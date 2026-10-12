@@ -1767,8 +1767,10 @@ holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the 
 in the Terrain or the Markers mode: the chip `Sketch` (after the Markers, Path nodes and 3D camera chips,
 which keep their room at 1280 pixels, so it lies behind More there until the window is wider), the View menu's `Show the sketch` and `Ctrl+Shift+K` turn it on or
 off (`view.overlay.sketch`, `MainViewModel.ShowSketch`, on by default; an overlay may carry a shortcut:
-`OverlayDefinition.Gesture`). In the Sketch mode a sheet is drawn fully, in the other modes at its own
-opacity ("Other modes", 45% for a new sheet).
+`OverlayDefinition.Gesture`). In the Sketch mode the chosen sheet is drawn fully and the other shown sheets at their
+own opacity ("Other modes", 45% for a new sheet), so two versions of a layout can be told apart
+(`MainViewModel.SketchDrawnFully`, null outside the mode where every sheet draws at its own opacity); the
+inspector says so.
 
 - **The pencil** (`Tools/PencilTool`, `sketch.pencil`): drag to draw. The colour in hand (keys 1 to 6, also
   on the keypad, or the six swatches in the options row), the width (`[` and `]`, or Thin, Medium,
@@ -1787,7 +1789,10 @@ opacity ("Other modes", 45% for a new sheet).
   mouse is dragged, so it holds a transaction as a brush's stroke does (`StartStroke`, `EndStroke`):
   the whole drag is one step of undo, Escape throws it away. Alt with a click sends the 3D camera there in
   every other tool; a tool that uses Alt itself says so (`IMapTool.UsesAlt`) and gets it.
-  `sketch.erase {points, radius?, whole?, mirror?, sheet?}` does the same to places given.
+  `sketch.erase {points, radius?, whole?, mirror?, sheet?}` does the same to places given. The status
+  counts what it did: `Cut 2 strokes, removed 1 stroke and 1 symbol of Sheet 1` (`EraseCounts`). With Whole
+  and Mirror the eraser's images by the symmetry take strokes and symbols but never labels (they are not
+  mirrored when written): only the path itself reaches a label.
 - **Sheets**: the panel's Sheets list (`Views/SketchPanels/SketchSheetsPanel`): each sheet with its eye
   (a chip, Shown or Hidden), its name and its count of strokes; the list chooses the sheet the pencil
   and the eraser work in and the inspector shows, + (or Add a sheet) adds one, Duplicate and Delete work on
@@ -1797,10 +1802,18 @@ opacity ("Other modes", 45% for a new sheet).
   whole drag, merged by `sketch.opacity:<sheet>`), the legend (a text per colour, what that colour means on this
   sheet), the count of strokes, Duplicate sheet and Clear. A legend text is typed into its field and
   given like the name; each is one step of undo. The sheet chosen is the view model's
-  (`SketchViewModel.Chosen`, by name, kept while the sketch has the sheet, else the first; a sheet added,
-  renamed or duplicated by a command is chosen: `ChooseOnNextRefresh`), not an edit of the map.
+  (`SketchViewModel.Chosen`, by name, kept while the sketch has the sheet, else the one chosen before it, else
+  the first; a sheet that an undo or delete took away and a later undo brings back is chosen again; a sheet
+  added, renamed or duplicated by a command is chosen: `ChooseOnNextRefresh`), not an edit of the map.
+- **Mirror boxes**: the Mirror box of the pencil, the eraser and the Symbol tool shows the truth about the map's
+  symmetry (`SketchMirrorHint`): it is off and disabled, with a tip that says why, while the map has no
+  symmetry ("choose one in the views' bar") or the bar's Mirror chip is off, and follows the tool's own
+  choice (`Mirror`, kept) when mirroring is on (`MirrorChecked`, `MirrorAvailable`, `MirrorTip`; also in
+  `state.sketch.pencil.mirrorAvailable` and the like). The box follows the bar rather than writing to the
+  map's setting: the chip is the one switch of the map's symmetry, the box is the tool's own wish.
 - **Commands** (`Commands/Sketch/`, all story N-1): `sketch.draw {points, colour?, width?, mirror?, smooth?,
-  straight?, tolerance?, sheet?}` (answers how many strokes it made), `sketch.erase`, `sketch.addSheet {name?}`,
+  straight?, tolerance?, sheet?}` (answers how many strokes it made; a line that leaves the map is cut at the
+  map's edge into strokes of its own, one wholly beyond the map is refused), `sketch.erase`, `sketch.addSheet {name?}`,
   `sketch.renameSheet {name, sheet?}`, `sketch.duplicateSheet {name?, sheet?}`, `sketch.deleteSheet {sheet?}`,
   `sketch.clearSheet {sheet?}`, `sketch.showSheet {sheet?, on?}`, `sketch.chooseSheet {sheet}`,
   `sketch.setLegend {colour, text, sheet?}`, `sketch.setOpacity {opacity, sheet?}`, `sketch.setPencil
@@ -1810,6 +1823,11 @@ opacity ("Other modes", 45% for a new sheet).
   delete and clear; the others have their controls in the panel, the inspector and the options row.
   `sketch.draw` smooths and thins as the pencil's settings say (a line of an exact polyline stays
   as it is while Smooth is off: `smooth: false`).
+- **Select all and Delete** in the Sketch mode act on the sketch only: `select.all` (Ctrl+A, also from the Select
+  menu) selects the chosen sheet's strokes, symbols and labels (as `sketch.select {all}`, choosing the Select
+  tool), and `edit.delete` removes the sketch's selected items (as `sketch.deleteSelected`, one step); the map's
+  things selected in another mode are neither selected nor deleted, and Delete cannot run without a selection of
+  the sketch (`MainViewModel.Meets(Needs.Selection)`).
 - **In the other modes** the inspector ends with a Sketch block while the map has strokes
   (`MainViewModel.SketchNote`: `Layout A at 45% over the terrain. The Sketch chip in the views' bar
   hides it, or Ctrl+Shift+K.`, or that the sketch is hidden and how to show it); the Sketch mode's own

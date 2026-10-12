@@ -41,7 +41,7 @@ public sealed class SetSketchPencilHandler(MainViewModel model) : IRequestHandle
         {
             model.SelectTool("sketch.pencil");
         }
-        model.Status = $"Pencil: {pencil.Colour.ToString().ToLowerInvariant()}, {pencil.Width.ToString().ToLowerInvariant()}{(pencil.Mirror ? ", mirrored" : "")}{(pencil.Smooth ? ", smooth" : "")}";
+        model.Status = $"Pencil: {pencil.Colour.ToString().ToLowerInvariant()}, {pencil.Width.ToString().ToLowerInvariant()}{(pencil.MirrorChecked ? ", mirrored" : "")}{(pencil.Smooth ? ", smooth" : "")}";
         return Task.CompletedTask;
     }
 }
@@ -81,7 +81,7 @@ public sealed class SetSketchEraserHandler(MainViewModel model) : IRequestHandle
         {
             model.SelectTool("sketch.eraser");
         }
-        model.Status = $"Eraser: radius {eraser.Radius:0.#} ogrids{(eraser.Mirror ? ", mirrored" : "")}{(eraser.Whole ? ", whole strokes" : "")}";
+        model.Status = $"Eraser: radius {eraser.Radius:0.#} ogrids{(eraser.MirrorChecked ? ", mirrored" : "")}{(eraser.Whole ? ", whole strokes" : "")}";
         return Task.CompletedTask;
     }
 }

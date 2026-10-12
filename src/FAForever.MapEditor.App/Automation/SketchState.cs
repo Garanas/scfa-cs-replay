@@ -77,6 +77,7 @@ internal static class SketchState
                 ["size"] = symbol.Ogrids,
                 ["turn"] = symbol.Turn,
                 ["mirror"] = symbol.Mirror,
+                ["mirrorAvailable"] = symbol.MirrorAvailable,
                 ["state"] = symbol.Describe(),
             },
             ["label"] = new JsonObject
@@ -97,6 +98,7 @@ internal static class SketchState
                 ["colour"] = pencil.Colour.ToString().ToLowerInvariant(),
                 ["width"] = pencil.Width.ToString().ToLowerInvariant(),
                 ["mirror"] = pencil.Mirror,
+                ["mirrorAvailable"] = pencil.MirrorAvailable,
                 ["smooth"] = pencil.Smooth,
                 ["drawing"] = pencil.IsDrawing,
             },
@@ -104,6 +106,7 @@ internal static class SketchState
             {
                 ["radius"] = eraser.Radius,
                 ["mirror"] = eraser.Mirror,
+                ["mirrorAvailable"] = eraser.MirrorAvailable,
                 ["whole"] = eraser.Whole,
             },
             ["pending"] = model.Sketch.Pending.Count,

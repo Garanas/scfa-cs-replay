@@ -636,8 +636,11 @@ layout before building it, and pictures projected onto the map to trace or build
       texts shown as a key in the top view's corner; the strokes are kept in the project as
       sketch/sketch.json (optional, read again when it changes on disk, never exported), every
       operation is a command (sketch.*) and one step of undo; the top view draws them as lines of a
-      fixed width on screen at every zoom, dimmed outside the mode; the Sketch chip, the View menu
-      and Ctrl+Shift+K show or hide the sketch in every mode. Missing: the 3D view draws no strokes
+      fixed width on screen at every zoom, dimmed outside the mode (in the mode the chosen sheet draws
+      fully and the other shown sheets at their own opacity); the Sketch chip, the View menu
+      and Ctrl+Shift+K show or hide the sketch in every mode; Ctrl+A and Delete in the mode act on the
+      chosen sheet only; the tools' Mirror boxes show off while the map does not mirror; the eraser says
+      what it cut and removed; a stroke is cut at the map's edge. Missing: the 3D view draws no strokes
       (N-3).
 - [x] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
       a screenshot of another map): several per map, each moved, scaled and turned with handles or

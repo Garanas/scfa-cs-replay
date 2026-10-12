@@ -61,7 +61,7 @@ public sealed partial class HeightmapView
         int culled = 0;
         int symbols = 0;
         int labels = 0;
-        bool full = model.InSketchMode;
+        string? full = model.SketchDrawnFully;
         // what lies in the view, in ogrids, with a stroke's half width around it
         Rect visible = new Rect(ControlToMap(default), ControlToMap(new Point(Bounds.Width, Bounds.Height)));
         visible = visible.Inflate(SketchLook.Pixels(SketchWidth.Thick) / _zoom);

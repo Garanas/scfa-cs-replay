@@ -492,7 +492,7 @@ public sealed partial class MainViewModel : ObservableObject
         && (!needs.HasFlag(Needs.Workspace) || Setup.Workspace is not null)
         && (!needs.HasFlag(Needs.Project) || Map?.ProjectFolder is not null)
         && (!needs.HasFlag(Needs.NoStroke) || _stroke is null)
-        && (!needs.HasFlag(Needs.Selection) || Selection.HasAny);
+        && (!needs.HasFlag(Needs.Selection) || (InSketchMode ? SketchHasSelection : Selection.HasAny));
 
     /// <summary>
     /// The history panel: the map as it was opened, then every step, the undone ones last.

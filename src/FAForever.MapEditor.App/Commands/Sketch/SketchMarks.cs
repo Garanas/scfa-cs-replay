@@ -166,7 +166,7 @@ public sealed class SetSketchSymbolHandler(MainViewModel model) : IRequestHandle
         {
             model.SelectTool("sketch.symbol");
         }
-        model.Status = $"Symbol: {tool.Kind.ToString().ToLowerInvariant()}, {tool.Colour.ToString().ToLowerInvariant()}, {tool.Ogrids:0.#} ogrids{(tool.Kind == SketchSymbolKind.Arrow ? $", turned {tool.Turn:0.#} degrees" : "")}{(tool.Mirror ? ", mirrored" : "")}";
+        model.Status = $"Symbol: {tool.Kind.ToString().ToLowerInvariant()}, {tool.Colour.ToString().ToLowerInvariant()}, {tool.Ogrids:0.#} ogrids{(tool.Kind == SketchSymbolKind.Arrow ? $", turned {tool.Turn:0.#} degrees" : "")}{(tool.MirrorChecked ? ", mirrored" : "")}";
         return Task.CompletedTask;
     }
 }

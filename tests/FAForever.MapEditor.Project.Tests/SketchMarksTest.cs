@@ -88,11 +88,11 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = Map().AddSymbols("A", [Symbol(SketchSymbolKind.Cross, 5, 5)], out _)
                 .AddSheet("Empty", out _).AddSheet("Hidden", out _).AddSymbols("Hidden", [Symbol(SketchSymbolKind.Cross, 5, 5)], out _).ShowSheet("Hidden", false);
 
-            (SketchSheet Sheet, float Opacity)[] outside = [.. SketchLines.Shown(document.Sketch, full: false)];
+            (SketchSheet Sheet, float Opacity)[] outside = [.. SketchLines.Shown(document.Sketch, chosen: null)];
             Assert.AreEqual(1, outside.Length);
             Assert.AreEqual(SketchSheet.DefaultOpacity, outside[0].Opacity);
-            Assert.AreEqual(1f, SketchLines.Shown(document.Sketch, full: true).Single().Opacity);
-            Assert.AreEqual(0, SketchLines.Shown(document.SetSheetOpacity("A", 0).Sketch, full: false).Count(), "a transparent sheet is left out");
+            Assert.AreEqual(1f, SketchLines.Shown(document.Sketch, chosen: "A").Single().Opacity);
+            Assert.AreEqual(0, SketchLines.Shown(document.SetSheetOpacity("A", 0).Sketch, chosen: null).Count(), "a transparent sheet is left out");
         }
 
         [TestMethod]

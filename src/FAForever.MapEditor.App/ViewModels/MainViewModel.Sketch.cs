@@ -65,10 +65,20 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Whether the Sketch mode is the one chosen: its sheets are then drawn fully, else at their
-    /// opacity for the other modes.
+    /// Whether the Sketch mode is the one chosen: its chosen sheet is then drawn fully and the others at
+    /// their opacity for the other modes, as every sheet is in the other modes.
     /// </summary>
     public bool InSketchMode => SelectedMode?.Definition.Id == "sketch";
+
+    /// <summary>
+    /// The sheet the views draw fully: the chosen one while the Sketch mode is the one chosen, so that it can be
+    /// told from the other shown sheets, which are drawn at their own opacity; null in the other modes, where
+    /// every sheet is drawn at its own.
+    /// </summary>
+    public string? SketchDrawnFully => InSketchMode ? Sketch.Chosen : null;
+
+    // whether the Sketch mode's Select tool holds a selection: what Delete acts on in that mode
+    private bool SketchHasSelection => _tools.Values.OfType<Tools.SketchSelectTool>().FirstOrDefault()?.HasSelection == true;
 
     private void InitializeSketch()
     {

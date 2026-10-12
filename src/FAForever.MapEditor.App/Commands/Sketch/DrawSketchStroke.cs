@@ -16,7 +16,9 @@ namespace FAForever.MapEditor.App.Commands;
 /// and thinned (Smooth), or a straight line from its first place to its last (Straight). A sketch
 /// without sheets gets its first for the stroke, and a hidden sheet is shown.
 /// </summary>
-/// <param name="Points">The places the line goes through, <c>[[x, z], ...]</c> in ogrids; one is a dot.</param>
+/// <param name="Points">The places the line goes through, <c>[[x, z], ...]</c> in ogrids; one is a dot. A line
+/// that leaves the map is cut at its edge (what lies beyond is left out, the parts that come back are strokes of
+/// their own); one wholly beyond the map is refused.</param>
 /// <param name="Colour">Red, yellow, green, blue, white or black, or 1 to 6; left out, the pencil's.</param>
 /// <param name="Width">Thin, medium or thick; left out, the pencil's.</param>
 /// <param name="Mirror">Left out, the pencil's.</param>
@@ -54,7 +56,13 @@ public sealed class DrawSketchStrokeHandler(MainViewModel model, CurrentEdit edi
 
         MapDocument document = edit.Transaction.Document;
         IReadOnlyList<MapSymmetryTransform> parts = r.Mirror ?? pencil.Mirror ? model.EditTransforms(document) : [];
-        IReadOnlyList<SketchStroke> strokes = SketchEdits.WithImages(new SketchStroke(colour, width, line), parts);
+        // a line that leaves the map is cut at its edge: the parts on the map are strokes of their own
+        IReadOnlyList<ImmutableArray<Vector2>> onMap = SketchGeometry.ClipToMap(line, document.Width, document.Height);
+        if (onMap.Count == 0)
+        {
+            throw new ArgumentException($"The stroke lies wholly beyond the map ({document.Width} by {document.Height} ogrids)");
+        }
+        List<SketchStroke> strokes = [.. onMap.SelectMany(piece => SketchEdits.WithImages(new SketchStroke(colour, width, piece), parts))];
         string used = "";
         edit.Transaction.Apply(d =>
         {
@@ -68,7 +76,7 @@ public sealed class DrawSketchStrokeHandler(MainViewModel model, CurrentEdit edi
         });
         model.Sketch.ChooseOnNextRefresh(used);
         model.ShowSketch = true;
-        model.Status = $"Drew {SketchArguments.Strokes(strokes.Count)} in {used}{(strokes.Count > 1 ? ", mirrored by the symmetry" : "")}";
+        model.Status = $"Drew {SketchArguments.Strokes(strokes.Count)} in {used}{(strokes.Count > 1 ? (onMap.Count > 1 ? ", cut at the edge of the map" : ", mirrored by the symmetry") : "")}";
         return Task.FromResult(strokes.Count);
     }
 }

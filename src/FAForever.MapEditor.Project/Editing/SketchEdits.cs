@@ -6,6 +6,54 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project.Editing
 {
     /// <summary>
+    /// What an eraser did to a sheet: the strokes it cut (some of each is left) and what it removed
+    /// whole (a stroke with nothing left of it, a symbol, a label).
+    /// </summary>
+    public readonly record struct EraseCounts(int Cut, int Strokes, int Symbols, int Labels)
+    {
+        /// <summary>
+        /// Everything the eraser changed; 0 when it touched nothing.
+        /// </summary>
+        public int Touched => Cut + Strokes + Symbols + Labels;
+
+        /// <summary>
+        /// <c>Cut 2 strokes, removed 1 stroke and 1 symbol</c>; what it did not do is left out.
+        /// </summary>
+        public string Describe()
+        {
+            List<string> removed = [];
+            if (Strokes > 0)
+            {
+                removed.Add($"{Strokes} {(Strokes == 1 ? "stroke" : "strokes")}");
+            }
+            if (Symbols > 0)
+            {
+                removed.Add($"{Symbols} {(Symbols == 1 ? "symbol" : "symbols")}");
+            }
+            if (Labels > 0)
+            {
+                removed.Add($"{Labels} {(Labels == 1 ? "label" : "labels")}");
+            }
+            string gone = removed.Count switch
+            {
+                0 => "",
+                1 => removed[0],
+                _ => string.Join(", ", removed[..^1]) + " and " + removed[^1],
+            };
+            string cut = Cut > 0 ? $"Cut {Cut} {(Cut == 1 ? "stroke" : "strokes")}" : "";
+            return (cut.Length > 0, gone.Length > 0) switch
+            {
+                (true, true) => $"{cut}, removed {gone}",
+                (true, false) => cut,
+                (false, true) => $"Removed {gone}",
+                _ => "Touched nothing",
+            };
+        }
+
+        public static EraseCounts operator +(EraseCounts a, EraseCounts b) =>
+            new(a.Cut + b.Cut, a.Strokes + b.Strokes, a.Symbols + b.Symbols, a.Labels + b.Labels);
+    }
+    /// <summary>
     /// The edits of the map maker's sketch (user story N-1): sheets added, renamed, duplicated,
     /// deleted, shown, given a legend and cleared, strokes drawn (repeated by the map's symmetry when
     /// asked) and rubbed out. Every one returns the document itself when it changes nothing, so
@@ -277,12 +325,26 @@ namespace FAForever.MapEditor.Project.Editing
         /// <param name="path">The places the eraser went through, in ogrids; one is a click.</param>
         /// <param name="parts">The parts of the map the path is repeated into (identity first);
         /// empty for the path alone.</param>
-        /// <param name="erased">How many strokes the eraser touched (a stroke cut in two counts once).</param>
+        /// <param name="erased">How many strokes the eraser touched (a stroke cut in two counts once), with
+        /// <paramref name="whole"/> also the symbols and labels it removed.</param>
         /// <exception cref="ArgumentException">No such sheet, or the radius is not above 0.</exception>
         public static MapDocument Erase(this MapDocument document, string sheet, IReadOnlyList<Vector2> path, float radius, bool whole,
             IReadOnlyList<MapSymmetryTransform> parts, out int erased)
         {
-            erased = 0;
+            MapDocument result = document.EraseCounted(sheet, path, radius, whole, parts, out EraseCounts counts);
+            erased = counts.Touched;
+            return result;
+        }
+
+        /// <summary>
+        /// As <see cref="Erase"/>, saying what the eraser did: how many strokes it cut and how many strokes,
+        /// symbols and labels it removed. Labels are never mirrored when written, so the eraser's images by
+        /// the symmetry do not reach them: only the path itself does.
+        /// </summary>
+        public static MapDocument EraseCounted(this MapDocument document, string sheet, IReadOnlyList<Vector2> path, float radius, bool whole,
+            IReadOnlyList<MapSymmetryTransform> parts, out EraseCounts counts)
+        {
+            counts = default;
             if (!(radius > 0))
             {
                 throw new ArgumentException($"The eraser's radius is above 0 ogrids, not {radius}", nameof(radius));
@@ -297,19 +359,28 @@ namespace FAForever.MapEditor.Project.Editing
             ImmutableArray<SketchStroke> strokes = held.Strokes;
             ImmutableArray<SketchSymbol> symbols = held.Symbols;
             ImmutableArray<SketchLabel> labels = held.Labels;
-            foreach (ImmutableArray<Vector2> eraser in paths)
+            int cut = 0, removedStrokes = 0, removedSymbols = 0, removedLabels = 0;
+            for (int i = 0; i < paths.Count; i++)
             {
-                strokes = EraseAlong(strokes, eraser, radius, whole, ref erased);
+                ImmutableArray<Vector2> eraser = paths[i];
+                strokes = EraseAlong(strokes, eraser, radius, whole, ref cut, ref removedStrokes);
                 if (whole)
                 {
-                    // whole strokes (Alt) take the symbols and labels the eraser touches too (user story N-4)
-                    int before = symbols.Length + labels.Length;
+                    // whole strokes (Alt) take the symbols and labels the eraser touches too (user story N-4);
+                    // symbols are repeated by the symmetry as strokes are, labels are not: the path itself only
+                    int before = symbols.Length;
                     symbols = [.. symbols.Where(symbol => !Touched(SketchPicking.Bounds(symbol), eraser, radius))];
-                    labels = [.. labels.Where(label => !Touched(SketchLabels.Bounds(label), eraser, radius))];
-                    erased += before - symbols.Length - labels.Length;
+                    removedSymbols += before - symbols.Length;
+                    if (i == 0)
+                    {
+                        before = labels.Length;
+                        labels = [.. labels.Where(label => !Touched(SketchLabels.Bounds(label), eraser, radius))];
+                        removedLabels += before - labels.Length;
+                    }
                 }
             }
-            return erased == 0 ? document : ChangeSheet(document, held, held with { Strokes = strokes, Symbols = symbols, Labels = labels });
+            counts = new EraseCounts(cut, removedStrokes, removedSymbols, removedLabels);
+            return counts.Touched == 0 ? document : ChangeSheet(document, held, held with { Strokes = strokes, Symbols = symbols, Labels = labels });
         }
 
         private static bool Touched((Vector2 Min, Vector2 Max) box, ImmutableArray<Vector2> path, float radius)
@@ -328,7 +399,7 @@ namespace FAForever.MapEditor.Project.Editing
             return false;
         }
 
-        private static ImmutableArray<SketchStroke> EraseAlong(ImmutableArray<SketchStroke> strokes, ImmutableArray<Vector2> path, float radius, bool whole, ref int erased)
+        private static ImmutableArray<SketchStroke> EraseAlong(ImmutableArray<SketchStroke> strokes, ImmutableArray<Vector2> path, float radius, bool whole, ref int cut, ref int removed)
         {
             ImmutableArray<SketchStroke>.Builder result = ImmutableArray.CreateBuilder<SketchStroke>(strokes.Length);
             // one stroke may be cut again by a later segment: the pieces go through each segment in turn
@@ -367,7 +438,14 @@ namespace FAForever.MapEditor.Project.Editing
                     result.Add(stroke);
                     continue;
                 }
-                erased++;
+                if (pieces.Count == 0)
+                {
+                    removed++;
+                }
+                else
+                {
+                    cut++;
+                }
                 foreach (ImmutableArray<Vector2> piece in pieces)
                 {
                     result.Add(stroke with { Points = piece });
