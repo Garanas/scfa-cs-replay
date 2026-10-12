@@ -195,7 +195,7 @@ namespace FAForever.MapEditor.App.Tests
 
                     Assert.IsTrue(model.Tour.IsDone, $"{at}: Do it for me did not make {each.Until!.Path} = {each.Until.Value}");
                     Assert.IsTrue(model.Tour.ShowsDone, at);
-                    Assert.IsNull(model.Tour.Problem, at);
+                    Assert.IsNull(model.Tour.Problem, $"{at}: {model.Tour.Problem}");
                     await WithFrames(model.Tour.EndAsync());
                 }
             }
@@ -346,10 +346,15 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             JsonObject state = (JsonObject)await automation.HandleAsync("state", []);
 
-            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "undo" })
+            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "undo", "coverageStacks.shown" })
             {
                 Assert.AreEqual(AutomationServer.At(state, path)?.ToJsonString(), TourState.Read(model, path)?.ToJsonString(), $"the path {path}");
             }
+            model.SelectMode("paint");
+            Dispatcher.UIThread.RunJobs();
+            state = (JsonObject)await automation.HandleAsync("state", []);
+            Assert.AreEqual("stratum-1", AutomationServer.At(state, "coverageStacks.shown")?.GetValue<string>());
+            Assert.AreEqual("stratum-1", TourState.Read(model, "coverageStacks.shown")?.GetValue<string>());
             Assert.IsTrue(TourState.Known("show.grid") && !TourState.Known("nothing.here"));
             window.Close();
         });

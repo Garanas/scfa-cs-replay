@@ -125,11 +125,18 @@ public sealed class ToolRow : Panel
     /// Shows the settings that do not fit when <paramref name="control"/> is one of them, as a
     /// click on More would; true when it had to.
     /// </summary>
-    public static bool Reveal(Control control)
+    public static bool Reveal(Control control) => Reveal(control, out _);
+
+    /// <summary>
+    /// As <see cref="Reveal(Control)"/>, giving the row it opened.
+    /// </summary>
+    public static bool Reveal(Control control, out ToolRow? opened)
     {
+        opened = null;
         if (RowOf(control) is (ToolRow row, Control item) && row._overflow.Contains(item) && !row.IsExpanded)
         {
             row.IsExpanded = true;
+            opened = row;
             return true;
         }
         return false;

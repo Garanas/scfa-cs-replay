@@ -138,6 +138,7 @@ public sealed partial class TourOverlay : UserControl
         if (!tour.IsRunning)
         {
             Track(null);
+            _locator?.Collapse();
             Spotlight.Hole = null;
             Spotlight.LetThrough = false;
             return;

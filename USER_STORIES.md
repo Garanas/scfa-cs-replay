@@ -682,8 +682,12 @@ own sit beside the editor's.
       not written again, an untouched older copy is brought up to date) and read again when a file
       there changes. On the first start, once a map is open, a card at the window's corner offers the
       tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
-      tours finished). The tour of the window (twelve steps) is the first. Missing: the tours of the
-      modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export).
+      tours finished). The tour of the window (twelve steps) is the first; the tours of the Terrain
+      (twelve steps: tools, brush, draft and final, height layers, curves, history), Masks (ten: the
+      list, adding a mask, the brush, the stack and its rules, where masks are used) and Paint modes
+      (thirteen: strata, choosing one, textures, the brush and its limits, mask stacks, rules, the
+      shader, the 3D view) follow, each with steps that ask you to act. Missing: the tours of the other
+      modes (Markers, Units, Procedural with the export).
 - [x] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
       static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
       numbered, made again when the window changes. Today: `faf-map guide build --out <folder> --port <n>

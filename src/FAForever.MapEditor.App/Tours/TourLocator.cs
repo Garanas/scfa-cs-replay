@@ -23,6 +23,8 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
     private const int FrameWaitMilliseconds = 250;
 
     private readonly UiLocator _locator = new UiLocator(window, model);
+    private readonly List<ToolRow> _revealed = [];
+    private TourTarget? _lastTarget;
 
     /// <summary>
     /// The tour's overlay, which lies over the window (dimming and card): the check
@@ -35,6 +37,11 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
     /// </summary>
     public async Task<TourPlace> ResolveAsync(TourTarget? target)
     {
+        if (!ReferenceEquals(target, _lastTarget))
+        {
+            Collapse();
+            _lastTarget = target;
+        }
         if (target is null)
         {
             return TourPlace.Middle;
@@ -81,6 +88,19 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
         return bounds.Intersect(new Rect(window.Bounds.Size)) is { Width: > 0, Height: > 0 } shown ? shown : null;
     }
 
+    /// <summary>
+    /// Closes the tool rows a step opened to show its target: another step, or the end of the tour, finds them as they were.
+    /// </summary>
+    public void Collapse()
+    {
+        foreach (ToolRow row in _revealed)
+        {
+            row.IsExpanded = false;
+        }
+        _revealed.Clear();
+        _lastTarget = null;
+    }
+
     private async Task<TourPlace> ResolvePartAsync(string part)
     {
         MovablePanel? panel = part.ToLowerInvariant() switch
@@ -102,6 +122,12 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
     private async Task<TourPlace> ResolveLabelAsync(TourTarget target)
     {
         IReadOnlyList<Control> matches = _locator.Matches(target.Label!, target.Type, target.Under);
+        if (matches.Count == 0)
+        {
+            // a list made again by the step's own commands (the tools after a mode) has its controls once a frame is drawn
+            await SettleAsync();
+            matches = _locator.Matches(target.Label!, target.Type, target.Under);
+        }
         if (matches.Count == 0)
         {
             // in a panel the person hid, or outside the window in a floating one: show the panel, then look again
@@ -127,10 +153,22 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
             await SettleAsync();
             control = _locator.Matches(target.Label!, target.Type, target.Under).ElementAtOrDefault(index) ?? control;
         }
-        ToolRow.Reveal(control);
+        if (ToolRow.Reveal(control, out ToolRow? opened) && opened is not null)
+        {
+            _revealed.Add(opened);
+        }
         control.BringIntoView();
         await SettleAsync();
-        return Place(control, "control", reach: true);
+        TourPlace place = Place(control, "control", reach: true);
+        for (int again = 0; again < 3 && (place.Bounds is null || place.Why is not null); again++)
+        {
+            // the scroll viewers around it and the rows of a bar move on a later frame
+            await Task.Delay(30);
+            control.BringIntoView();
+            await SettleAsync();
+            place = Place(control, "control", reach: true);
+        }
+        return place;
     }
 
     private async Task<TourPlace> ResolveMapAsync(TourTarget target)
