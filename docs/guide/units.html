@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A tour of the Units mode</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>A tour of the Units mode</h1>
+<p>Armies, groups and units: the palette, placing one unit, placing many, and presets.</p>
+<section class="step" id="welcome">
+<h2>1. Units</h2>
+<p>The Units mode puts units on the map: each army&#39;s starting base, civilians, and wrecks. About ten steps. You will place one unit yourself; Undo takes it away again.</p>
+</section>
+<section class="step" id="panel">
+<h2>2. The mode&#39;s panel</h2>
+<img src="images/units/02-panel.webp" alt="The mode&#39;s panel">
+<p>The tools, a palette of ten slots to place from, the armies with their groups, and below them presets: ready-made settlements and wreck fields.</p>
+</section>
+<section class="step" id="tools">
+<h2>3. Two tools</h2>
+<img src="images/units/03-tools.webp" alt="Two tools">
+<p>Place puts a unit where you click. Select picks units to move, turn, group or delete. Double click a unit to select its whole group.</p>
+</section>
+<section class="step" id="palette">
+<h2>4. The palette</h2>
+<img src="images/units/04-palette.webp" alt="The palette">
+<p>Ten slots of units you place often. Keys 1 to 9 and 0 pick a slot while the mouse is over a view; Tab changes the palette. A unit tile dragged from the Assets tab onto a slot keeps it there.</p>
+</section>
+<section class="step" id="tree">
+<h2>5. Armies and groups</h2>
+<img src="images/units/05-tree.webp" alt="Armies and groups">
+<p>Every army has groups. INITIAL holds the units the game creates at the start, WRECKAGE the wrecks. The group you choose here is where the Place tool puts units. Choose an army or a group to edit it in the inspector.</p>
+</section>
+<section class="step" id="options">
+<h2>6. The Place tool&#39;s settings</h2>
+<img src="images/units/06-options.webp" alt="The Place tool&#39;s settings">
+<p>How to place, the unit, its army and its group come first. Behind More are the facing, the spacing and As wrecks. Q and E turn what you place.</p>
+</section>
+<section class="step" id="choose-unit">
+<h2>7. Try it: choose a unit</h2>
+<img src="images/units/07-choose-unit.webp" alt="Try it: choose a unit">
+<p>Click slot 3, the Mass Extractor. The Place tool then places that unit.</p>
+<p class="done">The Place tool has the Mass Extractor. Choose a unit is the other way: it opens the picker with every unit of the workspace.</p>
+<img src="images/units/07-choose-unit-after.webp" alt="Try it: choose a unit, after the step">
+</section>
+<section class="step" id="place-unit">
+<h2>8. Try it: place the unit</h2>
+<img src="images/units/08-place-unit.webp" alt="Try it: place the unit">
+<p>Click on the map. A structure snaps to the build grid.</p>
+<p class="done">That is one unit, one step of Undo. Its army is the one whose spawn lies nearest the middle of the view.</p>
+<img src="images/units/08-place-unit-after.webp" alt="Try it: place the unit, after the step">
+</section>
+<section class="step" id="how">
+<h2>9. Many at once</h2>
+<img src="images/units/09-how.webp" alt="Many at once">
+<p>Single places one unit. Line and Rectangle are dragged out, Ring surrounds the selected structures, and Scatter paints units in a circle. The footprints show under the mouse before you click, in red where they would overlap.</p>
+</section>
+<section class="step" id="inspector">
+<h2>10. The inspector edits the units</h2>
+<img src="images/units/10-inspector.webp" alt="The inspector edits the units">
+<p>Edits what you chose last. A unit picked with the Select tool shows its army, group and blueprint, Replace, the faction chips, Group, Ungroup and the Wrecks check box. An army or group chosen in the tree shows its name, its units and Add a group. The unit the Place tool has shows on its tile.</p>
+</section>
+<section class="step" id="presets">
+<h2>11. Unit presets</h2>
+<img src="images/units/11-presets.webp" alt="Unit presets">
+<p>A preset is a saved group of units. The editor ships villages, farms and wreck fields; Save keeps your own. Click a preset to choose it, then click on the map to place it as a new group.</p>
+</section>
+<section class="step" id="end">
+<h2>12. That is the Units mode</h2>
+<p>The Map mode holds the armies&#39; teams and factions. Help, Tours starts this tour again and lists the others.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

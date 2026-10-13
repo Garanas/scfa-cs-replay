@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shaping the terrain</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>Shaping the terrain</h1>
+<p>Sculpt the ground in layers you can change later: tools, brushes, height layers and undo.</p>
+<section class="step" id="welcome">
+<h2>1. Shaping the terrain</h2>
+<p>The Terrain mode shapes the ground: where it rises, falls and where units can walk. Twelve steps. Back and Next go through them; Escape ends the tour.</p>
+</section>
+<section class="step" id="tools">
+<h2>2. The tools</h2>
+<img src="images/terrain/02-tools.webp" alt="The tools">
+<p>Sculpt raises and lowers with a brush. Stamp presses a picture into the ground. Curve draws roads, rivers, ridges and cliffs along a line. Terrain types sets what the game uses for footsteps and effects. Walkability marks by hand where land units may go. Ruler measures distance and slope.</p>
+</section>
+<section class="step" id="choose-sculpt">
+<h2>3. Try it: choose Sculpt</h2>
+<img src="images/terrain/03-choose-sculpt.webp" alt="Try it: choose Sculpt">
+<p>Click Sculpt.</p>
+<p class="done">Sculpt is the tool for the general form of the map.</p>
+<img src="images/terrain/03-choose-sculpt-after.webp" alt="Try it: choose Sculpt, after the step">
+</section>
+<section class="step" id="options">
+<h2>4. The brush</h2>
+<img src="images/terrain/04-options.webp" alt="The brush">
+<p>The shape of the brush, what it does (raise, lower, smooth, flatten, set a height, noise, erode, scale), how its edge fades, its radius and its strength. More holds the rest. The keys [ and ] make the brush smaller and larger.</p>
+</section>
+<section class="step" id="top-view">
+<h2>5. Try it: make one stroke</h2>
+<img src="images/terrain/05-top-view.webp" alt="Try it: make one stroke">
+<p>Press the left mouse in the top view and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map.</p>
+<p class="done">The ground rose where you dragged. Ctrl+Z takes the stroke back.</p>
+<img src="images/terrain/05-top-view-after.webp" alt="Try it: make one stroke, after the step">
+</section>
+<section class="step" id="draft-final">
+<h2>6. Draft and final</h2>
+<img src="images/terrain/06-draft-final.webp" alt="Draft and final">
+<p>A map can have two heightmaps. The draft is the rough shape you send to a tool such as World Machine or Gaea. The final is the one the game gets. The chips choose which one the views show and the brushes change.</p>
+</section>
+<section class="step" id="add-layer">
+<h2>7. Try it: add a height layer</h2>
+<img src="images/terrain/07-add-layer.webp" alt="Try it: add a height layer">
+<p>A height layer is a change on top of the ground below it. Click Sculpt layer to add one. The Sculpt tool then writes into the chosen layer, so you can hide, lock, weaken or remove what you sculpted later.</p>
+<p class="done">The layer is in the list under Height layers. Strokes now go into it.</p>
+<img src="images/terrain/07-add-layer-after.webp" alt="Try it: add a height layer, after the step">
+</section>
+<section class="step" id="layer-list">
+<h2>8. The layers</h2>
+<img src="images/terrain/08-layer-list.webp" alt="The layers">
+<p>The highest layer is first. Each row has a box to show or hide the layer, a small picture, its name and how it combines, and a lock. The chips above the list filter it. Under it, Sculpt layer, Image and Curve add more, and Bake ends the stack.</p>
+</section>
+<section class="step" id="inspector">
+<h2>9. The layer&#39;s settings</h2>
+<img src="images/terrain/09-inspector.webp" alt="The layer&#39;s settings">
+<p>The inspector edits the chosen layer: its name, how it combines with the layers below (add, subtract, multiply and more), its strength, a mask that limits where it works, whether it is shown or locked, and whether it counts for the draft, the final or both.</p>
+</section>
+<section class="step" id="curve">
+<h2>10. Curves</h2>
+<img src="images/terrain/10-curve.webp" alt="Curves">
+<p>The Curve tool makes a layer from a line. Click points on the map to draw it and choose its profile: a road, a river, a ridge, a valley or a cliff. Drag a point to move it. The inspector then holds the width, falloff and height.</p>
+</section>
+<section class="step" id="history">
+<h2>11. Everything can be undone</h2>
+<img src="images/terrain/11-history.webp" alt="Everything can be undone">
+<p>History lists every step. Ctrl+Z undoes the last one, Ctrl+Y does it again, and a click on a step goes back to it. Strokes made in this tour are in the list too.</p>
+</section>
+<section class="step" id="end">
+<h2>12. That is the Terrain mode</h2>
+<p>Next: the Masks mode, which marks where things may happen, and the Paint mode. Help, Tours lists them.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

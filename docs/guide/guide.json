@@ -1,0 +1,1561 @@
+{
+  "format": 1,
+  "editor": {
+    "version": "1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c",
+    "built": "2026-10-12T21:50:58.3332969Z",
+    "generated": "2026-10-13"
+  },
+  "theme": "dark",
+  "window": [
+    1280,
+    800
+  ],
+  "tours": [
+    {
+      "id": "window",
+      "title": "A tour of the window",
+      "summary": "The parts of the editor's window, in about two minutes.",
+      "order": 10,
+      "overview": "images/window/00-overview.webp",
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "A tour of the window",
+          "text": "Twelve steps, about two minutes. Back and Next go through them; Escape ends the tour, and Help, Tours starts it again."
+        },
+        {
+          "number": 2,
+          "id": "modes",
+          "title": "The modes",
+          "text": "Each mode is one kind of work: the map's settings, sketches to draft it, the shape of the terrain, its paint and masks, water, lighting, markers, props, decals and units. F1 to F12 choose them; Procedural and Plugins sit at the bottom.",
+          "target": {
+            "named": "part \"rail\"",
+            "found": true,
+            "bounds": [
+              0,
+              36,
+              52,
+              735
+            ]
+          },
+          "image": "images/window/02-modes.webp"
+        },
+        {
+          "number": 3,
+          "id": "panel",
+          "title": "The mode's panel",
+          "text": "What the mode has: its tools first, then what it works on, the height layers here. Choose an entry to edit it in the inspector.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/window/03-panel.webp"
+        },
+        {
+          "number": 4,
+          "id": "options",
+          "title": "The tool's settings",
+          "text": "The active tool's settings in one row, the most used first. What does not fit the window lies behind More.",
+          "more": "Brush settings are kept per tool. The keys [ and ] make a brush smaller and larger.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/window/04-options.webp"
+        },
+        {
+          "number": 5,
+          "id": "views",
+          "title": "What the views show",
+          "text": "Top, 3D or both side by side, the map's symmetry, and a chip for each overlay: markers, path nodes, the 3D camera, and more behind More.",
+          "target": {
+            "named": "part \"views\"",
+            "found": true,
+            "bounds": [
+              337,
+              76,
+              638,
+              40
+            ]
+          },
+          "image": "images/window/05-views.webp"
+        },
+        {
+          "number": 6,
+          "id": "top-view",
+          "title": "The top view",
+          "text": "The map from above. The left mouse uses the tool, the right or middle mouse moves the map, the wheel zooms.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/window/06-top-view.webp"
+        },
+        {
+          "number": 7,
+          "id": "try-3d",
+          "title": "Try it: the 3D view",
+          "text": "Click 3D, or press Ctrl+2.",
+          "done": "That is the 3D view. The wheel zooms towards the mouse, the middle mouse moves, space and the mouse turn the view. Both views share the camera.",
+          "target": {
+            "named": "label \"3D\" TabItem under \"View\"",
+            "found": true,
+            "bounds": [
+              395,
+              80,
+              41,
+              28
+            ]
+          },
+          "image": "images/window/07-try-3d.webp",
+          "after": "images/window/07-try-3d-after.webp"
+        },
+        {
+          "number": 8,
+          "id": "dock",
+          "title": "The dock",
+          "text": "The problems the checks found, the history of undo steps, the workspace's assets to drag onto the map, and the Console.",
+          "target": {
+            "named": "part \"dock\"",
+            "found": true,
+            "bounds": [
+              337,
+              581,
+              638,
+              190
+            ]
+          },
+          "image": "images/window/08-dock.webp"
+        },
+        {
+          "number": 9,
+          "id": "inspector",
+          "title": "The inspector",
+          "text": "Edits what you chose last: an entry of the panel, things on the map, or an asset on the shelf.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/window/09-inspector.webp"
+        },
+        {
+          "number": 10,
+          "id": "status",
+          "title": "The status bar",
+          "text": "What the last operation did, the mode and tool, what is out of date, and the switch that makes results again on their own.",
+          "target": {
+            "named": "part \"status\"",
+            "found": true,
+            "bounds": [
+              0,
+              771,
+              1280,
+              29
+            ]
+          },
+          "image": "images/window/10-status.webp"
+        },
+        {
+          "number": 11,
+          "id": "palette",
+          "title": "Every operation is a command",
+          "text": "Ctrl+K finds any of them by name, with its shortcut. The menus hold the same commands.",
+          "target": {
+            "named": "label \"Command palette\"",
+            "found": true,
+            "bounds": [
+              968,
+              4,
+              300,
+              26
+            ]
+          },
+          "image": "images/window/11-palette.webp"
+        },
+        {
+          "number": 12,
+          "id": "end",
+          "title": "That is the window",
+          "text": "Next: the tours of the modes, one for sketching a draft and one for each of Terrain, Masks, Paint, Markers, Units and Procedural. Help, Tours lists them and starts this one again."
+        }
+      ]
+    },
+    {
+      "id": "sketch",
+      "title": "Drafting a map",
+      "summary": "Sketch a map before you build it: pencil strokes, symbols, labels, sheets and a picture to trace.",
+      "order": 15,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Drafting a map",
+          "text": "No idea where to begin? Draw first and build later. A sketch is a draft on top of the map: rough lines, symbols and words that never reach the game. Fourteen steps. Back and Next go through them; Escape ends the tour."
+        },
+        {
+          "number": 2,
+          "id": "rail",
+          "title": "The Sketch mode",
+          "text": "This button on the rail, or F10, opens the Sketch mode. It sits first because a draft comes first. The sketch is kept in the project, shows in every mode to guide the work, and is never exported.",
+          "target": {
+            "named": "label \"Sketch\" under \"Modes\"",
+            "found": true,
+            "bounds": [
+              6,
+              86,
+              40,
+              40
+            ]
+          },
+          "image": "images/sketch/02-rail.webp"
+        },
+        {
+          "number": 3,
+          "id": "tools",
+          "title": "The tools",
+          "text": "Pencil draws lines. Eraser rubs them out. Symbol stamps a small sign: a spawn, a mass point and the like. Label writes words. Select picks, moves and recolours what you drew. Image shows a picture of your own to trace.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              164,
+              251,
+              64
+            ]
+          },
+          "image": "images/sketch/03-tools.webp"
+        },
+        {
+          "number": 4,
+          "id": "try-pencil",
+          "title": "Try it: draw a line",
+          "text": "Press the left mouse in the map and drag, then let go. A click makes a dot; Shift makes a straight line.",
+          "done": "That line is one stroke. The first stroke made a sheet for it. Ctrl+Z takes it back.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/sketch/04-try-pencil.webp",
+          "after": "images/sketch/04-try-pencil-after.webp"
+        },
+        {
+          "number": 5,
+          "id": "colours",
+          "title": "Colours and widths",
+          "text": "Six colours: red, yellow, green, blue, white and black. The keys 1 to 6 choose one. The width is Thin, Medium or Thick (behind More when the window is narrow); the keys [ and ] make it smaller and larger. Choose before you draw, as with a pen.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/sketch/05-colours.webp"
+        },
+        {
+          "number": 6,
+          "id": "mirror",
+          "title": "Mirror and the map's symmetry",
+          "text": "A map for two teams is usually the same on both sides. Choose the map's symmetry here, and the Mirror box of the pencil, the eraser and the Symbol tool repeats each stroke and symbol on the other side. Mirror stays off until the map has a symmetry.",
+          "more": "Mirror is the tool's own wish; the symmetry itself is chosen once for the map, in this box beside the views.",
+          "target": {
+            "named": "label \"Symmetry\" ComboBox",
+            "found": true,
+            "bounds": [
+              539,
+              84,
+              84,
+              24
+            ]
+          },
+          "image": "images/sketch/06-mirror.webp"
+        },
+        {
+          "number": 7,
+          "id": "sheets",
+          "title": "Sheets and the legend",
+          "text": "A sheet is a layer of the sketch: one for the spawns, one for the water, one for a second idea. Add one with + in the panel, and show, hide or clear each on its own. Here you name the sheet, set how faint it is in the other modes, and write its legend: what each colour means on this sheet.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/sketch/07-sheets.webp"
+        },
+        {
+          "number": 8,
+          "id": "try-symbol",
+          "title": "Try it: stamp a symbol",
+          "text": "The row above holds six: a spawn, a mass point, a hydrocarbon point, an arrow, a cross and a question mark. Click in the map to stamp the chosen one.",
+          "done": "The symbol is on the sheet. Ctrl+Z takes it back.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/sketch/08-try-symbol.webp",
+          "after": "images/sketch/08-try-symbol-after.webp"
+        },
+        {
+          "number": 9,
+          "id": "label",
+          "title": "Labels",
+          "text": "With Label, click in the map and type: a name for a lake, a note about an expansion, a question to answer later. Enter keeps it. Its colour and size are in the row above.",
+          "target": {
+            "named": "label \"Label\" under \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              198,
+              81,
+              30
+            ]
+          },
+          "image": "images/sketch/09-label.webp"
+        },
+        {
+          "number": 10,
+          "id": "eraser",
+          "title": "The eraser",
+          "text": "Drag it over a line to rub out the part it passes; the rest stays. Hold Alt to take away whole strokes, symbols and labels instead. A drag is one step of undo.",
+          "target": {
+            "named": "label \"Eraser\" under \"Tools\"",
+            "found": true,
+            "bounds": [
+              151,
+              164,
+              81,
+              30
+            ]
+          },
+          "image": "images/sketch/10-eraser.webp"
+        },
+        {
+          "number": 11,
+          "id": "image",
+          "title": "Projected images",
+          "text": "Project an image... asks for a picture file: a drawing, a photo, a screenshot of another map. It is copied into the project and laid over the top view, to trace or to build towards. You can move, turn, scale and fade it, and have several. Images show in the top view only; Ctrl+Shift+J shows or hides them. The tour opens no files: press the button when you have a picture.",
+          "target": {
+            "named": "label \"Project an image\"",
+            "found": true,
+            "bounds": [
+              66,
+              467,
+              122,
+              27
+            ]
+          },
+          "image": "images/sketch/11-image.webp"
+        },
+        {
+          "number": 12,
+          "id": "chip",
+          "title": "Showing the sketch",
+          "text": "The Sketch chip turns the sketch on or off in every mode, as does Ctrl+Shift+K. Hide it to see the map as it is, show it to build along the draft.",
+          "target": {
+            "named": "label \"Show Sketch\"",
+            "found": true,
+            "bounds": [
+              717,
+              84,
+              59,
+              24
+            ]
+          },
+          "image": "images/sketch/12-chip.webp"
+        },
+        {
+          "number": 13,
+          "id": "3d",
+          "title": "The sketch in 3D",
+          "text": "Strokes, symbols and labels lie on the ground in the 3D view too, and climb the hills. You can draw and stamp there as in the top view. Projected images stay in the top view.",
+          "target": {
+            "named": "label \"3D\" TabItem under \"View\"",
+            "found": true,
+            "bounds": [
+              395,
+              80,
+              41,
+              28
+            ]
+          },
+          "image": "images/sketch/13-3d.webp"
+        },
+        {
+          "number": 14,
+          "id": "end",
+          "title": "A draft to build from",
+          "text": "Next: the tour of the Terrain mode, which turns a draft into ground. Help, Tours lists it and starts this one again."
+        }
+      ]
+    },
+    {
+      "id": "terrain",
+      "title": "Shaping the terrain",
+      "summary": "Sculpt the ground in layers you can change later: tools, brushes, height layers and undo.",
+      "order": 20,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Shaping the terrain",
+          "text": "The Terrain mode shapes the ground: where it rises, falls and where units can walk. Twelve steps. Back and Next go through them; Escape ends the tour."
+        },
+        {
+          "number": 2,
+          "id": "tools",
+          "title": "The tools",
+          "text": "Sculpt raises and lowers with a brush. Stamp presses a picture into the ground. Curve draws roads, rivers, ridges and cliffs along a line. Terrain types sets what the game uses for footsteps and effects. Walkability marks by hand where land units may go. Ruler measures distance and slope.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              251,
+              98
+            ]
+          },
+          "image": "images/terrain/02-tools.webp"
+        },
+        {
+          "number": 3,
+          "id": "choose-sculpt",
+          "title": "Try it: choose Sculpt",
+          "text": "Click Sculpt.",
+          "done": "Sculpt is the tool for the general form of the map.",
+          "target": {
+            "named": "label \"Sculpt\" under \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              81,
+              30
+            ]
+          },
+          "image": "images/terrain/03-choose-sculpt.webp",
+          "after": "images/terrain/03-choose-sculpt-after.webp"
+        },
+        {
+          "number": 4,
+          "id": "options",
+          "title": "The brush",
+          "text": "The shape of the brush, what it does (raise, lower, smooth, flatten, set a height, noise, erode, scale), how its edge fades, its radius and its strength. More holds the rest. The keys [ and ] make the brush smaller and larger.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/terrain/04-options.webp"
+        },
+        {
+          "number": 5,
+          "id": "top-view",
+          "title": "Try it: make one stroke",
+          "text": "Press the left mouse in the top view and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map.",
+          "done": "The ground rose where you dragged. Ctrl+Z takes the stroke back.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/terrain/05-top-view.webp",
+          "after": "images/terrain/05-top-view-after.webp"
+        },
+        {
+          "number": 6,
+          "id": "draft-final",
+          "title": "Draft and final",
+          "text": "A map can have two heightmaps. The draft is the rough shape you send to a tool such as World Machine or Gaea. The final is the one the game gets. The chips choose which one the views show and the brushes change.",
+          "target": {
+            "named": "label \"Show the draft heightmap\"",
+            "found": true,
+            "bounds": [
+              66,
+              291,
+              126,
+              24
+            ]
+          },
+          "image": "images/terrain/06-draft-final.webp"
+        },
+        {
+          "number": 7,
+          "id": "add-layer",
+          "title": "Try it: add a height layer",
+          "text": "A height layer is a change on top of the ground below it. Click Sculpt layer to add one. The Sculpt tool then writes into the chosen layer, so you can hide, lock, weaken or remove what you sculpted later.",
+          "done": "The layer is in the list under Height layers. Strokes now go into it.",
+          "target": {
+            "named": "label \"Add a sculpting layer\"",
+            "found": true,
+            "bounds": [
+              66,
+              510,
+              83,
+              27
+            ]
+          },
+          "image": "images/terrain/07-add-layer.webp",
+          "after": "images/terrain/07-add-layer-after.webp"
+        },
+        {
+          "number": 8,
+          "id": "layer-list",
+          "title": "The layers",
+          "text": "The highest layer is first. Each row has a box to show or hide the layer, a small picture, its name and how it combines, and a lock. The chips above the list filter it. Under it, Sculpt layer, Image and Curve add more, and Bake ends the stack.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/terrain/08-layer-list.webp"
+        },
+        {
+          "number": 9,
+          "id": "inspector",
+          "title": "The layer's settings",
+          "text": "The inspector edits the chosen layer: its name, how it combines with the layers below (add, subtract, multiply and more), its strength, a mask that limits where it works, whether it is shown or locked, and whether it counts for the draft, the final or both.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/terrain/09-inspector.webp"
+        },
+        {
+          "number": 10,
+          "id": "curve",
+          "title": "Curves",
+          "text": "The Curve tool makes a layer from a line. Click points on the map to draw it and choose its profile: a road, a river, a ridge, a valley or a cliff. Drag a point to move it. The inspector then holds the width, falloff and height.",
+          "target": {
+            "named": "label \"Curve\" Button under \"Tools\"",
+            "found": true,
+            "bounds": [
+              236,
+              149,
+              81,
+              30
+            ]
+          },
+          "image": "images/terrain/10-curve.webp"
+        },
+        {
+          "number": 11,
+          "id": "history",
+          "title": "Everything can be undone",
+          "text": "History lists every step. Ctrl+Z undoes the last one, Ctrl+Y does it again, and a click on a step goes back to it. Strokes made in this tour are in the list too.",
+          "target": {
+            "named": "label \"History\" TabItem",
+            "found": true,
+            "bounds": [
+              425,
+              582,
+              66,
+              30
+            ]
+          },
+          "image": "images/terrain/11-history.webp"
+        },
+        {
+          "number": 12,
+          "id": "end",
+          "title": "That is the Terrain mode",
+          "text": "Next: the Masks mode, which marks where things may happen, and the Paint mode. Help, Tours lists them."
+        }
+      ]
+    },
+    {
+      "id": "masks",
+      "title": "Masks: where things may happen",
+      "summary": "Make a mask of your own, paint it, build it from layers and rules, and see where it is used.",
+      "order": 30,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Masks",
+          "text": "A mask is a picture of the map that says where something may happen: where rivers go, where forests grow, what to erode. Height layers, strata and prop rules read masks. Ten steps."
+        },
+        {
+          "number": 2,
+          "id": "tools",
+          "title": "The mask brush",
+          "text": "The mask brush paints the chosen mask. It is the one tool of the mode.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              251,
+              30
+            ]
+          },
+          "image": "images/masks/02-tools.webp"
+        },
+        {
+          "number": 3,
+          "id": "list",
+          "title": "The list of masks",
+          "text": "Each mask has a small picture that follows your strokes, and its size. Choose one to paint it and to edit it in the inspector. Under the list: a name field, Add a mask, Rename, Duplicate, Delete, and Show it over the terrain.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/masks/03-list.webp"
+        },
+        {
+          "number": 4,
+          "id": "add-mask",
+          "title": "Try it: add a mask",
+          "text": "Type a name if you like, then click Add a mask. A mask starts empty. Half the map's size makes a coarser mask, which is enough for most uses.",
+          "done": "The new mask is in the list and chosen. Delete removes it again, and so does undo.",
+          "target": {
+            "named": "label \"Add a mask\"",
+            "found": true,
+            "bounds": [
+              66,
+              373,
+              82,
+              27
+            ]
+          },
+          "image": "images/masks/04-add-mask.webp",
+          "after": "images/masks/04-add-mask-after.webp"
+        },
+        {
+          "number": 5,
+          "id": "options",
+          "title": "The brush's settings",
+          "text": "The chosen mask's name, the brush shape and how its edge fades, the radius and the strength, and Erase, which takes the mask away instead of adding it.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/masks/05-options.webp"
+        },
+        {
+          "number": 6,
+          "id": "paint",
+          "title": "Try it: paint a mask",
+          "text": "Press the left mouse in the top view and drag over the map. The painted part shows in colour over the terrain. Each stroke is one step of undo. A mask has to be chosen in the list first; add one if the list is empty.",
+          "done": "The painted part shows in colour. Ctrl+Z takes the stroke back.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/masks/06-paint.webp",
+          "after": "images/masks/06-paint-after.webp"
+        },
+        {
+          "number": 7,
+          "id": "show-it",
+          "title": "Seeing the mask",
+          "text": "Show it over the terrain keeps the chosen mask visible, also when another tool is active. The chip Mask above the views does the same.",
+          "target": {
+            "named": "label \"Show it over the terrain\"",
+            "found": true,
+            "bounds": [
+              66,
+              405,
+              164,
+              24
+            ]
+          },
+          "image": "images/masks/07-show-it.webp"
+        },
+        {
+          "number": 8,
+          "id": "stack",
+          "title": "A mask is a stack of layers",
+          "text": "The inspector lists the layers of the chosen mask. A layer can be painted, an image, another mask, a stratum's mask, or rules. Each has a way of combining with the layers below, a strength and a clip. Up, Down and Remove arrange them. A rules layer builds a mask without painting: it follows the terrain by slope, height, distance from the water or noise, so grass on flat ground needs no brush.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/masks/08-stack.webp"
+        },
+        {
+          "number": 9,
+          "id": "used",
+          "title": "Where masks are used",
+          "text": "A height layer takes a mask as its clip, so it works only there. A stratum's layer can read a mask, and props can be placed by rules from one. Masks are for your tools: the game never gets them."
+        },
+        {
+          "number": 10,
+          "id": "end",
+          "title": "That is the Masks mode",
+          "text": "Next: the Paint mode, where strata give the terrain its textures. Help, Tours lists it."
+        }
+      ]
+    },
+    {
+      "id": "paint",
+      "title": "Painting the terrain's strata",
+      "summary": "The terrain's textures: strata, their masks, the strata brush and the 3D view.",
+      "order": 40,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Painting strata",
+          "text": "The terrain's looks are strata: a texture each, laid over the one below, and a mask that says where it shows. The Paint mode picks the textures and paints the masks. Thirteen steps."
+        },
+        {
+          "number": 2,
+          "id": "tools",
+          "title": "The strata brush",
+          "text": "The Strata tool paints the mask of the chosen stratum. Where the mask is full, that stratum's texture covers the ones below.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              251,
+              30
+            ]
+          },
+          "image": "images/paint/02-tools.webp"
+        },
+        {
+          "number": 3,
+          "id": "layers",
+          "title": "The layers",
+          "text": "From the bottom: the lower layer covers the whole map, then strata 1 to 8, then the upper layer, which lies over everything. Each row shows the texture and the stratum's mask. Unused strata are empty.",
+          "target": {
+            "named": "label \"Layer textures\"",
+            "found": true,
+            "bounds": [
+              66,
+              223,
+              251,
+              514
+            ]
+          },
+          "image": "images/paint/03-layers.webp"
+        },
+        {
+          "number": 4,
+          "id": "choose-stratum",
+          "title": "Try it: choose a stratum",
+          "text": "Click Stratum 2 in the list. The strata brush paints the stratum you chose.",
+          "done": "The map shows Stratum 2's mask in colour, and the inspector shows its textures.",
+          "target": {
+            "named": "label \"Layer textures\"",
+            "found": true,
+            "bounds": [
+              66,
+              223,
+              251,
+              514
+            ]
+          },
+          "image": "images/paint/04-choose-stratum.webp",
+          "after": "images/paint/04-choose-stratum-after.webp"
+        },
+        {
+          "number": 5,
+          "id": "inspector",
+          "title": "The stratum's textures",
+          "text": "The albedo is the texture's colour and the normal map its relief, each with a scale: a smaller scale repeats the texture more often. Choose... picks a texture from the game's files and your own.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/paint/05-inspector.webp"
+        },
+        {
+          "number": 6,
+          "id": "options",
+          "title": "The brush's settings",
+          "text": "Shape, edge and radius, and under More the strength and Erase. Slope and Height limit the brush to ground whose slope or height is within the range you set, such as rock only on steep ground.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/paint/06-options.webp"
+        },
+        {
+          "number": 7,
+          "id": "paint",
+          "title": "Try it: paint one stroke",
+          "text": "Press the left mouse in the top view and drag over the map to paint the stratum's mask; with Erase on, the brush removes it. Each stroke is one step of undo; with symmetry on it paints every part of the map.",
+          "done": "The stratum's mask is painted where you dragged. Ctrl+Z takes the stroke back.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/paint/07-paint.webp",
+          "after": "images/paint/07-paint-after.webp"
+        },
+        {
+          "number": 8,
+          "id": "mask-layers",
+          "title": "A stratum's mask is a stack",
+          "text": "Under Mask layers: the painted layer, and more layers that are an image, another mask, another stratum or rules, each combined with the ones below. Use them to build a mask from the terrain instead of painting all of it.",
+          "target": {
+            "named": "label \"Stratum layers\"",
+            "found": true,
+            "bounds": [
+              995,
+              346,
+              271,
+              45
+            ]
+          },
+          "image": "images/paint/08-mask-layers.webp"
+        },
+        {
+          "number": 9,
+          "id": "rules",
+          "title": "Rules from the terrain",
+          "text": "A rules layer makes the mask from slope, height, distance from the water or noise. Grass on flat ground and rock on slopes need no painting, and the mask follows the terrain when you sculpt it.",
+          "target": {
+            "named": "label \"Add a rules stratum layer\"",
+            "found": true,
+            "bounds": [
+              995,
+              525,
+              47,
+              27
+            ]
+          },
+          "image": "images/paint/09-rules.webp"
+        },
+        {
+          "number": 10,
+          "id": "manage",
+          "title": "Adding and ordering strata",
+          "text": "Add a stratum takes the next free one, Remove takes the chosen one out, and Up and Down change its order: the higher a stratum, the later it is laid over the others. The map's version sets how many there are.",
+          "target": {
+            "named": "label \"Add a stratum\"",
+            "found": true,
+            "bounds": [
+              66,
+              744,
+              97,
+              27
+            ]
+          },
+          "image": "images/paint/10-manage.webp"
+        },
+        {
+          "number": 11,
+          "id": "shader",
+          "title": "The terrain shader",
+          "text": "The shader decides how the game lays the strata together. Forged Alliance's has eight strata. The notes under it say what the game reads from each texture.",
+          "target": {
+            "named": "label \"Terrain shader\"",
+            "found": true,
+            "bounds": [
+              116,
+              747,
+              109,
+              24
+            ]
+          },
+          "image": "images/paint/11-shader.webp"
+        },
+        {
+          "number": 12,
+          "id": "see-3d",
+          "title": "Try it: see it in 3D",
+          "text": "Click 3D to see the textures as the game draws them.",
+          "done": "The terrain is drawn with its strata. Both views share the camera.",
+          "target": {
+            "named": "label \"3D\" TabItem under \"View\"",
+            "found": true,
+            "bounds": [
+              395,
+              80,
+              41,
+              28
+            ]
+          },
+          "image": "images/paint/12-see-3d.webp",
+          "after": "images/paint/12-see-3d-after.webp"
+        },
+        {
+          "number": 13,
+          "id": "end",
+          "title": "That is the Paint mode",
+          "text": "Help, Tours lists the tour of the window and the others."
+        }
+      ]
+    },
+    {
+      "id": "markers",
+      "title": "A tour of the Markers mode",
+      "summary": "Spawns, mass and hydrocarbon deposits, path nodes and chains, with one deposit placed by you.",
+      "order": 50,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Markers",
+          "text": "Markers are the points the game reads from the map: where each army starts, where the mass and hydrocarbon deposits lie, the path nodes the AI follows, and places a script can point at. About ten steps. You will place one deposit yourself; Undo takes it away again."
+        },
+        {
+          "number": 2,
+          "id": "panel",
+          "title": "The panel lists the markers",
+          "text": "One row for each kind of marker with how many the map has, then the path nodes by layer, then the chains. The check box at the left of a row shows or hides that kind in the views. Choose a row to see it in the inspector.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/markers/02-panel.webp"
+        },
+        {
+          "number": 3,
+          "id": "tools",
+          "title": "The tools",
+          "text": "Select picks markers. Spawn, Mass, Hydrocarbon, AI marker and Blank place one marker per click. Path node lays a path, Chain joins markers in an order, Weather and Clouds place weather, and Preset places a saved group of markers.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              251,
+              132
+            ]
+          },
+          "image": "images/markers/03-tools.webp"
+        },
+        {
+          "number": 4,
+          "id": "choose-mass",
+          "title": "Try it: choose the Mass tool",
+          "text": "Click Mass in the list of tools.",
+          "done": "The Mass tool is active. Its settings are in the row above the views.",
+          "target": {
+            "named": "label \"Mass\" Button",
+            "found": true,
+            "bounds": [
+              236,
+              149,
+              81,
+              30
+            ]
+          },
+          "image": "images/markers/04-choose-mass.webp",
+          "after": "images/markers/04-choose-mass-after.webp"
+        },
+        {
+          "number": 5,
+          "id": "place-mass",
+          "title": "Try it: place a mass deposit",
+          "text": "Click on the map. The deposit goes to the middle of the nearest ogrid, as the game puts it, and gets the next free name.",
+          "done": "That is one deposit, one step of Undo. It is selected, so the inspector shows it.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/markers/05-place-mass.webp",
+          "after": "images/markers/05-place-mass-after.webp"
+        },
+        {
+          "number": 6,
+          "id": "inspector",
+          "title": "The inspector edits the marker",
+          "text": "What you selected last: the deposit's name and resource, and for other kinds the army of a spawn, the type of an AI marker or the layer of a path node. A field changes every selected marker at once.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/markers/06-inspector.webp"
+        },
+        {
+          "number": 7,
+          "id": "options",
+          "title": "The tool's settings",
+          "text": "Spawns, AI markers and path nodes can snap to a grid, and a path node has its layer: land, amphibious, water or air. Deposits always snap to an ogrid's centre. A deposit on steep ground gets a warning here and in the status bar.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/markers/07-options.webp"
+        },
+        {
+          "number": 8,
+          "id": "path",
+          "title": "Paths of nodes",
+          "text": "With the Path node tool a click on empty ground places a node linked to the selected one, so clicks lay a path. Drag from one node to another to link them. Nodes of different layers never link. The Procedural mode can also generate a whole network for you.",
+          "target": {
+            "named": "label \"Path node\" Button",
+            "found": true,
+            "bounds": [
+              151,
+              183,
+              81,
+              30
+            ]
+          },
+          "image": "images/markers/08-path.webp"
+        },
+        {
+          "number": 9,
+          "id": "chains",
+          "title": "Chains and the adaptive map",
+          "text": "A chain is a list of markers in an order, for scripts. Select markers and use Chain from the selection, or click them one by one with the Chain tool. The adaptive map entry makes deposits wait for the army that starts nearest.",
+          "target": {
+            "named": "label \"Chains and options\"",
+            "found": true,
+            "bounds": [
+              66,
+              689,
+              251,
+              58
+            ]
+          },
+          "image": "images/markers/09-chains.webp"
+        },
+        {
+          "number": 10,
+          "id": "kind",
+          "title": "A kind in the inspector",
+          "text": "Choosing the row Mass in the list shows how many there are, with Select them and Clear them. Clearing is one step of Undo.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/markers/10-kind.webp"
+        },
+        {
+          "number": 11,
+          "id": "chips",
+          "title": "Showing markers in the views",
+          "text": "The chips above the views switch the Markers overlay on and off (Path nodes too, behind More when the window is narrow). Choosing a marker tool shows its kind on its own.",
+          "target": {
+            "named": "part \"views\"",
+            "found": true,
+            "bounds": [
+              337,
+              76,
+              638,
+              40
+            ]
+          },
+          "image": "images/markers/11-chips.webp"
+        },
+        {
+          "number": 12,
+          "id": "end",
+          "title": "That is the Markers mode",
+          "text": "Spawns also make the armies, so the Units mode places each army's first base. Help, Tours starts this tour again and lists the others."
+        }
+      ]
+    },
+    {
+      "id": "units",
+      "title": "A tour of the Units mode",
+      "summary": "Armies, groups and units: the palette, placing one unit, placing many, and presets.",
+      "order": 60,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Units",
+          "text": "The Units mode puts units on the map: each army's starting base, civilians, and wrecks. About ten steps. You will place one unit yourself; Undo takes it away again."
+        },
+        {
+          "number": 2,
+          "id": "panel",
+          "title": "The mode's panel",
+          "text": "The tools, a palette of ten slots to place from, the armies with their groups, and below them presets: ready-made settlements and wreck fields.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/units/02-panel.webp"
+        },
+        {
+          "number": 3,
+          "id": "tools",
+          "title": "Two tools",
+          "text": "Place puts a unit where you click. Select picks units to move, turn, group or delete. Double click a unit to select its whole group.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              133,
+              251,
+              30
+            ]
+          },
+          "image": "images/units/03-tools.webp"
+        },
+        {
+          "number": 4,
+          "id": "palette",
+          "title": "The palette",
+          "text": "Ten slots of units you place often. Keys 1 to 9 and 0 pick a slot while the mouse is over a view; Tab changes the palette. A unit tile dragged from the Assets tab onto a slot keeps it there.",
+          "target": {
+            "named": "label \"Palette slots\"",
+            "found": true,
+            "bounds": [
+              66,
+              248,
+              251,
+              120
+            ]
+          },
+          "image": "images/units/04-palette.webp"
+        },
+        {
+          "number": 5,
+          "id": "tree",
+          "title": "Armies and groups",
+          "text": "Every army has groups. INITIAL holds the units the game creates at the start, WRECKAGE the wrecks. The group you choose here is where the Place tool puts units. Choose an army or a group to edit it in the inspector.",
+          "target": {
+            "named": "label \"Armies and their unit groups\"",
+            "found": true,
+            "bounds": [
+              66,
+              483,
+              251,
+              72
+            ]
+          },
+          "image": "images/units/05-tree.webp"
+        },
+        {
+          "number": 6,
+          "id": "options",
+          "title": "The Place tool's settings",
+          "text": "How to place, the unit, its army and its group come first. Behind More are the facing, the spacing and As wrecks. Q and E turn what you place.",
+          "target": {
+            "named": "part \"options\"",
+            "found": true,
+            "bounds": [
+              337,
+              36,
+              638,
+              40
+            ]
+          },
+          "image": "images/units/06-options.webp"
+        },
+        {
+          "number": 7,
+          "id": "choose-unit",
+          "title": "Try it: choose a unit",
+          "text": "Click slot 3, the Mass Extractor. The Place tool then places that unit.",
+          "done": "The Place tool has the Mass Extractor. Choose a unit is the other way: it opens the picker with every unit of the workspace.",
+          "target": {
+            "named": "label \"Palette slots\"",
+            "found": true,
+            "bounds": [
+              66,
+              248,
+              251,
+              120
+            ]
+          },
+          "image": "images/units/07-choose-unit.webp",
+          "after": "images/units/07-choose-unit-after.webp"
+        },
+        {
+          "number": 8,
+          "id": "place-unit",
+          "title": "Try it: place the unit",
+          "text": "Click on the map. A structure snaps to the build grid.",
+          "done": "That is one unit, one step of Undo. Its army is the one whose spawn lies nearest the middle of the view.",
+          "target": {
+            "named": "label \"Top view\"",
+            "found": true,
+            "bounds": [
+              337,
+              116,
+              638,
+              460
+            ]
+          },
+          "image": "images/units/08-place-unit.webp",
+          "after": "images/units/08-place-unit-after.webp"
+        },
+        {
+          "number": 9,
+          "id": "how",
+          "title": "Many at once",
+          "text": "Single places one unit. Line and Rectangle are dragged out, Ring surrounds the selected structures, and Scatter paints units in a circle. The footprints show under the mouse before you click, in red where they would overlap.",
+          "target": {
+            "named": "label \"How to place\"",
+            "found": true,
+            "bounds": [
+              397,
+              44,
+              80,
+              24
+            ]
+          },
+          "image": "images/units/09-how.webp"
+        },
+        {
+          "number": 10,
+          "id": "inspector",
+          "title": "The inspector edits the units",
+          "text": "Edits what you chose last. A unit picked with the Select tool shows its army, group and blueprint, Replace, the faction chips, Group, Ungroup and the Wrecks check box. An army or group chosen in the tree shows its name, its units and Add a group. The unit the Place tool has shows on its tile.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/units/10-inspector.webp"
+        },
+        {
+          "number": 11,
+          "id": "presets",
+          "title": "Unit presets",
+          "text": "A preset is a saved group of units. The editor ships villages, farms and wreck fields; Save keeps your own. Click a preset to choose it, then click on the map to place it as a new group.",
+          "target": {
+            "named": "label \"Filter of the unit presets\"",
+            "found": true,
+            "bounds": [
+              66,
+              666,
+              251,
+              52
+            ]
+          },
+          "image": "images/units/11-presets.webp"
+        },
+        {
+          "number": 12,
+          "id": "end",
+          "title": "That is the Units mode",
+          "text": "The Map mode holds the armies' teams and factions. Help, Tours starts this tour again and lists the others."
+        }
+      ]
+    },
+    {
+      "id": "procedural",
+      "title": "A tour of the Procedural mode and the export",
+      "summary": "Results the editor works out from the map, the steps of the export, and where to find Export and Upload to the vault.",
+      "order": 70,
+      "steps": [
+        {
+          "number": 1,
+          "id": "welcome",
+          "title": "Procedural",
+          "text": "Some of what a map needs is worked out from the rest of it: where units can walk, the paths of the AI, the normal map, the preview. This mode lists those results. It ends with the export, which writes the map for the game. About twelve steps; nothing is exported."
+        },
+        {
+          "number": 2,
+          "id": "panel",
+          "title": "The results",
+          "text": "One row for each result, under Movement, Terrain surface, From rules and Pictures. Each says how it stands: Missing, Out of date or Current. Generate makes it. Export is the last row.",
+          "target": {
+            "named": "part \"panel\"",
+            "found": true,
+            "bounds": [
+              52,
+              36,
+              280,
+              735
+            ]
+          },
+          "image": "images/procedural/02-panel.webp"
+        },
+        {
+          "number": 3,
+          "id": "tools",
+          "title": "Two tools",
+          "text": "Connected regions chooses a region of ground that units can travel between by clicking it. Path nodes edits the generated path network by hand: click to add a node, drag to move or link.",
+          "target": {
+            "named": "label \"Tools\"",
+            "found": true,
+            "bounds": [
+              66,
+              149,
+              251,
+              34
+            ]
+          },
+          "image": "images/procedural/03-tools.webp"
+        },
+        {
+          "number": 4,
+          "id": "generate",
+          "title": "Try it: generate the walkability",
+          "text": "Press Generate beside Walkability. It marks where land, air and water units can go, as the game works it out.",
+          "done": "The walkability is Current. Generating changes nothing in the map's own data, so there is no step of Undo.",
+          "target": {
+            "named": "label \"Generate the walkability\"",
+            "found": true,
+            "bounds": [
+              248,
+              229,
+              69,
+              27
+            ]
+          },
+          "image": "images/procedural/04-generate.webp",
+          "after": "images/procedural/04-generate-after.webp"
+        },
+        {
+          "number": 5,
+          "id": "inspector",
+          "title": "The inspector",
+          "text": "For the chosen result: how it stands, Generate, whether the views preview it, whether it regenerates on its own, what it is made from, and what the export does with it.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/procedural/05-inspector.webp"
+        },
+        {
+          "number": 6,
+          "id": "preview",
+          "title": "Try it: see the result",
+          "text": "Tick Preview in the views, or the Walkability chip above the views.",
+          "done": "The top view now tints where units cannot go.",
+          "target": {
+            "named": "label \"Preview the walkability in the views\"",
+            "found": true,
+            "bounds": [
+              995,
+              389,
+              147,
+              24
+            ]
+          },
+          "image": "images/procedural/06-preview.webp",
+          "after": "images/procedural/06-preview-after.webp"
+        },
+        {
+          "number": 7,
+          "id": "auto",
+          "title": "Regenerating on its own",
+          "text": "While a result is shown in the views, the editor makes it again after you change what it is made from, a second later. This switch turns that off for the whole editor; each result has its own choice in the inspector.",
+          "target": {
+            "named": "label \"Regenerate results on their own\"",
+            "found": true,
+            "bounds": [
+              1181,
+              776,
+              87,
+              20
+            ]
+          },
+          "image": "images/procedural/07-auto.webp"
+        },
+        {
+          "number": 8,
+          "id": "export",
+          "title": "The export",
+          "text": "This is the Export row. The inspector lists the steps the export takes, in order: the normal map when it is out of date, the preview picture, the decals and path networks you chose to write, the walkability marks, the reclaim totals, the textures as DDS files and last the map folder. Each shows waiting, running, done or failed. Its Export button runs them.",
+          "target": {
+            "named": "part \"inspector\"",
+            "found": true,
+            "bounds": [
+              980,
+              36,
+              300,
+              735
+            ]
+          },
+          "image": "images/procedural/08-export.webp"
+        },
+        {
+          "number": 9,
+          "id": "export-menu",
+          "title": "File, Export to the vault",
+          "text": "File, Export to the vault (Ctrl+E) runs those steps and writes the map folder for the game into the workspace's vault folder. It works on a copy: your project and its generated results stay as they are. This tour does not export; choose it yourself when you are ready.",
+          "target": {
+            "named": "label \"File\" MenuItem",
+            "found": true,
+            "bounds": [
+              81,
+              0,
+              38,
+              36
+            ]
+          },
+          "image": "images/procedural/09-export-menu.webp"
+        },
+        {
+          "number": 10,
+          "id": "upload",
+          "title": "File, Upload to the vault",
+          "text": "File, Upload to the vault sends the map to the FAForever vault. It runs the checks, exports the next version, asks you to confirm, signs you in through your browser and uploads. The Sandbox cannot be uploaded: a map needs its own name and description first.",
+          "target": {
+            "named": "label \"File\" MenuItem",
+            "found": true,
+            "bounds": [
+              81,
+              0,
+              38,
+              36
+            ]
+          },
+          "image": "images/procedural/10-upload.webp"
+        },
+        {
+          "number": 11,
+          "id": "end",
+          "title": "That is the Procedural mode",
+          "text": "Help, Tours starts this tour again and lists the others."
+        }
+      ]
+    }
+  ]
+}
