@@ -18,6 +18,16 @@ namespace FAForever.MapEditor.Project
         public static string Version { get; } = Split().Version;
 
         /// <summary>
+        /// The build's stage, the version's suffix (<c>beta</c> of <c>1.0.0-beta</c>), or null for a release.
+        /// </summary>
+        public static string? Stage { get; } = Version.IndexOf('-') is int dash and >= 0 ? Version[(dash + 1)..] : null;
+
+        /// <summary>
+        /// The editor's name for a window's title, with its stage: <c>FAF map editor (beta)</c>.
+        /// </summary>
+        public static string WindowName { get; } = Stage is null ? "FAF map editor" : $"FAF map editor ({Stage})";
+
+        /// <summary>
         /// The full commit hash, or null when the build did not know it.
         /// </summary>
         public static string? Commit { get; } = Split().Commit;

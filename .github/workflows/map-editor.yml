@@ -81,16 +81,19 @@ jobs:
         if-no-files-found: ignore
         retention-days: 14
 
-    # the executable carries the commit in its name too (faf-map-editor-<commit>.exe), so builds kept
-    # side by side stay apart once downloaded; the editor never reads its own file name
+    # the executable carries the stage and the commit in its name too (faf-map-editor-beta-<commit>.exe),
+    # so builds kept side by side stay apart once downloaded; the editor never reads its own file name.
+    # The stage is the version's suffix (Directory.Build.props), left out for a release.
     - name: Name the artifact and the executable
       id: name
       shell: pwsh
       run: |
         $short = "${{ github.sha }}".Substring(0, 7)
-        $exe = "faf-map-editor-$short" + [System.IO.Path]::GetExtension("${{ matrix.exe }}")
+        $stage = (dotnet msbuild src/FAForever.MapEditor.App -getProperty:VersionSuffix).Trim()
+        $name = if ($stage) { "faf-map-editor-$stage" } else { "faf-map-editor" }
+        $exe = "$name-$short" + [System.IO.Path]::GetExtension("${{ matrix.exe }}")
         Move-Item "publish/${{ matrix.exe }}" "publish/$exe"
-        "artifact=faf-map-editor-${{ matrix.rid }}-$short" >> $env:GITHUB_OUTPUT
+        "artifact=$name-${{ matrix.rid }}-$short" >> $env:GITHUB_OUTPUT
         "exe=$exe" >> $env:GITHUB_OUTPUT
 
     # an artifact is a zip that drops the executable bit: Linux and macOS get a tar that keeps it

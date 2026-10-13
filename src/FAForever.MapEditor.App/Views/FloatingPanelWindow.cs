@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project;
 
 namespace FAForever.MapEditor.App.Views;
 
@@ -22,7 +23,7 @@ public sealed class FloatingPanelWindow : Window
     {
         Panel = panel;
         _layout = layout;
-        Title = $"{LayoutViewModel.TitleOf(panel)} - FAF map editor";
+        Title = $"{LayoutViewModel.TitleOf(panel)} - {EditorBuild.WindowName}";
         DataContext = dataContext;
         ShowInTaskbar = false;
         FloatingBounds bounds = layout.FloatingBoundsOf(panel);

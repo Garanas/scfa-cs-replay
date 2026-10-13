@@ -470,8 +470,8 @@ public sealed partial class MainViewModel : ObservableObject
     public partial bool IsBusy { get; set; }
 
     public string Title => Map is null
-        ? "FAF map editor"
-        : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name}{(Map.Document.IsPublishable ? "" : " (sandbox, not for the vault)")} - {Map.ProjectFolder ?? "not saved as a project"} - FAF map editor";
+        ? EditorBuild.WindowName
+        : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name}{(Map.Document.IsPublishable ? "" : " (sandbox, not for the vault)")} - {Map.ProjectFolder ?? "not saved as a project"} - {EditorBuild.WindowName}";
 
     /// <summary>
     /// The open map's name, for the menu bar; empty without a map.

@@ -358,8 +358,11 @@ exception's message. Hidden folders (`.git`) are no files of the project: `Proje
   with `-- Made with the FAF Map Editor <version> (<commit>) on <date>` and `ScenarioInfo` holds
   `map_editor = { name, version, commit, project_format, exported }`. Without one the bytes are the same
   every time (the tests' comparisons). The version and commit come from the build (`EditorBuild`: the
-  informational version, `1.0.0+<sha>`, which the SDK makes from git; a build without `.git` knows no
-  commit and writes `commit unknown`). Checked 2026-10-10: the game (`lua/ui/maputil.lua`,
+  informational version, `1.0.0-beta+<sha>`, which the SDK makes from git; a build without `.git` knows no
+  commit and writes `commit unknown`). The map editor is a beta: `VersionSuffix` in the root
+  `Directory.Build.props` (the map editor's projects only) is `EditorBuild.Stage`, which the window's
+  title (`EditorBuild.WindowName`, `FAF map editor (beta)`) and the name of CI's executable carry too;
+  removing the suffix ends the beta everywhere. Checked 2026-10-10: the game (`lua/ui/maputil.lua`,
   `LoadScenarioInfoFile` runs the file and reads named keys; nothing walks ScenarioInfo's keys; the lobby
   sends the file's path, not the table), the FAF client (`MapService.readMap`, luaj, named keys) and the
   vault's upload check (faf-java-api `MapService.validateScenarioLua`, luaj, named keys; `updateLuaFiles`
