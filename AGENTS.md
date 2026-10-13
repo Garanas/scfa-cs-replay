@@ -88,7 +88,8 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   run by hand): one standalone executable each for Windows (`win-x64`), Linux (`linux-x64`) and
   macOS (`osx-arm64`), self-contained and single file (the runtime and native libraries inside,
   its version carrying the commit), kept 90 days as the artifacts `faf-map-editor-<rid>-<commit>`
-  (the Windows exe as it is, the others in a tar that keeps the executable bit). The Linux build is
+  (the executable is named `faf-map-editor-<commit>`, `.exe` on Windows; the Windows exe as it is,
+  the others in a tar `faf-map-editor-<rid>-<commit>.tar.gz` that keeps the executable bit). The Linux build is
   started on a virtual display first (`tools/editor-smoke.sh`: the setup page, automation, a
   screenshot, closing) and draws a map of the tests in the 3D view on Mesa's software OpenGL
   (`tools/editor-smoke-3d.sh`; artifact `faf-map-editor-smoke-linux`); the macOS build is not started.

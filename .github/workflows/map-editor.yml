@@ -81,23 +81,28 @@ jobs:
         if-no-files-found: ignore
         retention-days: 14
 
-    - name: Name the artifact
+    # the executable carries the commit in its name too (faf-map-editor-<commit>.exe), so builds kept
+    # side by side stay apart once downloaded; the editor never reads its own file name
+    - name: Name the artifact and the executable
       id: name
       shell: pwsh
       run: |
         $short = "${{ github.sha }}".Substring(0, 7)
+        $exe = "faf-map-editor-$short" + [System.IO.Path]::GetExtension("${{ matrix.exe }}")
+        Move-Item "publish/${{ matrix.exe }}" "publish/$exe"
         "artifact=faf-map-editor-${{ matrix.rid }}-$short" >> $env:GITHUB_OUTPUT
+        "exe=$exe" >> $env:GITHUB_OUTPUT
 
     # an artifact is a zip that drops the executable bit: Linux and macOS get a tar that keeps it
     - name: Pack (Linux and macOS)
       if: runner.os != 'Windows'
-      run: tar -czf "publish/faf-map-editor-${{ matrix.rid }}.tar.gz" -C publish "${{ matrix.exe }}"
+      run: tar -czf "publish/${{ steps.name.outputs.artifact }}.tar.gz" -C publish "${{ steps.name.outputs.exe }}"
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.name.outputs.artifact }}
         # the executable alone (on Windows) or its tar: symbol files some native packages bring along are left out
-        path: ${{ runner.os == 'Windows' && format('publish/{0}', matrix.exe) || format('publish/faf-map-editor-{0}.tar.gz', matrix.rid) }}
+        path: ${{ runner.os == 'Windows' && format('publish/{0}', steps.name.outputs.exe) || format('publish/{0}.tar.gz', steps.name.outputs.artifact) }}
         if-no-files-found: error
         retention-days: 90
