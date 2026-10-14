@@ -9,6 +9,8 @@
     <EmbeddedResource Include="Workspaces\ExampleUnitPresets\units\*.json" LogicalName="ExampleUnitPresets/%(Filename)%(Extension)" />
     <!-- the example unit palettes every workspace starts with (ExampleUnitPalettes, user story U-8) -->
     <EmbeddedResource Include="Workspaces\ExampleUnitPalettes\palettes\*.json" LogicalName="ExampleUnitPalettes/%(Filename)%(Extension)" />
+    <!-- the style of the preview page the export writes (PreviewPage) -->
+    <EmbeddedResource Include="Generation\PreviewPage.css" LogicalName="PreviewPage.css" />
   </ItemGroup>
 
   <ItemGroup>

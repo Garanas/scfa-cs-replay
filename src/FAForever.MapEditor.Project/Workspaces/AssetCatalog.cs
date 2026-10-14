@@ -200,6 +200,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         public double? EnergyCost { get; init; }
 
         /// <summary>
+        /// The share of a unit's mass cost its wreck holds (<c>Wreckage.MassMult</c>, 0.9 for most
+        /// units); null for the other kinds and for a unit that leaves no wreck.
+        /// </summary>
+        public double? WreckageMass { get; init; }
+
+        /// <summary>
         /// The mass it stands for: a unit's cost, a prop's reclaim; 0 for the other kinds.
         /// </summary>
         public double Mass => Kind == AssetKind.Unit ? MassCost ?? 0 : ReclaimMass;
@@ -235,6 +241,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         public static AssetCatalog Empty { get; } = new AssetCatalog([]);
+
+        /// <summary>
+        /// A catalogue of the given entries (tests).
+        /// </summary>
+        internal static AssetCatalog Of(IReadOnlyList<AssetEntry> entries) => new AssetCatalog(entries);
 
         /// <summary>
         /// The catalogue this one was made from by reading one asset again (<see cref="Reload"/>),
@@ -571,6 +582,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Categories = [.. unit.Categories.Select(category => category.ToUpperInvariant())],
                     MassCost = unit.MassCost,
                     EnergyCost = unit.EnergyCost,
+                    WreckageMass = unit.WreckageMass,
                 };
             }
         }

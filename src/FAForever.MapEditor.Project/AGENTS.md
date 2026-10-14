@@ -381,6 +381,48 @@ exception's message. Hidden folders (`.git`) are no files of the project: `Proje
 A `-0` in a marker's orientation becomes `0` on import: they turn a marker the same, and the
 project leaves an orientation of zero out.
 
+## The preview page
+
+User story M-11 (`Generation/PreviewPageFiles`, `PreviewPage`, `StartSurroundings`): a page about the
+map, generated into a folder the map maker chooses (the editor's Generate, Preview page; `faf-map
+preview <project or map folder> <folder> [--workspace]`). It is no part of the export: the map's
+files never hold it, and the map does not change.
+
+- **The files** (`PreviewPageFiles.Render` by their path in the folder, `Write` into it, each file
+  written beside its place and then moved there): `index.html` and in `assets/` seven pictures at 1024,
+  512 and 256 pixels square (21 PNGs): `preview_<size>` (`TexturedPreview` at 1024, made smaller from
+  it; the workspace's textures when there is one), `cliffs_<size>` (red where an ogrid is too steep for
+  land units, `NavGenerator.IsFlat`, also under water), `water_<size>` (blue below the water's surface,
+  the heights interpolated) and `zones_<layer>_<size>` for `land`, `naval`, `hover` and `amphibious`
+  (each region of the navigational mesh, `Walkability.Generate`, in `RegionColour(label)`, whose hues
+  skip the cliffs' red and the water's blue); everything else transparent. A pixel over several ogrids
+  samples them: its alpha is the share covered, a zone's colour the region most of them belong to. A
+  map that is not square fills the picture from the top left, as the preview. `assets/icons/<unit>.png`
+  holds the build icons of the units whose wrecks lie on the map, only those (`AssetEntry.Icon`).
+- **The page** (`PreviewPage`, its style the embedded `Generation/PreviewPage.css`): one HTML file with
+  no scripts. The map with switches (water, cliffs, dimmed ground, one pathing layer, starts, no-rush
+  circles, mass in green, hydrocarbons in yellow, wrecks as grey blocks in three sizes); the switches are
+  hidden checkboxes and radio buttons before everything they change (`#id:checked ~ .hero ...`), the
+  row of a start enlarges its marker with `:has()`, a wreck's card (icon, name, value) opens on `:hover`.
+  Beside it the name, description, four facts (size, mass, reclaim, no-rush radius) and the terrain
+  (under water, too steep, an SVG of the heights with the water line). Below: the starts (mass within
+  30 / 60 ogrids, hydrocarbons within 60, reclaim within 30 / 60 and all reclaim closest to it, land
+  region, the twin by a symmetry of two parts), the wrecks by unit (value, count, closest starts), the
+  pathing layers with their regions, the pictures, and a footer with the `EditorStamp`. The system's
+  fonts (Bahnschrift on Windows), so the page works from its folder without a network. Map sizes are
+  named as the game names them (51.2 ogrids a km: 1024 is 20 km); region areas are the AI's
+  (`NavRegion.Area`, 20 m an ogrid).
+- **Reclaim** (`StartSurroundings`, `ReclaimValues`): a prop gives its blueprint's `ReclaimMassMax`; a
+  wreck its unit's mass cost times `Wreckage.MassMult` (`AssetEntry.WreckageMass`, 0.9 for most units;
+  `CreateWreckageProp` with no overkill, as `ScenarioUtils.CreateWreckageUnit` makes it). Each prop and
+  wreck counts for the start nearest to it only, so the starts' shares add up to the map's reclaim. A
+  wreck's value is a band (`WreckValue`): low under 100, medium to 500, high from 500. Without a
+  catalogue (no workspace, or one without assets) the page leaves out the reclaim and the values and
+  gives the scenario's reclaim, if any. On Seton's Clutch props and wrecks give 37.8k and 17.7k,
+  together the 55.6k its scenario states.
+- Measured on Seton's Clutch (20 km) with textures: 2.3 s, the catalogue 0.35 s besides. Tests:
+  `PreviewPageFilesTest`, `PreviewPageTest`.
+
 ## What the game ignores and what it derives
 
 How the engine treats what the export writes, from Draiget/faf-re at commit 2ba55b2 (the Map

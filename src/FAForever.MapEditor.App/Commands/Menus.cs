@@ -74,7 +74,7 @@ public static class Menus
         new MenuLayout("Generate",
         [
             "generate.walkability", "generate.navigation", "markers.connectPaths", "generate.props", "generate.masks", Separator,
-            "generate.normalMap", "decals.generateNormal", "decals.generateShadow", "file.renderPreview", "generate.skyCube", Separator,
+            "generate.normalMap", "decals.generateNormal", "decals.generateShadow", "file.renderPreview", "generate.previewPage", "generate.skyCube", Separator,
             "generate.stale", "generate.all", Separator,
             "generate.automatic", "generate.useAsWorkspaceDefault",
         ]),

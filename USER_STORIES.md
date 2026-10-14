@@ -230,6 +230,11 @@ reads again when it changes; and nothing that generates runs by itself.
       dome, the pictures a Lua file of the map names and every picture in a folder of the map; DDS
       files and the game's textures are left as they are; a picture converted before comes from a
       cache by its hash.
+- [x] **M-11 Preview page.** A page about the map, generated into a folder the map maker chooses:
+      the map with switchable layers (water, cliffs, pathing regions, starts, deposits, wrecks), its
+      facts and terrain, what lies around each start (deposits, reclaim), its wrecks and pathing
+      layers, and the pictures at three sizes. One HTML file without scripts and its pictures. Today:
+      Generate, Preview page (`generate.previewPage {folder}`) and `faf-map preview`.
 
 ## T: Terrain
 

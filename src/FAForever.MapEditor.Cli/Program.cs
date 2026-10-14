@@ -31,6 +31,19 @@ namespace FAForever.MapEditor.Cli
         public bool Watch { get; set; }
     }
 
+    [Verb("preview", HelpText = "Generate a map's preview page: index.html and its pictures in assets, no scripts.")]
+    public sealed class PreviewOptions
+    {
+        [Value(0, MetaName = "map", Required = true, HelpText = "A project folder, or a map folder of the game.")]
+        public string MapFolder { get; set; } = "";
+
+        [Value(1, MetaName = "output", Required = true, HelpText = "The folder to write the page into; made when missing.")]
+        public string OutputFolder { get; set; } = "";
+
+        [Option("workspace", HelpText = "The workspace whose assets hold the game's textures and blueprints; without it the map's own textures only, the others grey, and no reclaim.")]
+        public string? Workspace { get; set; }
+    }
+
     [Verb("editor", HelpText = "Send a command to a running editor started with --automation, e.g. 'editor stroke points=[[10,10],[50,50]]'.")]
     public sealed class EditorOptions
     {
@@ -142,9 +155,10 @@ namespace FAForever.MapEditor.Cli
     public static class Program
     {
         public static int Main(string[] args) =>
-            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions, DevOptions, GuideOptions>(args).MapResult(
+            Parser.Default.ParseArguments<UnpackOptions, PackOptions, PreviewOptions, EditorOptions, WorkspaceOptions, DevOptions, GuideOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
+                (PreviewOptions o) => Run(() => Preview(o)),
                 (EditorOptions o) => o.Command switch
                 {
                     "start" => EditorProcess.Start(o),
@@ -199,6 +213,22 @@ namespace FAForever.MapEditor.Cli
             }
             EditedMap.ImportMap(o.MapFolder).SaveAs(o.ProjectFolder);
             Console.WriteLine($"Unpacked {o.MapFolder} into {o.ProjectFolder}");
+        }
+
+        /// <summary>
+        /// The preview page of a project or of a map folder of the game (user story M-11).
+        /// </summary>
+        private static void Preview(PreviewOptions o)
+        {
+            EditedMap map = File.Exists(Path.Combine(o.MapFolder, MapProjectLayout.Map)) ? EditedMap.OpenProject(o.MapFolder) : EditedMap.ImportMap(o.MapFolder);
+            Workspace? workspace = null;
+            if (o.Workspace is not null)
+            {
+                workspace = Workspace.Exists(o.Workspace) ? Workspace.Open(o.Workspace) : throw new MapProjectException($"{o.Workspace} is no workspace");
+            }
+            AssetCatalog? catalog = workspace is null ? null : AssetCatalog.Load(workspace);
+            string page = FAForever.MapEditor.Project.Generation.PreviewPageFiles.Write(map.Document, o.OutputFolder, workspace, catalog, EditorStamp.Now());
+            Console.WriteLine($"Generated the preview page {page}" + (catalog is null ? " (no workspace: no reclaim)" : ""));
         }
 
         private static void Pack(PackOptions o)

@@ -204,11 +204,7 @@ namespace FAForever.FileFormats.Map
                     int bottomRight = bottomLeft + 1;
                     int cell = z * width + x;
 
-                    flat[cell] =
-                        MathF.Abs(terrain[topLeft] - terrain[topRight]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[bottomLeft] - terrain[bottomRight]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[topLeft] - terrain[bottomLeft]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[topRight] - terrain[bottomRight]) < MaxHeightDifference;
+                    flat[cell] = IsFlat(terrain[topLeft], terrain[topRight], terrain[bottomLeft], terrain[bottomRight]);
 
                     averageDepth[cell] = (depth[topLeft] + depth[bottomLeft] + depth[topRight] + depth[bottomRight]) * 0.25f;
 
@@ -230,6 +226,26 @@ namespace FAForever.FileFormats.Map
 
             return new Caches(flat, averageDepth, open);
         }
+
+        /// <summary>
+        /// Whether land units can cross an ogrid by its slope (<c>PopulateCaches</c>): every side's
+        /// height difference is under <see cref="MaxHeightDifference"/>. Water and terrain types do not
+        /// count; an ogrid that is not flat is a cliff to land and amphibious units.
+        /// </summary>
+        public static bool IsFlat(ScmapHeightmap heightmap, int x, int z)
+        {
+            int stride = heightmap.Width + 1;
+            int topLeft = z * stride + x;
+            float scale = heightmap.Scale;
+            ushort[] samples = heightmap.Samples;
+            return IsFlat(samples[topLeft] * scale, samples[topLeft + 1] * scale, samples[topLeft + stride] * scale, samples[topLeft + stride + 1] * scale);
+        }
+
+        private static bool IsFlat(float topLeft, float topRight, float bottomLeft, float bottomRight) =>
+            MathF.Abs(topLeft - topRight) < MaxHeightDifference &&
+            MathF.Abs(bottomLeft - bottomRight) < MaxHeightDifference &&
+            MathF.Abs(topLeft - bottomLeft) < MaxHeightDifference &&
+            MathF.Abs(topRight - bottomRight) < MaxHeightDifference;
 
         private delegate bool PathingRule(bool flat, float depth, bool open);
 

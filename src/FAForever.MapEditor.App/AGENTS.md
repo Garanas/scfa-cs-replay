@@ -1064,6 +1064,13 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   inputs are the heightmap, the water, the strata, their masks, the lighting and the terrain
   shader. Both are out of date when the heightmap changes, the preview also
   with the water level.
+- **The preview page** (M-11, `generate.previewPage {folder?}`, Generate, Preview page;
+  `MainViewModel.PreviewPage.cs`): the library's `PreviewPageFiles.Write` with the workspace's textures
+  and `Assets.Catalog`, on a pool thread (span `model.preview-page`, operation `previewPage`), into the
+  folder given, else one asked for (starting in the folder used last in the session,
+  `PreviewPageFolder`); it answers the page's file. The map does not change: no step of undo. The
+  status line says where it went, and that reclaim is left out when the workspace has no assets.
+  Tests: `PreviewPageCommandTest`.
 - **Problems** (`ViewModels/ProblemsViewModel`, `model.Problems`, the dock's Problems tab): the
   library's `ProblemChecks` (`Problems.Checks`; a feature registers an `IProblemCheck` of its own),
   run on the window's thread (span `model.problems`, about 3 ms on Archsimkats Valley's 8304

@@ -69,6 +69,16 @@ namespace FAForever.MapEditor.Project
             Save(image, path, 8);
         }
 
+        /// <summary>
+        /// An 8-bit PNG of red, green, blue and alpha bytes of every pixel.
+        /// </summary>
+        public static byte[] RgbaPng(int width, int height, byte[] rgba)
+        {
+            using MagickImage image = new MagickImage(rgba, new PixelReadSettings((uint)width, (uint)height, StorageType.Char, PixelMapping.RGBA));
+            image.Depth = 8;
+            return image.ToByteArray(MagickFormat.Png);
+        }
+
         private static MagickImage Open(string path, int width, int height)
         {
             if (!File.Exists(path))
