@@ -47,7 +47,7 @@ namespace FAForever.MapEditor.Project.Generation
         /// </summary>
         public static IReadOnlyList<MapSymmetryTransform> ImagesOf(MapDocument document, PropRule rule) =>
             rule.Mirror && document.Symmetry is SymmetrySetting symmetry
-                ? [.. MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, document.Width, document.Height).Skip(1)]
+                ? [.. symmetry.Transforms(document.Width, document.Height).Skip(1)]
                 : [];
 
         /// <summary>

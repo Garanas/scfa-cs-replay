@@ -243,12 +243,24 @@ What the Viewer's map page shows beyond the files themselves:
   thresholds. The guideline names the roles, not the distances: the defaults (base radius 60 ogrids,
   contested within 15%, expansion spots within 25 ogrids) were checked with the owner on Theta Passage
   (4 safe, 0 expandable, 7 raidable, 1 contestable per player) and Glacier Valley.
-- `MapSymmetry`: rotational or mirrored, from the start positions and resource markers (2 ogrids of tolerance).
-  It also mirrors (the map editor's symmetry, user story F-12): `Transforms(kind, count, width, height)`
-  gives one `MapSymmetryTransform` per part of the map, the identity first (rotational: 2 to 8 parts,
-  turned clockwise in the top view around the middle; a mirror: two), which maps a point, a position
-  (its height kept), a direction, a yaw and a rotation matrix; `Images` the points, `Guides` the
-  lines between the parts. Orientations follow `Matrix4x4.CreateRotationY`: a yaw faces
+- `MapSymmetry`: the kinds (`MapSymmetryKind`) are those that map a rectangle or a square onto
+  itself, the turns for 3 and 5 to 8 players (for maps played inside a circle) and their mirrored
+  versions: rotational (2 to 8 parts; 2 is the point symmetry, the same as a point mirrored through
+  the middle), the four mirrors, both mirrors (`MirroredBothWays`, 4 parts, any rectangle), both
+  diagonals (4, a square) and `Kaleidoscope` (count turns each mirrored, 4 to 16 parts; four turns
+  is the eight-way symmetry of a square, two the same as both mirrors). `Detect(area, positions)`
+  finds, from the start positions and resource markers (2 ogrids of tolerance), the kind with the
+  most parts under which every position has a counterpart (the diagonals and turns other than half
+  a circle only on a square), so a map with a base in each corner is both mirrors, not the half turn.
+  It also mirrors (the map editor's symmetry, user story F-12): `Transforms(kind, count, area)` (or
+  `width, height` for the whole map) gives one `MapSymmetryTransform` per part, the identity first
+  (rotational: turned clockwise in the top view around the area's middle; a mirror: two; the
+  dihedral kinds each turn followed by its mirror, `MapSymmetryTransform.Mirror` and `Then`),
+  which maps a point, a position (its height kept), a direction, a yaw and a rotation matrix;
+  `Images` the points, `Guides` the lines between the parts (a mirrored kind's a line per mirror,
+  at most 8, what the editor's 3D overlay holds; none for the point symmetry, whose guide is its
+  middle, `Point`). The area (`MapSymmetryArea`) is the whole map or
+  a playable area off its middle. Orientations follow `Matrix4x4.CreateRotationY`: a yaw faces
   `(sin, cos)` on (x, z), a matrix's rows are an object's own axes, its z axis where it faces; a
   mirror keeps a rotation a rotation (it turns the object's own x axis around).
 - `MapArchive`: reads the vault's zip piece by piece: the directory from the end, then only the

@@ -379,7 +379,7 @@ public sealed partial class HeightmapView : Control
 
         if (_model is { ShowSymmetry: true, Symmetry.IsOn: true, ShownDocument: MapDocument mirrored })
         {
-            DrawSymmetry(context, overlay, _model.Symmetry.Guides(mirrored));
+            DrawSymmetry(context, overlay, _model.Symmetry.Guides(mirrored), _model.Symmetry.GuidePoint(mirrored));
         }
 
         if (_model is { ShowCamera: true, HasMap: true })
@@ -1436,10 +1436,16 @@ public sealed partial class HeightmapView : Control
     }
 
     /// <summary>
-    /// The lines between the parts of the symmetry (user story F-12), dashed, over a darker line
-    /// so that they show on light and dark terrain.
+    /// The radius in pixels of the ring that marks the point symmetry's middle, and of the dot in it.
     /// </summary>
-    private void DrawSymmetry(DrawingContext context, Overlay overlay, IReadOnlyList<(System.Numerics.Vector2 From, System.Numerics.Vector2 To)> guides)
+    internal const double SymmetryPointRing = 9, SymmetryPointDot = 3;
+
+    /// <summary>
+    /// The symmetry's guides (user story F-12): its lines dashed over a darker line, so that they show
+    /// on light and dark terrain, and the point symmetry's middle as a ring around a dot, at a fixed
+    /// size on screen.
+    /// </summary>
+    private void DrawSymmetry(DrawingContext context, Overlay overlay, IReadOnlyList<(System.Numerics.Vector2 From, System.Numerics.Vector2 To)> guides, System.Numerics.Vector2? point)
     {
         Pen shadow = new Pen(overlay.Shadow.Brush, overlay.Stroke.Thickness * 2);
         Pen line = new Pen(overlay.Stroke.Brush, overlay.Stroke.Thickness, DashStyle.Dash);
@@ -1451,6 +1457,13 @@ public sealed partial class HeightmapView : Control
                 Point end = MapToControl(to.X, to.Y);
                 context.DrawLine(shadow, start, end);
                 context.DrawLine(line, start, end);
+            }
+            if (point is System.Numerics.Vector2 middle)
+            {
+                Point at = MapToControl(middle.X, middle.Y);
+                context.DrawEllipse(null, shadow, at, SymmetryPointRing, SymmetryPointRing);
+                context.DrawEllipse(null, new Pen(overlay.Stroke.Brush, overlay.Stroke.Thickness), at, SymmetryPointRing, SymmetryPointRing);
+                context.DrawEllipse(overlay.Stroke.Brush, overlay.Shadow, at, SymmetryPointDot, SymmetryPointDot);
             }
         }
     }

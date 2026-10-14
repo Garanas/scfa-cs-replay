@@ -56,7 +56,7 @@ namespace FAForever.MapEditor.Project.Editing
             if (curve.Symmetry is SymmetrySetting symmetry)
             {
                 int part = 1;
-                foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, mapWidth, mapHeight).Skip(1))
+                foreach (MapSymmetryTransform transform in symmetry.Transforms(mapWidth, mapHeight).Skip(1))
                 {
                     // as the rasterizer: the curve's own samples turned or mirrored, a mirrored image running the other way
                     CurveSample[] image = [.. samples.Select(sample =>

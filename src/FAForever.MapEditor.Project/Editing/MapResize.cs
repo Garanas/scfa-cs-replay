@@ -387,6 +387,7 @@ namespace FAForever.MapEditor.Project.Editing
                 Markers = set,
                 Water = document.Water with { WaveGenerators = waves },
                 Sky = sky,
+                Symmetry = MovedSymmetry(document.Symmetry, dx, dz, width, height),
             };
 
             // markers outside go with every link and chain entry to them
@@ -409,6 +410,20 @@ namespace FAForever.MapEditor.Project.Editing
                 emptied.Count,
                 document.Water.WaveGenerators.Length - waves.Length);
             return new MapResizeResult(moved, dx, dz, removed, spawnsMoved, clipped - emptied.Count);
+        }
+
+        /// <summary>
+        /// A symmetry around a rectangle moves with the map's content; one that no longer lies on the
+        /// new map is around the whole map.
+        /// </summary>
+        private static SymmetrySetting? MovedSymmetry(SymmetrySetting? symmetry, int dx, int dz, int width, int height)
+        {
+            if (symmetry?.Around is not FileFormats.Map.MapSymmetryArea area)
+            {
+                return symmetry;
+            }
+            FileFormats.Map.MapSymmetryArea moved = new FileFormats.Map.MapSymmetryArea(area.X0 + dx, area.Z0 + dz, area.X1 + dx, area.Z1 + dz);
+            return symmetry with { Around = moved.X0 >= 0 && moved.Z0 >= 0 && moved.X1 <= width && moved.Z1 <= height ? moved : null };
         }
     }
 }

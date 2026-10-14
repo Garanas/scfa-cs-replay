@@ -153,13 +153,19 @@
         _ => "air",
     };
 
-    public static string SymmetryLabel(MapSymmetryKind? kind) => kind switch
+    public static string SymmetryLabel(MapSymmetryMatch? symmetry) => symmetry switch
     {
-        MapSymmetryKind.Rotational => "Turned half a circle around the centre",
-        MapSymmetryKind.MirroredLeftRight => "Mirrored from left to right",
-        MapSymmetryKind.MirroredTopBottom => "Mirrored from top to bottom",
-        MapSymmetryKind.MirroredDiagonal => "Mirrored on a diagonal",
-        MapSymmetryKind.MirroredOtherDiagonal => "Mirrored on a diagonal",
+        { Kind: MapSymmetryKind.Rotational, Count: 2 } => "Point symmetry: turned half a circle around the centre",
+        { Kind: MapSymmetryKind.Rotational, Count: 4 } => "Turned a quarter circle around the centre",
+        { Kind: MapSymmetryKind.Rotational } match => $"Turned around the centre in {match.Count} parts",
+        { Kind: MapSymmetryKind.MirroredLeftRight } => "Mirrored from left to right",
+        { Kind: MapSymmetryKind.MirroredTopBottom } => "Mirrored from top to bottom",
+        { Kind: MapSymmetryKind.MirroredDiagonal } => "Mirrored on a diagonal: top right and bottom left",
+        { Kind: MapSymmetryKind.MirroredOtherDiagonal } => "Mirrored on a diagonal: top left and bottom right",
+        { Kind: MapSymmetryKind.MirroredBothWays } => "Mirrored from left to right and from top to bottom",
+        { Kind: MapSymmetryKind.MirroredBothDiagonals } => "Mirrored on both diagonals",
+        { Kind: MapSymmetryKind.Kaleidoscope, Count: 4 } => "Mirrored and turned in eight parts",
+        { Kind: MapSymmetryKind.Kaleidoscope } match => $"Mirrored and turned in {match.Parts} parts",
         _ => "None found in the start positions and resources",
     };
 

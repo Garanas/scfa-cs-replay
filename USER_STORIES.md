@@ -113,8 +113,10 @@ reads again when it changes; and nothing that generates runs by itself.
       and Select all leave areas alone outside the Map mode.
 - [x] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
-      rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
-      its guides; the maths mirrors points, yaws and rotations. Every brush stroke paints in every
+      the point symmetry and rotational for 3 to 8, four mirrors, both mirrors, both diagonals,
+      turned and mirrored for 6 to 16 parts with the eight-way symmetry among them; around the whole
+      map or the playable area; on and off takes the map's own, the one with the most parts) and the top view shows
+      its guides (the point symmetry's a mark at its middle); the maths mirrors points, yaws and rotations. Every brush stroke paints in every
       part (shapes turned and flipped, props painted as mirrored props); placing markers, props,
       decals and units places their images; moving, turning and deleting take the mirror partners
       along, and so do scaling (the handles, Scale the selection), turning about the selection's

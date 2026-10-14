@@ -49,12 +49,15 @@ public sealed partial class MainViewModel
         {
             return;
         }
+        Symmetry.PlayableArea = SymmetryViewModel.PlayableAreaOf(document);
         SymmetryChoice choice = Symmetry.ChoiceOf(document.Symmetry);
-        if (choice != Symmetry.Chosen)
+        MapSymmetryArea? around = document.Symmetry?.Around;
+        if (choice != Symmetry.Chosen || around != Symmetry.Around)
         {
             _followingMapSymmetry = true;
             try
             {
+                Symmetry.Around = around;
                 Symmetry.Chosen = choice;
             }
             finally
@@ -83,7 +86,7 @@ public sealed partial class MainViewModel
         _followingMapSymmetry = true;
         try
         {
-            map.Session.Edit(setting is null ? "Turn the symmetry off" : $"Choose the symmetry {Symmetry.Chosen.Title.ToLowerInvariant()}", document => document with { Symmetry = setting }, "symmetry");
+            map.Session.Edit(setting is null ? "Turn the symmetry off" : $"Choose the symmetry {Symmetry.Chosen.Title.ToLowerInvariant()}{(setting.Around is null ? "" : " around the playable area")}", document => document with { Symmetry = setting }, "symmetry");
         }
         finally
         {

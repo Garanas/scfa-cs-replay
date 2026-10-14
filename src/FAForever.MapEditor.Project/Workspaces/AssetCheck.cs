@@ -54,7 +54,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             }
 
             List<string> reasons = [];
-            if (manifest.FormatVersion != AssetConverter.FormatVersion || manifest.EditorVersion != AssetConverter.EditorVersion)
+            if (manifest.FormatVersion != AssetConverter.FormatVersion || AssetConverter.ReleaseOf(manifest.EditorVersion) != AssetConverter.ReleaseOf(AssetConverter.EditorVersion))
             {
                 reasons.Add($"The editor was updated from {manifest.EditorVersion} to {AssetConverter.EditorVersion}.");
             }

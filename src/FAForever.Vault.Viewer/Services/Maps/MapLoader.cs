@@ -91,7 +91,7 @@ public sealed class MapLoader(HttpClient http)
         List<Vector3> fairness = [.. starts.Select(start => start.Position), .. save.GetMarkers("Mass").Select(marker => marker.Position), .. save.GetMarkers("Hydrocarbon").Select(marker => marker.Position)];
         (double underWater, double steep) = TerrainShares(scmap);
 
-        LoadedMap loaded = new(folder, scenario, save, scmap, navigation, playableArea, starts, extractors, MapSymmetry.Find(scmap.Width, scmap.Height, fairness))
+        LoadedMap loaded = new(folder, scenario, save, scmap, navigation, playableArea, starts, extractors, FindSymmetry(scmap, playableArea, fairness))
         {
             ClosestStarts = closest,
             UnderWater = underWater,
@@ -109,6 +109,14 @@ public sealed class MapLoader(HttpClient http)
         }
         return loaded;
     }
+
+    /// <summary>
+    /// The symmetry with the most parts around the whole map, else around the playable area when
+    /// that is smaller.
+    /// </summary>
+    private static MapSymmetryMatch? FindSymmetry(Scmap scmap, MapArea? playableArea, IReadOnlyList<Vector3> positions) =>
+        MapSymmetry.Detect(scmap.Width, scmap.Height, positions)
+            ?? (playableArea is null ? null : MapSymmetry.Detect(new MapSymmetryArea((float)playableArea.X0, (float)playableArea.Z0, (float)playableArea.X1, (float)playableArea.Z1), positions));
 
     /// <summary>The pair of start positions closest to each other along the routes.</summary>
     private static (int, int)? ClosestStarts(ExtractorDistances distances)

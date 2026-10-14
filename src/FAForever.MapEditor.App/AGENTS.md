@@ -883,16 +883,32 @@ Four small parts that later features build on:
   the first one shown: the Terrain panel's stamp presets with the stamp tool, its brush presets
   with the others.
 - **Symmetry** (user story F-12, `model.Symmetry`, `ViewModels/SymmetryViewModel`): off unless
-  chosen; rotational for 2 to 8 players or one of the four mirrors, chosen in the combo box after
-  the overlay chips or with `select.symmetry {kind?, count?}` (Ctrl+Shift+Y; `off`, `rotational`,
-  `leftRight`, `topBottom`, `diagonal`, `otherDiagonal`). Without arguments it turns it on or off:
-  on, the one used last, else the map's own (`MapSymmetry.Find` on its spawns and deposits), else
-  rotational for two. Each map keeps its own (`MapDocument.Symmetry`, saved in `map.json`): a
+  chosen; the point symmetry (rotational for two, its bar text `Point`), rotational for 3 to 8
+  players, one of the four mirrors, both mirrors (`Both ways`, 4 parts), both diagonals (4), or
+  turned and mirrored for 3 to 8 turns (6 to 16 parts; four turns is the eight-way symmetry),
+  chosen in the combo box after the overlay chips or with `select.symmetry {kind?, count?, around?}`
+  (Ctrl+Shift+Y; `off`, `point`, `rotational`, `leftRight`, `topBottom`, `diagonal`,
+  `otherDiagonal`, `bothWays`, `bothDiagonals`, `kaleidoscope`, `eightWay`; `point` and `eightWay`
+  bring their count). Without a kind it turns it on or off: on, the one used last, else the map's
+  own (`SymmetryViewModel.DetectSetting`: the library's `MapSymmetry.Detect` on its spawns and
+  deposits, the kind with the most parts, around the whole map and else around the playable area),
+  else the point symmetry. **Around the playable area**: a map whose playable area is not the whole
+  map (`SymmetryViewModel.PlayableArea`, followed on every change) shows the chip `Playable area`
+  after Mirror (`Symmetry around the playable area`, `OffersAround`; hidden on other maps, so the
+  views' bar keeps its room); on, the symmetry turns and mirrors around that rectangle as it is now
+  (`Around`, kept in the map's setting); it stays there when the area changes (its tip says so,
+  `AroundText`) until the chip is turned off and on. `select.symmetry around=playableArea|map` does
+  the same (refused while the playable area is the whole map). `state.symmetry` has `parts`,
+  `around`, `aroundText` and `playableArea`. Each map keeps its own (`MapDocument.Symmetry`, saved in `map.json`): a
   choice is a step of undo (`Choose the symmetry ...`, choices that follow each other one step), an
   undo or another map chooses what the map keeps (`MainViewModel.FollowMapSymmetry`), and another
   map forgets the one used last, so turning it on takes that map's own. A new map comes with
   rotational for its players. The top view draws the lines between the parts, dashed over a dark line,
-  while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`), and so does the 3D view on the terrain.
+  while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`), and so does the 3D view on the terrain;
+  the point symmetry has no line but a ring around a dot at its middle, the same size on screen in both views
+  (`SymmetryViewModel.GuidePoint`, `HeightmapView.SymmetryPointRing`, the overlay shader's `uGuidePoint`). The
+  diagonal mirrors are named by the halves they swap (`Mirrored diagonally: top left and bottom right`, the bar's
+  `Diagonal /` after the line; `Diagonal \` the other).
   `Transforms(document)` gives the library's `MapSymmetryTransform`s (the maths is in
   FileFormats.Map's `MapSymmetry`); the edits mirrored with them are the next section's.
 - **Symmetry applied to edits** (user stories F-12, S-1; `ViewModels/MainViewModel.Symmetry.cs`, the

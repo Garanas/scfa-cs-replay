@@ -269,7 +269,13 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
   the caller.
 - **The map's symmetry** (`MapDocument.Symmetry`, a `SymmetrySetting` of kind and count, null for
   none): the symmetry the editor mirrors edits by, kept in `map.json` (`symmetry`, an optional
-  `SymmetryDto`: the kind's name and the count; an unknown kind reads as none) and never exported.
+  `SymmetryDto`: the kind's name, the count and `around`; an unknown kind reads as none) and never exported.
+  `Around` is the rectangle it turns and mirrors around (`MapSymmetryArea`): the playable area as it
+  was when the symmetry was put around it, null for the whole map. It stays where it is when the
+  area changes (the editor's chip off and on takes the area again) and moves with the map's content
+  in a resize (`MapResize`; off the new map it is the whole map). Every part of the library takes the
+  parts through the setting (`SymmetrySetting.Transforms(width, height)`, `Guides`), never from the
+  kind alone, so the rectangle is never left out; a curve keeps the setting it was drawn with.
   `NewMap` sets rotational for its players (2 to 8) and puts the spawns exactly on its images: the
   first above the middle on an ogrid's centre, the others turned about the middle.
 - **Deposits stay on ogrid centres**: `ObjectEdits` moves, places, turns about a place and scales

@@ -134,6 +134,10 @@
                 <ToggleButton Classes="chip" Content="Mirror" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
                               AutomationProperties.Name="Mirror edits" ToolTip.Tip="Mirror edits by the symmetry"
                               AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
+                <!-- only where it changes something: a map whose playable area is not the whole map -->
+                <ToggleButton Classes="chip" Content="Playable area" IsVisible="{Binding Symmetry.OffersAround}" IsChecked="{Binding Symmetry.IsAroundPlayableArea}"
+                              AutomationProperties.Name="Symmetry around the playable area" ToolTip.Tip="{Binding Symmetry.AroundText, StringFormat='The symmetry is around {0}'}"
+                              AutomationProperties.HelpText="On, the symmetry turns and mirrors around the playable area as it is now; off, around the whole map" />
               </controls:ToolRow>
             </DockPanel>
           </Border>

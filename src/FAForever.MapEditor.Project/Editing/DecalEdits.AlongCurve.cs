@@ -105,7 +105,7 @@ namespace FAForever.MapEditor.Project.Editing
             }
             if (curve.Symmetry is SymmetrySetting symmetry && placed.Count > 0)
             {
-                IReadOnlyList<MapSymmetryTransform> transforms = MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, document.Width, document.Height);
+                IReadOnlyList<MapSymmetryTransform> transforms = symmetry.Transforms(document.Width, document.Height);
                 document = document.MirrorObjects(placed, transforms, out ImmutableArray<ObjectRef> images);
                 placed.AddRange(images);
             }

@@ -229,5 +229,24 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(AssetState.Outdated, check.State);
             StringAssert.Contains(check.Reasons.Single(), "updated from 0.0.1");
         }
+
+        [TestMethod]
+        public void TheStageOfTheSameReleaseKeepsTheAssets()
+        {
+            (_, Workspace workspace) = Setup();
+            AssetConverter.Convert(workspace);
+            string manifest = Path.Combine(workspace.AssetsFolder, WorkspaceLayout.Manifest);
+            string release = AssetConverter.ReleaseOf(AssetConverter.EditorVersion);
+
+            foreach (string other in new[] { release, release + "-beta", release + "-rc.1" })
+            {
+                string text = File.ReadAllText(manifest);
+                string written = text[(text.IndexOf("\"editorVersion\": \"", StringComparison.Ordinal) + 18)..];
+                written = written[..written.IndexOf('"')];
+                File.WriteAllText(manifest, text.Replace($"\"editorVersion\": \"{written}\"", $"\"editorVersion\": \"{other}\""));
+                Assert.IsTrue(workspace.CheckAssets().IsCurrent, $"converted by {other}, read by {AssetConverter.EditorVersion}");
+            }
+            Assert.AreEqual("1.0.0", AssetConverter.ReleaseOf("1.0.0-beta+9bd1109"));
+        }
     }
 }

@@ -343,7 +343,7 @@ namespace FAForever.MapEditor.Project.Editing
                 return [curve];
             }
             List<HeightCurve> parts = [curve with { Symmetry = null }];
-            foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, mapWidth, mapHeight).Skip(1))
+            foreach (MapSymmetryTransform transform in symmetry.Transforms(mapWidth, mapHeight).Skip(1))
             {
                 IEnumerable<CurvePoint> points = curve.Points.Select(point =>
                 {
@@ -478,7 +478,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 yield break;
             }
-            foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, mapWidth, mapHeight).Skip(1))
+            foreach (MapSymmetryTransform transform in symmetry.Transforms(mapWidth, mapHeight).Skip(1))
             {
                 CurveSample[] line = [.. samples.Select(sample =>
                 {

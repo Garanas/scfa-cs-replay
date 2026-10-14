@@ -171,15 +171,26 @@ namespace FAForever.MapEditor.Project.Files
         /// A symmetry as <c>map.json</c> and <c>layers.json</c> keep it; null for none.
         /// </summary>
         internal static SymmetryDto? ToDto(SymmetrySetting? symmetry) =>
-            symmetry is null ? null : new SymmetryDto { Kind = symmetry.Kind.ToString(), Count = symmetry.Count };
+            symmetry is null ? null : new SymmetryDto
+            {
+                Kind = symmetry.Kind.ToString(),
+                Count = symmetry.Count,
+                Around = symmetry.Around is FileFormats.Map.MapSymmetryArea area ? [area.X0, area.Z0, area.X1, area.Z1] : null,
+            };
 
         /// <summary>
         /// The symmetry of <c>map.json</c>; null for none, or for a kind or count this editor does not know.
+        /// A rectangle that is not one (four numbers, the second corner beyond the first) reads as the whole map.
         /// </summary>
         internal static SymmetrySetting? ToModel(SymmetryDto? symmetry) =>
             symmetry is not null && Enum.TryParse(symmetry.Kind, ignoreCase: true, out FileFormats.Map.MapSymmetryKind kind) && Enum.IsDefined(kind)
-                && (kind != FileFormats.Map.MapSymmetryKind.Rotational || symmetry.Count is >= 2 and <= FileFormats.Map.MapSymmetry.MaximumCount)
-                ? new SymmetrySetting(kind, kind == FileFormats.Map.MapSymmetryKind.Rotational ? symmetry.Count : 2)
+                && (!FileFormats.Map.MapSymmetry.HasCount(kind) || symmetry.Count is >= 2 and <= FileFormats.Map.MapSymmetry.MaximumCount)
+                ? new SymmetrySetting(kind, FileFormats.Map.MapSymmetry.HasCount(kind) ? symmetry.Count : 2)
+                {
+                    Around = symmetry.Around is [float x0, float z0, float x1, float z1] && x1 > x0 && z1 > z0
+                        ? new FileFormats.Map.MapSymmetryArea(x0, z0, x1, z1)
+                        : null,
+                }
                 : null;
 
         public static DecalsDto ToDecalsDto(MapDocument document) => new DecalsDto

@@ -309,7 +309,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = await Open("diagonal");
             Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredDiagonal, 2), model.Map!.Document.Symmetry, "the map keeps the choice");
-            Assert.AreEqual("Choose the symmetry mirrored on the diagonal", model.Map.Session.UndoDescription);
+            Assert.AreEqual("Choose the symmetry mirrored diagonally: top right and bottom left", model.Map.Session.UndoDescription);
             await Run(model, "select.symmetry", new JsonObject { ["kind"] = "rotational", ["count"] = 3 });
             Assert.AreEqual(1, model.Map.Session.History.Count(step => step.Description.Contains("symmetry")), "choices that follow each other are one step");
             await Run(model, "edit.undo");
@@ -331,7 +331,7 @@ namespace FAForever.MapEditor.App.Tests
                 Assert.IsFalse(model.Map.Session.IsModified);
 
                 await Run(model, "file.new", new JsonObject { ["name"] = "Fresh", ["size"] = 256, ["players"] = 2 });
-                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 2, "Rotational, 2 players"), model.Symmetry.Chosen, "a new map: the symmetry of its spawns");
+                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 2, "Point symmetry (rotational, 2 players)"), model.Symmetry.Chosen, "a new map: the symmetry of its spawns");
                 Assert.IsFalse(model.Problems.Run().Any(problem => problem.Check == SymmetryChecks.Id), "a new map is exactly symmetric");
             }
             finally
@@ -443,6 +443,126 @@ namespace FAForever.MapEditor.App.Tests
 
             await Run(model, "select.symmetry", new JsonObject { ["kind"] = "off" });
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.Commands.RunAsync("edit.mirror", [], interactive: false), "no symmetry, nothing to mirror into");
+        }
+
+        [TestMethod]
+        [DataRow("point", 0, 2, "Point")]
+        [DataRow("diagonal", 0, 2, "Diagonal \\")]
+        [DataRow("otherDiagonal", 0, 2, "Diagonal /")]
+        [DataRow("bothWays", 0, 4, "Both ways")]
+        [DataRow("bothDiagonals", 0, 4, "Both diagonals")]
+        [DataRow("eightWay", 0, 8, "8-way mirrored")]
+        [DataRow("kaleidoscope", 3, 6, "6-way mirrored")]
+        [DataRow("kaleidoscope", 8, 16, "16-way mirrored")]
+        public async Task EveryKindPlacesAPropInEachOfItsParts(string kind, int count, int parts, string shortName)
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.Assets.Use(UnitsTest.Catalog());
+            await model.OpenAsync(HardFfa);
+            JsonObject arguments = new JsonObject { ["kind"] = kind };
+            if (count > 0)
+            {
+                arguments["count"] = count;
+            }
+            await Run(model, "select.symmetry", arguments);
+            Assert.AreEqual(parts, model.Symmetry.Chosen.Parts, kind);
+            Assert.AreEqual(shortName, model.Symmetry.Chosen.Short);
+            Assert.AreEqual(model.Symmetry.Setting, model.Map!.Document.Symmetry, "the map keeps it");
+
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 100, ["z"] = 37, ["heading"] = 20 });
+            Prop[] rocks = [.. model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Prop).Select(thing => (Prop)model.ShownDocument!.Find(thing)!)];
+            Assert.AreEqual(parts, rocks.Length, $"{kind}: a rock in every part");
+            foreach (Prop rock in rocks)
+            {
+                Assert.AreEqual(Vector2.Distance(new Vector2(128, 128), new Vector2(100, 37)), Vector2.Distance(new Vector2(128, 128), Flat(rock.Position)), 1e-2f, "as far from the middle");
+            }
+            int lines = model.Symmetry.Guides(model.ShownDocument!).Count;
+            Assert.IsTrue(lines <= 8, "the guides fit the 3D view's eight");
+            Assert.AreEqual(kind == "point", model.Symmetry.GuidePoint(model.ShownDocument!) is not null, "the point symmetry's guide is a point");
+            Assert.IsTrue(lines > 0 || kind == "point", "the other kinds' guides are lines");
+        }
+
+        [TestMethod]
+        public async Task TurningOnFindsTheSymmetryWithTheMostParts()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.Assets.Use(UnitsTest.Catalog());
+            await Run(model, "file.new", new JsonObject { ["name"] = "Corners", ["size"] = 256, ["players"] = 2 });
+            foreach (string markers in new[] { "spawns", "mass", "hydrocarbon" })
+            {
+                await Run(model, "markers.clear", new JsonObject { ["kind"] = markers, ["confirm"] = true });
+            }
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "off" });
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "bothWays" });
+            await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = 40.5f, ["z"] = 60.5f });
+            await Run(model, "markers.place", new JsonObject { ["kind"] = "spawn", ["x"] = 70, ["z"] = 30 });
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "off" });
+            model.Symmetry.Forget();
+
+            await Run(model, "select.symmetry");
+            Assert.AreEqual(MapSymmetryKind.MirroredBothWays, model.Symmetry.Chosen.Kind, "both mirrors, which also hold the half turn");
+        }
+
+        [TestMethod]
+        public async Task TheSymmetryGoesAroundThePlayableAreaAndKeepsItsPlace()
+        {
+            MainViewModel model = await Open("leftRight");
+            Assert.IsFalse(model.Symmetry.OffersAround, "the whole map is playable: no chip");
+            await Run(model, "map.addArea", new JsonObject { ["name"] = "PLAY", ["x0"] = 20, ["z0"] = 30, ["x1"] = 120, ["z1"] = 130 });
+            await Run(model, "map.setPlayableArea", new JsonObject { ["name"] = "PLAY" });
+            Assert.AreEqual(new MapSymmetryArea(20, 30, 120, 130), model.Symmetry.PlayableArea);
+            Assert.IsTrue(model.Symmetry.OffersAround, "the chip shows");
+            Assert.IsFalse(model.Symmetry.IsAroundPlayableArea);
+
+            CommandRun run = await Run(model, "select.symmetry", new JsonObject { ["around"] = "playableArea" });
+            Assert.AreEqual(new MapSymmetryArea(20, 30, 120, 130), model.Map!.Document.Symmetry!.Around);
+            Assert.AreEqual(MapSymmetryKind.MirroredLeftRight, model.Map.Document.Symmetry.Kind, "the kind stays");
+            StringAssert.Contains(model.Map.Session.UndoDescription, "around the playable area");
+            StringAssert.Contains(((JsonObject)run.Result!).ToJsonString(), "\"around\":[20,30,120,130]");
+
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 30, ["z"] = 50 });
+            Prop[] rocks = [.. model.Selection.Items.Select(thing => (Prop)model.ShownDocument!.Find(thing)!)];
+            Assert.IsTrue(rocks.Any(rock => MathF.Abs(rock.Position.X - 110) < 1e-3f && MathF.Abs(rock.Position.Z - 50) < 1e-3f), "mirrored about the area's middle, x 70");
+            (Vector2 From, Vector2 To) guide = model.Symmetry.Guides(model.ShownDocument!).Single();
+            Assert.AreEqual(new Vector2(70, 30), guide.From);
+
+            // the area moves; the symmetry stays where it was put until it is put around the area again
+            await Run(model, "map.setArea", new JsonObject { ["name"] = "PLAY", ["x0"] = 40 });
+            Assert.AreEqual(new MapSymmetryArea(20, 30, 120, 130), model.Symmetry.Around);
+            StringAssert.Contains(model.Symmetry.AroundText, "no longer");
+            model.Symmetry.IsAroundPlayableArea = false;
+            model.Symmetry.IsAroundPlayableArea = true;
+            Assert.AreEqual(new MapSymmetryArea(40, 30, 120, 130), model.Map.Document.Symmetry!.Around, "the chip off and on follows the area");
+
+            string folder = Path.Combine(Path.GetTempPath(), "faf-symmetry-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                model.Map.SaveAs(folder);
+                await model.OpenAsync(HardFfa);
+                Assert.IsNull(model.Symmetry.Around, "another map: around its whole map");
+                await model.OpenAsync(folder);
+                Assert.AreEqual(new MapSymmetryArea(40, 30, 120, 130), model.Symmetry.Around, "saved with the project");
+                Assert.IsTrue(model.Symmetry.IsAroundPlayableArea);
+
+                await Run(model, "select.symmetry", new JsonObject { ["around"] = "map" });
+                Assert.IsNull(model.Map!.Document.Symmetry!.Around);
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                {
+                    Directory.Delete(folder, recursive: true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task ASymmetryAroundTheWholeMapCannotGoAroundAPlayableAreaThatIsTheWholeMap()
+        {
+            MainViewModel model = await Open("point");
+            ArgumentException refused = await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("select.symmetry", new JsonObject { ["around"] = "playableArea" }, interactive: false));
+            StringAssert.Contains(refused.Message, "whole map");
+            Assert.IsNull(model.Symmetry.Around);
         }
 
         private static Vector2 Flat(Vector3 place) => new Vector2(MathF.Round(place.X, 3), MathF.Round(place.Z, 3));

@@ -26,6 +26,7 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// covers an ogrid from it: the lines keep their width on screen.</param>
 /// <param name="LineSpacing">The grid's lines every so many ogrids (the Grid overlay), 0 for none,
 /// in <paramref name="LineColor"/>.</param>
+/// <param name="GuidePoint">The point symmetry's middle, drawn as a ring around a dot; null for none.</param>
 internal sealed record TerrainOverlays(
     object? WalkabilityOf,
     Func<uint[]>? Walkability,
@@ -46,9 +47,10 @@ internal sealed record TerrainOverlays(
     Vector3 Eye,
     float PixelScale,
     float LineSpacing = 0,
-    Vector4 LineColor = default)
+    Vector4 LineColor = default,
+    Vector2? GuidePoint = null)
 {
-    public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0 && LineSpacing <= 0;
+    public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0 && GuidePoint is null && LineSpacing <= 0;
 }
 
 /// <summary>
@@ -478,6 +480,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uEye", overlays.Eye.X, overlays.Eye.Y, overlays.Eye.Z);
         program.Set("uPixelScale", overlays.PixelScale);
         program.Set("uGuideCount", guides);
+        program.Set("uGuidePoint", overlays.GuidePoint?.X ?? 0, overlays.GuidePoint?.Y ?? 0, overlays.GuidePoint is null ? 0 : 1);
         program.Set("uLineSpacing", overlays.LineSpacing);
         Set(program, "uLineColor", overlays.LineColor);
         for (int i = 0; i < guides; i++)

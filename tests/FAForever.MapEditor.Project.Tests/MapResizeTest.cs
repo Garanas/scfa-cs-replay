@@ -85,6 +85,31 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void ASymmetryAroundARectangleMovesWithTheMap()
+        {
+            MapDocument original = Map() with { Symmetry = new SymmetrySetting(MapSymmetryKind.MirroredBothWays, 2) { Around = new MapSymmetryArea(16, 16, 144, 144) } };
+
+            MapDocument grown = MapResize.Resize(original, new MapResizeSettings { Width = 512, Height = 512 }).Document;
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredBothWays, 2) { Around = new MapSymmetryArea(144, 144, 272, 272) }, grown.Symmetry);
+
+            MapDocument big = Map(512) with { Symmetry = original.Symmetry };
+            MapDocument cropped = MapResize.Resize(big, new MapResizeSettings { Width = 256, Height = 256 }).Document;
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredBothWays, 2), cropped.Symmetry, "a rectangle off the new map: around the whole map");
+
+            MapDocument whole = Map() with { Symmetry = new SymmetrySetting(MapSymmetryKind.Rotational, 2) };
+            Assert.AreEqual(whole.Symmetry, MapResize.Resize(whole, new MapResizeSettings { Width = 512, Height = 512 }).Document.Symmetry, "around the whole map stays so");
+        }
+
+        [TestMethod]
+        public void ASymmetryAroundARectangleIsSavedWithTheProject()
+        {
+            string folder = ProjectFolders.New("symmetry");
+            SymmetrySetting setting = new SymmetrySetting(MapSymmetryKind.Kaleidoscope, 4) { Around = new MapSymmetryArea(16, 16, 144, 144) };
+            MapProjectStore.Save(Map() with { Symmetry = setting }, folder);
+            Assert.AreEqual(setting, MapProjectStore.Load(folder).Symmetry);
+        }
+
+        [TestMethod]
         public void GrowsEveryPartAroundTheOldMap()
         {
             MapDocument original = Map();

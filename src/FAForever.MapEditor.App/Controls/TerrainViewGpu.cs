@@ -1137,13 +1137,14 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 states[i] = model.Selection.Contains(area) ? 1 : model.Selection.Hovered == area ? 2 : 0;
             }
         }
-        IReadOnlyList<(Vector2 From, Vector2 To)> guides = model is { ShowSymmetry: true, Symmetry.IsOn: true } ? model.Symmetry.Guides(document) : [];
+        bool symmetry = model is { ShowSymmetry: true, Symmetry.IsOn: true };
+        IReadOnlyList<(Vector2 From, Vector2 To)> guides = symmetry ? model.Symmetry.Guides(document) : [];
         Vector4 hover = ThemeColorWithAlpha("SelectedStrokeBrush");
         TerrainOverlays overlays = new TerrainOverlays(walkOf, walk, walkWidth, walkHeight, painted, shownGrid?.Palette, ThemeColorWithAlpha("MapMaskBrush"),
             areas, states, guides, ThemeColorWithAlpha("MapAreaBrush"), ThemeColorWithAlpha("MapSelectionBrush"), hover,
             ThemeColorWithAlpha("MapOutsidePlayableBrush"), ThemeColorWithAlpha("OverlayStrokeBrush"), ThemeColorWithAlpha("OverlayShadowBrush"),
             model.Camera.Eye, 2 * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height),
-            model.ShowGrid ? model.GridSpacing : 0, ThemeColorWithAlpha("MapGridLineBrush"));
+            model.ShowGrid ? model.GridSpacing : 0, ThemeColorWithAlpha("MapGridLineBrush"), symmetry ? model.Symmetry.GuidePoint(document) : null);
         return overlays.IsEmpty ? null : overlays;
     }
 

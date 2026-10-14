@@ -47,12 +47,19 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const int FormatVersion = 7;
 
         /// <summary>
-        /// The version of the editor, without the commit it was built from, e.g. <c>1.2.0</c>.
-        /// Assets converted by another version are converted again.
+        /// The version of the editor, without the commit it was built from, e.g. <c>1.2.0</c> or
+        /// <c>1.2.0-beta</c>. Assets converted by another release are converted again
+        /// (<see cref="ReleaseOf"/>).
         /// </summary>
         public static string EditorVersion { get; } = (typeof(AssetConverter).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0")
             .Split('+')[0];
+
+        /// <summary>
+        /// The release of a version, without its stage: <c>1.2.0-beta</c> is <c>1.2.0</c>. A beta and
+        /// the release of the same number convert alike, so going from one to the other keeps the assets.
+        /// </summary>
+        public static string ReleaseOf(string? version) => (version ?? "").Split('+')[0].Split('-')[0];
 
         /// <summary>
         /// Converts the archives of <paramref name="workspace"/> into its assets.

@@ -17,7 +17,7 @@ public sealed record LoadedMap(
     MapArea? PlayableArea,
     IReadOnlyList<MapMarker> Starts,
     ExtractorDistances Extractors,
-    MapSymmetryKind? Symmetry)
+    MapSymmetryMatch? Symmetry)
 {
     public IReadOnlyList<MapMarker> Mass { get; } = [.. Save.GetMarkers("Mass")];
 

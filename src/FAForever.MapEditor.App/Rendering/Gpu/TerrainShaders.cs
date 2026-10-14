@@ -538,6 +538,7 @@ internal static class TerrainShaders
         uniform int uShade;
         uniform int uGuideCount;
         uniform vec4 uGuides[8];
+        uniform vec3 uGuidePoint;
         uniform vec4 uGuideColor;
         uniform vec4 uShadowColor;
         uniform vec3 uEye;
@@ -621,6 +622,17 @@ internal static class TerrainShaders
                     bool dash = mod(along, 14.0) < 8.0;
                     vec4 line = distance < 1.0 && dash ? vec4(uGuideColor.rgb * uGuideColor.a, uGuideColor.a) : vec4(uShadowColor.rgb * uShadowColor.a, uShadowColor.a);
                     color = over(color, line);
+                }
+            }
+            if (uGuidePoint.z > 0.5)
+            {
+                // the point symmetry's middle: a ring around a dot over a darker rim, as the top view's (HeightmapView.SymmetryPoint*)
+                float away = length(p - uGuidePoint.xy) / pixel.x;
+                float ring = abs(away - 9.0);
+                if (ring < 2.5 || away < 4.0)
+                {
+                    bool lit = ring < 1.0 || away < 3.0;
+                    color = over(color, lit ? vec4(uGuideColor.rgb * uGuideColor.a, uGuideColor.a) : vec4(uShadowColor.rgb * uShadowColor.a, uShadowColor.a));
                 }
             }
             if (color.a < 0.004)
