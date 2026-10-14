@@ -5,7 +5,20 @@
 // release whose units equal those of a version already present reuses that version's file; otherwise
 // it gets <version>.json. It prints which units changed compared with the previous version.
 //
-//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]
+//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] --base-game <folder> [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]
+//
+// The units are those the game loads: the base game's blueprints (gamedata/units.scd of the Forged
+// Alliance installation, e.g. D:\SteamLibrary\steamapps\common\Supreme Commander Forged Alliance)
+// with the release's own blueprints over them, by unit id. Until 3738 the FA repository held only the
+// units FAF had changed (before 3615 in schook/units/); the game took the others from units.scd, and
+// those are marked as the base game's (UnitSummary.BaseGame). --base-game falls back to the
+// environment variable FA_BASE_GAME. --without-base-game reads the repository alone: right only for
+// releases that hold every unit of the base game (3738 and later), as in the update workflow, which
+// has no game installation. --base-game-only takes no checkout and adds the base game alone, as
+// version 3599 (UnitDataIndex.BaseGame) dated by its newest file, unless --version and --released
+// say otherwise:
+//
+//   dotnet run tools/generate-unit-data.cs -- --base-game-only [output folder] --base-game <folder>
 //
 // --version is the release (its tag); without it, mod_info.lua says. They can differ: release 3805
 // still says 3804 there. --commit and --released record where the data comes from: the commit of the
@@ -15,17 +28,28 @@
 
 #:project ../src/FAForever.FileFormats.Blueprints/FAForever.FileFormats.Blueprints.csproj
 
+using System.IO.Compression;
 using FAForever.FileFormats.Blueprints;
 using FAForever.FileFormats.Lua;
 
-const string Usage = "Usage: dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]";
+const string Usage = "Usage: dotnet run tools/generate-unit-data.cs -- (<fa checkout> | --base-game-only) [output folder] (--base-game <folder> | --without-base-game) [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]";
 
-// positional arguments, and the options with their values
+// positional arguments, the options with their values, and the flags
 List<string> positional = [];
 Dictionary<string, string> options = [];
+bool withoutBaseGame = false;
+bool baseGameOnly = false;
 for (int position = 0; position < args.Length; position++)
 {
-    if (args[position].StartsWith("--", StringComparison.Ordinal) && position + 1 < args.Length)
+    if (args[position] == "--without-base-game")
+    {
+        withoutBaseGame = true;
+    }
+    else if (args[position] == "--base-game-only")
+    {
+        baseGameOnly = true;
+    }
+    else if (args[position].StartsWith("--", StringComparison.Ordinal) && position + 1 < args.Length)
     {
         options[args[position]] = args[++position];
     }
@@ -35,7 +59,13 @@ for (int position = 0; position < args.Length; position++)
     }
 }
 
-if (positional.Count is < 1 or > 2 || options.Keys.Except(["--version", "--commit", "--released"]).Any())
+// Without a checkout (--base-game-only), the only positional argument is the output folder.
+if (baseGameOnly)
+{
+    positional.Insert(0, "");
+}
+if (positional.Count is < 1 or > 2 || options.Keys.Except(["--version", "--commit", "--released", "--base-game"]).Any()
+    || (baseGameOnly && withoutBaseGame))
 {
     Console.Error.WriteLine(Usage);
     return 1;
@@ -52,15 +82,46 @@ if (options.TryGetValue("--released", out string? releasedText))
     released = date;
 }
 
-string source = Path.GetFullPath(positional[0]);
+string? source = baseGameOnly ? null : Path.GetFullPath(positional[0]);
 string output = positional.Count > 1
     ? Path.GetFullPath(positional[1])
     : Path.GetFullPath(Path.Combine(AppContext.GetData("EntryPointFileDirectoryPath") as string ?? "tools", "..", "src", "FAForever.Vault.Viewer", "wwwroot", "data", "units"));
 string indexPath = Path.Combine(output, "index.json");
 
-// mod_info.lua is plain data Lua: version = 3839
-IReadOnlyDictionary<string, LuaData> modInfo = LuaSourceParser.Execute(
-    File.ReadAllText(Path.Combine(source, "mod_info.lua")), new Dictionary<string, LuaFunction>());
+// The base game's units: gamedata/units.scd, a zip archive. --base-game may also name the gamedata
+// folder or the archive itself.
+string? unitsScd = null;
+if (!withoutBaseGame)
+{
+    string? baseGame = options.GetValueOrDefault("--base-game") ?? Environment.GetEnvironmentVariable("FA_BASE_GAME");
+    if (baseGame is not { Length: > 0 })
+    {
+        Console.Error.WriteLine("Where is the base game? Pass --base-game <Forged Alliance folder>, set FA_BASE_GAME, or pass --without-base-game.");
+        return 1;
+    }
+    unitsScd = new[] { baseGame, Path.Combine(baseGame, "units.scd"), Path.Combine(baseGame, "gamedata", "units.scd") }.FirstOrDefault(File.Exists);
+    if (unitsScd is null)
+    {
+        Console.Error.WriteLine($"No gamedata/units.scd in {baseGame}");
+        return 1;
+    }
+}
+
+// mod_info.lua is plain data Lua: version = 3839. Releases before 3650 have none: pass --version.
+// The base game alone is UnitDataIndex.BaseGame, dated by the newest file in units.scd.
+string modInfoPath = source is null ? "" : Path.Combine(source, "mod_info.lua");
+if (baseGameOnly)
+{
+    options.TryAdd("--version", UnitDataIndex.BaseGame.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    if (released is null)
+    {
+        using ZipArchive archive = ZipFile.OpenRead(unitsScd!);
+        released = DateOnly.FromDateTime(archive.Entries.Max(file => file.LastWriteTime).DateTime);
+    }
+}
+IReadOnlyDictionary<string, LuaData> modInfo = File.Exists(modInfoPath)
+    ? LuaSourceParser.Execute(File.ReadAllText(modInfoPath), new Dictionary<string, LuaFunction>())
+    : new Dictionary<string, LuaData>();
 int? modInfoVersion = modInfo.GetValueOrDefault("version") is LuaData.Number { Value: var number } ? (int)number : null;
 int? requestedVersion = options.TryGetValue("--version", out string? versionText) && int.TryParse(versionText, out int parsed) ? parsed : null;
 if (options.ContainsKey("--version") && requestedVersion is null)
@@ -70,7 +131,7 @@ if (options.ContainsKey("--version") && requestedVersion is null)
 }
 if ((requestedVersion ?? modInfoVersion) is not { } version)
 {
-    Console.Error.WriteLine($"No version in {Path.Combine(source, "mod_info.lua")}; pass --version");
+    Console.Error.WriteLine($"No version in {modInfoPath}; pass --version");
     return 1;
 }
 if (requestedVersion is not null && modInfoVersion is not null && requestedVersion != modInfoVersion)
@@ -78,22 +139,74 @@ if (requestedVersion is not null && modInfoVersion is not null && requestedVersi
     Console.WriteLine($"Note: mod_info.lua says {modInfoVersion}; using {version}.");
 }
 
-List<BlueprintUnit> blueprints = [];
-foreach (string file in Directory.GetFiles(Path.Combine(source, "units"), "*_unit.bp", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+// Every unit by its id, the last blueprint read winning, as when the game registers an id twice:
+// first the base game's, then the release's own, each in path order.
+Dictionary<string, BlueprintUnit> units = new(StringComparer.OrdinalIgnoreCase);
+HashSet<string> fromBaseGame = new(StringComparer.OrdinalIgnoreCase);
+bool Add(string text, string gamePath, bool isBaseGame)
 {
-    string gamePath = "/" + Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
     try
     {
-        blueprints.AddRange(BlueprintParser.Parse(File.ReadAllText(file), gamePath).OfType<BlueprintUnit>());
+        foreach (BlueprintUnit unit in BlueprintParser.Parse(text, gamePath).OfType<BlueprintUnit>())
+        {
+            // Releases 3623 to 3690 hold a second copy of ueb4202 (in units/UEB0402/).
+            if (units.ContainsKey(unit.BlueprintId) && isBaseGame == fromBaseGame.Contains(unit.BlueprintId))
+            {
+                Console.WriteLine($"Note: {unit.BlueprintId} has more than one blueprint; {gamePath} is read last.");
+            }
+            units[unit.BlueprintId] = unit;
+            if (isBaseGame)
+            {
+                fromBaseGame.Add(unit.BlueprintId);
+            }
+            else
+            {
+                fromBaseGame.Remove(unit.BlueprintId);
+            }
+        }
+        return true;
     }
     catch (FormatException exception)
     {
         Console.Error.WriteLine($"{gamePath}: {exception.Message}");
-        return 1;
+        return false;
     }
 }
 
-UnitData data = UnitData.From(blueprints);
+if (unitsScd is not null)
+{
+    using ZipArchive archive = ZipFile.OpenRead(unitsScd);
+    foreach (ZipArchiveEntry file in archive.Entries
+        .Where(file => file.FullName.EndsWith("_unit.bp", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(file => file.FullName, StringComparer.Ordinal))
+    {
+        using StreamReader reader = new(file.Open());
+        if (!Add(reader.ReadToEnd(), "/" + file.FullName.Replace('\\', '/'), isBaseGame: true))
+        {
+            return 1;
+        }
+    }
+}
+
+// The release's blueprints: units/, and schook/units/ before 3615 (hooks over the base game's files).
+string[] folders = source is null ? [] : ["units", Path.Combine("schook", "units")];
+foreach (string folder in folders.Select(folder => Path.Combine(source!, folder)).Where(Directory.Exists))
+{
+    foreach (string file in Directory.GetFiles(folder, "*_unit.bp", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+    {
+        if (!Add(File.ReadAllText(file), "/" + Path.GetRelativePath(source!, file).Replace(Path.DirectorySeparatorChar, '/'), isBaseGame: false))
+        {
+            return 1;
+        }
+    }
+}
+
+if (unitsScd is not null)
+{
+    Console.WriteLine($"{units.Count - fromBaseGame.Count} units from the release, {fromBaseGame.Count} from the base game.");
+}
+
+UnitData data = UnitData.From(units.Values, fromBaseGame);
 Directory.CreateDirectory(output);
 UnitDataIndex index = File.Exists(indexPath) ? UnitDataIndex.Deserialize(File.ReadAllText(indexPath)) : UnitDataIndex.Empty;
 UnitData Read(int owner) => UnitData.Deserialize(File.ReadAllText(Path.Combine(output, index.Versions[owner].File)));

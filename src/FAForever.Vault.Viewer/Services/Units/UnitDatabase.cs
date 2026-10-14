@@ -24,10 +24,10 @@ public sealed class UnitDatabase(HttpClient http)
     public const string Folder = "data/units/";
 
     /// <summary>
-    /// The oldest game version in the data: where <c>tools/backfill-unit-data.ps1 -From</c> started.
-    /// Change it together with the data.
+    /// The oldest game version in the data: the oldest release tag of the FA repository, where
+    /// <c>tools/backfill-unit-data.ps1</c> starts. Change it together with the data.
     /// </summary>
-    public const int FirstVersion = 3801;
+    public const int FirstVersion = 3603;
 
     private Task<UnitDataIndex>? index;
     private readonly Dictionary<string, Task<UnitData>> files = [];

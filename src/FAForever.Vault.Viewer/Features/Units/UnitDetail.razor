@@ -35,6 +35,13 @@
         @Units("Built by", Data.GetBuilders(Unit.BlueprintId).Where(builder => builder.Buildable || !Unit.Buildable).ToList())
         @Units("Builds", Unit.Builds.Select(Data.GetOrNull).OfType<UnitSummary>().ToList())
 
+        @if (Unit.BaseGame == true && GameVersion != UnitDataIndex.BaseGame)
+        {
+            <p class="mt-4 text-xs text-ink-muted">
+                FAF had not changed this unit by game version @GameVersion: the game loaded it as Forged Alliance ships it,
+                the version Steam installs. Its values are those of the base game.
+            </p>
+        }
         @if (!Unit.Buildable)
         {
             <p class="mt-4 text-xs text-ink-muted">No player can build this unit in a game: it belongs to the campaign, a map or another unit.</p>

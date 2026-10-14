@@ -65,8 +65,8 @@
     [Parameter] public UnitDataIndex.UnitChanges? Changes { get; set; }
 
     public static string ChangesLabel(UnitDataIndex.UnitChanges changes) => changes.IsEmpty
-        ? $"No unit changed since {changes.Previous}"
-        : $"{changes.Changed.Count} changed, {changes.Added.Count} added, {changes.Removed.Count} removed since {changes.Previous}";
+        ? $"No unit changed since {UnitDataIndex.VersionName(changes.Previous)}"
+        : $"{changes.Changed.Count} changed, {changes.Added.Count} added, {changes.Removed.Count} removed since {UnitDataIndex.VersionName(changes.Previous)}";
 
     private string? text;
     private int textVersion;

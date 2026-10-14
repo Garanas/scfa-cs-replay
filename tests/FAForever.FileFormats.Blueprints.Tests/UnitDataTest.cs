@@ -64,6 +64,26 @@ namespace FAForever.FileFormats.Blueprints.Tests
         }
 
         [TestMethod]
+        public void MarksTheUnitsOfTheBaseGame()
+        {
+            BlueprintUnit striker = ParseUnit("/units/UEL0201/UEL0201_unit.bp");
+            BlueprintUnit acu = ParseUnit("/units/UEL0001/UEL0001_unit.bp");
+
+            // the Striker from the base game's units.scd, the commander from the FA repository
+            UnitData older = UnitData.From([striker, acu], new HashSet<string> { "UEL0201" });
+            Assert.IsTrue(older.GetOrNull("uel0201")!.BaseGame);
+            Assert.IsNull(older.GetOrNull("uel0001")!.BaseGame);
+            Assert.IsTrue(UnitData.Deserialize(older.Serialize()).GetOrNull("uel0201")!.BaseGame);
+            // written only when true: the commander's line (the first unit) has no such property
+            Assert.IsFalse(older.Serialize().Split('\n')[1].Contains("baseGame"), older.Serialize());
+
+            // FAF takes the unit into the repository unchanged: a different file, but no change of the unit
+            UnitData newer = UnitData.From([striker, acu]);
+            Assert.IsFalse(older.HasSameUnits(newer));
+            Assert.IsTrue(UnitData.Compare(older, newer).IsEmpty);
+        }
+
+        [TestMethod]
         public void ReadsOneUnitWithoutTheOthers()
         {
             UnitData data = UnitData.From([

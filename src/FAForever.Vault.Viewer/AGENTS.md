@@ -336,7 +336,7 @@ The JSON index gives the top-left pixel of each cell:
 Hovering a unit on the Build order tab (the order ledger, the key moments and the "units ordered"
 chips of the Timings view) shows a card with what the unit is: name, faction, tech, where it moves,
 roles, cost, build power, health, shield, intel ranges and its weapons. The data is
-`wwwroot/data/units/`: an index and one file per distinct set of units, for every release from 3801
+`wwwroot/data/units/`: an index and one file per distinct set of units, for the base game ("Steam") and every release from 3603
 (see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md), "Unit data"); regenerate
 it, never edit it by hand.
 
@@ -363,7 +363,7 @@ it, never edit it by hand.
 - **The data is of the FAF branch without mods.** The card uses the replay's own game version (from
   the header, `UnitDataNotes.GameVersion`). `Services/Units/UnitDataNotes.cs` adds a note when a
   replay ran on another featured mod (`Metadata.FeaturedMod` is not `faf`), outside FAF (header version
-  not `v1.50.x`, e.g. Steam), on a version without data of its own (before 3801, or newer than the
+  not `v1.50.x`, e.g. Steam), on a version without data of its own (before 3603, or newer than the
   data), or with mods (`Header.Mods`). Units missing from the data (mods, campaign) get a short card
   saying so.
 - The published service worker caches `data/units/index.json` with the app shell, and each data file

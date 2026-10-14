@@ -124,6 +124,14 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlyList<UnitSummaryWeapon> Weapons { get; init; } = [];
 
+        /// <summary>
+        /// True when the blueprint is the base game's (<c>gamedata/units.scd</c> of Forged Alliance, as
+        /// Steam installs it): the FA repository had no file for the unit in this release, so the game
+        /// loaded the original one and the unit is as the base game shipped it. Null otherwise. Set by
+        /// <see cref="UnitData.From"/>; <see cref="UnitData.Compare"/> does not count it as a change.
+        /// </summary>
+        public bool? BaseGame { get; init; }
+
         public bool HasCategory(string category) => Categories.Contains(category, StringComparer.OrdinalIgnoreCase);
 
         /// <summary>

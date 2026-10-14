@@ -15,7 +15,7 @@
         <div class="ml-auto flex items-center gap-2">
             @if (states is { Count: > 0 })
             {
-                <a class="btn-secondary px-3 py-1 text-xs" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(states[^1])}")">Show in the database</a>
+                <a class="btn-secondary px-3 py-1 text-xs" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(states[^1].To)}")">Show in the database</a>
             }
             <button type="button" class="cursor-pointer rounded-md px-2 py-1 text-lg leading-none text-ink-muted transition hover:bg-raised hover:text-ink"
                     title="Remove from the page" aria-label="@($"Remove {Title} from the page")" @onclick="OnRemove">×</button>
@@ -32,7 +32,7 @@
     }
     else if (latest is null)
     {
-        <p class="mt-3 text-sm text-ink-muted">No game version since @index.Versions.Keys.Min() has a unit @BlueprintId; mod and campaign units are not in the unit data.</p>
+        <p class="mt-3 text-sm text-ink-muted">No game version has a unit @BlueprintId; mod units and units a map brings along are not in the unit data.</p>
     }
     else
     {
@@ -46,8 +46,17 @@
                         @foreach (UnitState state in states)
                         {
                             <th class="px-3 py-2 align-bottom font-normal">
-                                <a class="font-mono font-semibold text-ink transition hover:text-primary" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(state)}")"
-                                   title="Show this version in the unit database">@Range(state)</a>
+                                @* The base game's values, as Steam installs it, up to the first release that changed the unit. *@
+                                @if (state.Unit.BaseGame == true)
+                                {
+                                    <a class="font-semibold text-ink transition hover:text-primary" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(state.From)}")"
+                                       title="@SteamTitle(state)">Steam</a>
+                                }
+                                else
+                                {
+                                    <a class="font-mono font-semibold text-ink transition hover:text-primary" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(state.To)}")"
+                                       title="Show this version in the unit database">@Range(state)</a>
+                                }
                                 @if (index.Versions.GetValueOrDefault(state.From)?.Released is { } released)
                                 {
                                     <span class="block text-[11px] text-ink-faint">@released.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</span>
@@ -177,8 +186,13 @@
 
     private static string Range(UnitState state) => state.From == state.To ? $"{state.From}" : $"{state.From}–{state.To}";
 
-    // A stretch of versions opens its last version in the unit database; the latest is its default.
-    private string VersionQuery(UnitState state) => state.To == index?.Latest ? "" : $"&version={state.To}";
+    private static string SteamTitle(UnitState state) => state.To == UnitDataIndex.BaseGame || state.From != UnitDataIndex.BaseGame
+        ? "Forged Alliance as Steam installs it. Show it in the unit database"
+        : $"Forged Alliance as Steam installs it; FAF kept these values up to {state.To}. Show it in the unit database";
+
+    // A stretch of versions opens its last version in the unit database (the Steam column the base
+    // game itself); the latest is its default.
+    private string VersionQuery(int version) => version == index?.Latest ? "" : $"&version={version}";
 
     private static string Subtitle(UnitSummary unit) => string.Join(" · ", new[]
     {
@@ -194,9 +208,15 @@
         UnitState first = states![0];
         UnitState last = states[^1];
         int oldest = index!.Versions.Keys.Min();
-        string since = first.From == oldest ? $"since {oldest}, the oldest version with data" : $"since it was added in {first.From}";
+        string since = first.From == UnitDataIndex.BaseGame ? "since the base game (Steam)"
+            : first.From == oldest ? $"since {oldest}, the oldest version with data"
+            : $"since it was added in {first.From}";
         string changes = states.Count == 1 ? "it has not changed" : $"it changed {states.Count - 1} {(states.Count == 2 ? "time" : "times")}";
         string removed = last.To != index.Latest ? $" It is not in the versions after {last.To}." : "";
-        return $"In every version {since}, {changes}: each column is a stretch of versions in which it stayed the same.{removed}";
+        // How long FAF kept the base game's values (as Steam installs it).
+        string baseGame = first.Unit.BaseGame != true || first.To == UnitDataIndex.BaseGame ? ""
+            : states.Count == 1 ? " No FAF release changed it: its values are those of the base game."
+            : $" FAF kept the base game's values up to {first.To}.";
+        return $"In every version {since}, {changes}: each column is a stretch of versions in which it stayed the same.{removed}{baseGame}";
     }
 }

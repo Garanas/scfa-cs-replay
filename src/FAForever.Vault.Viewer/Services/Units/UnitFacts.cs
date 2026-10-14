@@ -22,9 +22,11 @@ public static class UnitFacts
     /// Releases the facts leave out: 3761 took categories such as PRODUCTSC1 and OVERLAYDIRECTFIRE
     /// off most units (398 changed, 312 of them only in categories) and 3762 put them back (394, all
     /// but one only in categories). Counting them would make every unit look changed in July 2023.
-    /// The 86 units 3761 changed in other values lose that change too.
+    /// The 86 units 3761 changed in other values lose that change too. The base game
+    /// (<see cref="UnitDataIndex.BaseGame"/>) is no release either; what FAF's first release changed in
+    /// it still counts, as a change in that release.
     /// </summary>
-    public static bool IsLeftOut(int version) => version is 3761 or 3762;
+    public static bool IsLeftOut(int version) => version is 3761 or 3762 or UnitDataIndex.BaseGame;
 
     /// <summary>The unit that changed in the most versions, with the two after it.</summary>
     public static Fact? MostChanged(UnitDataIndex index, UnitData latest)
@@ -92,7 +94,9 @@ public static class UnitFacts
         int releasesSince = versions.Count(version => version > since);
 
         string units = untouched.Count == 1 ? $"The {Name(latest, untouched[0].BlueprintId)} has" : $"{untouched.Count} units have";
-        string text = since == versions[0]
+        string text = since == UnitDataIndex.BaseGame
+            ? $"{units} the values of the base game, as Steam installs it: no FAF release changed {(untouched.Count == 1 ? "it" : "them")}."
+            : since == versions[0]
             ? $"{units} barely changed since release {since}{Date(index, since)}, the oldest with data."
             : $"{units} barely changed since release {since}{Date(index, since)}, {releasesSince} releases ago.";
         List<string> shown = untouched

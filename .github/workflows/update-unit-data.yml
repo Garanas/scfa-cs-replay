@@ -98,10 +98,12 @@ jobs:
       env:
         VERSION: ${{ steps.version.outputs.version }}
       # Its output says which units changed since the previous version: the pull request's description.
+      # The runner has no Forged Alliance installation: a new release holds every unit of the base
+      # game itself (all releases since 3738 do), so the repository alone gives the same data.
       run: |
         commit="$(git -C fa rev-parse HEAD)"
         released="$(git -C fa log -1 --format=%cs HEAD)"
-        dotnet run tools/generate-unit-data.cs -- fa --version "$VERSION" --commit "$commit" --released "$released" | tee "$RUNNER_TEMP/changes.txt"
+        dotnet run tools/generate-unit-data.cs -- fa --without-base-game --version "$VERSION" --commit "$commit" --released "$released" | tee "$RUNNER_TEMP/changes.txt"
 
     - name: Open a pull request
       if: steps.version.outputs.skip != 'true'
