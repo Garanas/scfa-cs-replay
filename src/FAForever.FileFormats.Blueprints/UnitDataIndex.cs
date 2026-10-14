@@ -45,6 +45,19 @@ namespace FAForever.FileFormats.Blueprints
                 new UnitChanges(previous, difference.Changed, difference.Added, difference.Removed);
         }
 
+        /// <summary>
+        /// The version under which the index holds the base game alone: the units of Forged Alliance as
+        /// Steam installs it (<c>gamedata/units.scd</c>), before any FAF release. 3599 is the last patch
+        /// of the original game; the oldest FAF release is 3603. Shown as "Steam".
+        /// </summary>
+        public const int BaseGame = 3599;
+
+        /// <summary>
+        /// How a game version reads: "Steam" for <see cref="BaseGame"/>, otherwise its number.
+        /// </summary>
+        public static string VersionName(int version) =>
+            version == BaseGame ? "Steam" : version.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         /// <summary>The newest game version with data.</summary>
         [JsonIgnore]
         public int? Latest => Versions.Count > 0 ? Versions.Keys.Max() : null;

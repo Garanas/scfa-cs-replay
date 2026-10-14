@@ -40,9 +40,9 @@ in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blue
 The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
 tools/generate-unit-data.cs -- <fa checkout> --base-game <Forged Alliance folder>`) parses the unit
 blueprints of one FA release and adds it to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the
-unit cards and the unit database read. Every release tag from 3603, the oldest, is there; the oldest
-version is also `UnitDatabase.FirstVersion` in the Viewer (the Units page shows it), so change both
-together.
+unit cards and the unit database read. Every release tag from 3603, the oldest, is there, after the
+base game (below); the oldest release is also `UnitDatabase.FirstVersion` in the Viewer (the Units
+page shows it), so change both together.
 
 - **The units are those the game loads: the base game's, with the release's own over them.** The
   game reads the base game's `gamedata/units.scd` (Forged Alliance as Steam installs it; FAF still
@@ -55,6 +55,10 @@ together.
   `UnitData.Compare` ignores the flag, so a unit that FAF took into the repository unchanged has not
   changed. Since 3738 the repository holds every unit of `units.scd`, so the update workflow, which
   has no game installation, passes `--without-base-game`.
+- **The base game alone is a version too**: 3599 (`UnitDataIndex.BaseGame`, the last patch of the
+  original game; `VersionName` makes it "Steam"), added first by the backfill script with
+  `--base-game-only` and dated by the newest file in `units.scd` (2009-06-30). Every unit's history
+  starts there, so the first FAF release (3603) lists what FAF changed in the base game.
 - Releases 3623 to 3690 hold two blueprints for `ueb4202` (a copy in `units/UEB0402/`); the last one
   read in path order wins (`units/UEB4202/`), and the generator prints a note.
 

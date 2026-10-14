@@ -34,7 +34,11 @@ if (Test-Path $Output) { Remove-Item -Recurse -Force $Output }
 New-Item -ItemType Directory -Force $Output | Out-Null
 
 try {
-    $rebuild = @("--no-cache")  # build the generator fresh once, then reuse that build
+    # The base game alone comes first, as version 3599 (UnitDataIndex.BaseGame): "Steam" in the Viewer,
+    # the starting point of every unit's history.
+    dotnet run --no-cache $generator -- --base-game-only $Output --base-game $BaseGame
+    if ($LASTEXITCODE -ne 0) { throw "generate-unit-data failed for the base game" }
+
     foreach ($tag in $tags) {
         $dir = Join-Path $work $tag
         New-Item -ItemType Directory -Force $dir | Out-Null
@@ -53,9 +57,8 @@ try {
         $released = git -C $Source log -1 --format=%cs "refs/tags/$tag"
 
         # the tag is the release: its mod_info.lua does not always say so (3805 says 3804)
-        dotnet run @rebuild $generator -- $dir $Output --base-game $BaseGame --version $tag --commit $commit --released $released
+        dotnet run $generator -- $dir $Output --base-game $BaseGame --version $tag --commit $commit --released $released
         if ($LASTEXITCODE -ne 0) { throw "generate-unit-data failed for $tag" }
-        $rebuild = @()
         Remove-Item -Recurse -Force $dir, $archive
     }
 }

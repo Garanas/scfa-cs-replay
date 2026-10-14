@@ -336,7 +336,7 @@ The JSON index gives the top-left pixel of each cell:
 Hovering a unit on the Build order tab (the order ledger, the key moments and the "units ordered"
 chips of the Timings view) shows a card with what the unit is: name, faction, tech, where it moves,
 roles, cost, build power, health, shield, intel ranges and its weapons. The data is
-`wwwroot/data/units/`: an index and one file per distinct set of units, for every release from 3603
+`wwwroot/data/units/`: an index and one file per distinct set of units, for the base game ("Steam") and every release from 3603
 (see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md), "Unit data"); regenerate
 it, never edit it by hand.
 

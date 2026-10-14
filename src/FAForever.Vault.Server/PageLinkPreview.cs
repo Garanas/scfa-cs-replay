@@ -282,8 +282,9 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     }
 
     /// <summary>
-    /// What happened to a unit since the oldest release with data (<paramref name="first"/>): "Since 3700,
-    /// changed in 3765, 3801 and 3830", "Added in 3765, unchanged since", "Unchanged in every release since 3700".
+    /// What happened to a unit since the oldest version with data (<paramref name="first"/>, the base game):
+    /// "Since the base game, changed in 3603, 3801 and 3830", "Added in 3765, unchanged since",
+    /// "Unchanged in every release since the base game".
     /// </summary>
     internal static string Story(int first, IReadOnlyList<int> added, IReadOnlyList<int> changed)
     {
@@ -294,9 +295,11 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
             _ => $"changed in {changed.Count} releases, most recently in {changed[^1]}",
         };
 
+        // The oldest data is usually the base game (Steam), which is no release.
+        string since = first == UnitDataIndex.BaseGame ? "the base game" : $"{first}";
         return added.Count > 0 ? $"Added in {added[0]}, {changes}"
-            : changed.Count == 0 ? $"Unchanged in every release since {first}"
-            : $"Since {first}, {changes}";
+            : changed.Count == 0 ? $"Unchanged in every release since {since}"
+            : $"Since {since}, {changes}";
     }
 
     /// <summary>"Experimental Mobile Factory · UEF · 28,000 mass, 350,000 energy · 12,500 health, 20,000 shield · builds 20 units".</summary>

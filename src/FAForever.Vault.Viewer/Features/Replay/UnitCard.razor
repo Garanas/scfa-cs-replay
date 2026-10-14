@@ -14,7 +14,7 @@
 
     @if (Unit is null)
     {
-        <p class="mt-2 text-xs text-ink-muted">Not in the unit data of game version @DataVersion: a mod or campaign unit.</p>
+        <p class="mt-2 text-xs text-ink-muted">Not in the unit data of game version @DataVersion: a mod unit, or one a map brings along.</p>
     }
     else
     {
@@ -77,8 +77,15 @@
     }
 
     <div class="mt-2 border-t border-edge pt-2 text-[11px] text-ink-faint">
-        Game version @DataVersion
-        @if (Unit?.BaseGame == true)
+        @if (DataVersion == UnitDataIndex.BaseGame)
+        {
+            @("Steam: the base game, before any FAF release")
+        }
+        else
+        {
+            @($"Game version {DataVersion}")
+        }
+        @if (Unit?.BaseGame == true && DataVersion != UnitDataIndex.BaseGame)
         {
             @* FAF had not changed the unit by this version: the game loaded the base game's blueprint. *@
             <span title="FAF had not changed this unit yet: the values are those of Forged Alliance as Steam installs it">@(" · as in the base game")</span>

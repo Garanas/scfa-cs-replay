@@ -34,6 +34,14 @@ namespace FAForever.FileFormats.Blueprints.Tests
         }
 
         [TestMethod]
+        [DataRow(UnitDataIndex.BaseGame, "Steam")]
+        [DataRow(3603, "3603")]
+        public void NamesAGameVersion(int version, string expected)
+        {
+            Assert.AreEqual(expected, UnitDataIndex.VersionName(version));
+        }
+
+        [TestMethod]
         public void FindsThePreviousVersion()
         {
             Assert.AreEqual(3811, Index.Previous(3839));
