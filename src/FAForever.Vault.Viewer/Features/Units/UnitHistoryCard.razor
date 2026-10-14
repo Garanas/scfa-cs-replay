@@ -52,6 +52,10 @@
                                 {
                                     <span class="block text-[11px] text-ink-faint">@released.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</span>
                                 }
+                                @if (state.Unit.BaseGame == true)
+                                {
+                                    <span class="block text-[11px] text-ink-faint" title="FAF had not changed this unit yet: the values are those of Forged Alliance as Steam installs it">base game</span>
+                                }
                             </th>
                         }
                     </tr>
@@ -197,6 +201,10 @@
         string since = first.From == oldest ? $"since {oldest}, the oldest version with data" : $"since it was added in {first.From}";
         string changes = states.Count == 1 ? "it has not changed" : $"it changed {states.Count - 1} {(states.Count == 2 ? "time" : "times")}";
         string removed = last.To != index.Latest ? $" It is not in the versions after {last.To}." : "";
-        return $"In every version {since}, {changes}: each column is a stretch of versions in which it stayed the same.{removed}";
+        // FAF had not changed it yet: the base game's values (as Steam installs it), up to the first change.
+        string baseGame = first.Unit.BaseGame != true ? ""
+            : states.Count == 1 ? " Its values are those of the base game, as Steam installs Forged Alliance."
+            : $" Up to {first.To} its values are those of the base game, as Steam installs Forged Alliance.";
+        return $"In every version {since}, {changes}: each column is a stretch of versions in which it stayed the same.{removed}{baseGame}";
     }
 }

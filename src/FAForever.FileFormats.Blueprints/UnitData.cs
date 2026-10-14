@@ -50,11 +50,15 @@ namespace FAForever.FileFormats.Blueprints
         /// The data of a release from its unit blueprints, with the build tree
         /// (<see cref="UnitBuildTree"/>) filled in.
         /// </summary>
-        public static UnitData From(IEnumerable<BlueprintUnit> units)
+        /// <param name="units">One blueprint per unit.</param>
+        /// <param name="baseGame">The ids of the units whose blueprint is the base game's
+        /// (<see cref="UnitSummary.BaseGame"/>), any case.</param>
+        public static UnitData From(IEnumerable<BlueprintUnit> units, IReadOnlySet<string>? baseGame = null)
         {
             List<BlueprintUnit> all = units.ToList();
             IReadOnlyDictionary<string, IReadOnlyList<string>> builds = UnitBuildTree.Builds(all);
             IReadOnlySet<string> buildable = UnitBuildTree.Buildable(all, builds);
+            HashSet<string> fromBaseGame = new(baseGame ?? new HashSet<string>(), StringComparer.OrdinalIgnoreCase);
             return new UnitData(
                 all.Select(unit =>
                     {
@@ -63,6 +67,7 @@ namespace FAForever.FileFormats.Blueprints
                         {
                             Buildable = buildable.Contains(summary.BlueprintId),
                             Builds = builds.GetValueOrDefault(summary.BlueprintId) ?? [],
+                            BaseGame = fromBaseGame.Contains(summary.BlueprintId) ? true : null,
                         };
                     })
                     .OrderBy(unit => unit.BlueprintId, StringComparer.Ordinal)
@@ -82,12 +87,14 @@ namespace FAForever.FileFormats.Blueprints
 
         /// <summary>
         /// The units added, removed and changed (any value of their summary) from <paramref name="older"/>
-        /// to <paramref name="newer"/>, each sorted by id.
+        /// to <paramref name="newer"/>, each sorted by id. A unit whose blueprint moved from the base game
+        /// to the FA repository without another difference (<see cref="UnitSummary.BaseGame"/>) has not changed.
         /// </summary>
         public static Difference Compare(UnitData older, UnitData newer)
         {
-            Dictionary<string, string> before = older.Units.ToDictionary(unit => unit.BlueprintId, Line);
-            Dictionary<string, string> after = newer.Units.ToDictionary(unit => unit.BlueprintId, Line);
+            static string Values(UnitSummary unit) => Line(unit with { BaseGame = null });
+            Dictionary<string, string> before = older.Units.ToDictionary(unit => unit.BlueprintId, Values);
+            Dictionary<string, string> after = newer.Units.ToDictionary(unit => unit.BlueprintId, Values);
             return new Difference(
                 after.Keys.Except(before.Keys).Order(StringComparer.Ordinal).ToList(),
                 before.Keys.Except(after.Keys).Order(StringComparer.Ordinal).ToList(),

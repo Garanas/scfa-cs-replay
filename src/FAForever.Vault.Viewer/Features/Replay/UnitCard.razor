@@ -76,7 +76,14 @@
         }
     }
 
-    <div class="mt-2 border-t border-edge pt-2 text-[11px] text-ink-faint">Game version @DataVersion</div>
+    <div class="mt-2 border-t border-edge pt-2 text-[11px] text-ink-faint">
+        Game version @DataVersion
+        @if (Unit?.BaseGame == true)
+        {
+            @* FAF had not changed the unit by this version: the game loaded the base game's blueprint. *@
+            <span title="FAF had not changed this unit yet: the values are those of Forged Alliance as Steam installs it">@(" · as in the base game")</span>
+        }
+    </div>
     @foreach (string note in Notes)
     {
         <p class="mt-1 text-[11px] text-primary">@note</p>

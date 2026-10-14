@@ -38,10 +38,25 @@ in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blue
 ## Unit data (the unit cards)
 
 The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
-tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and adds it
-to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the unit cards and the unit database read.
-Every release from 3801 (there is no 3800 tag) is there; the oldest version is also
-`UnitDatabase.FirstVersion` in the Viewer (the Units page shows it), so change both together.
+tools/generate-unit-data.cs -- <fa checkout> --base-game <Forged Alliance folder>`) parses the unit
+blueprints of one FA release and adds it to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the
+unit cards and the unit database read. Every release tag from 3603, the oldest, is there; the oldest
+version is also `UnitDatabase.FirstVersion` in the Viewer (the Units page shows it), so change both
+together.
+
+- **The units are those the game loads: the base game's, with the release's own over them.** The
+  game reads the base game's `gamedata/units.scd` (Forged Alliance as Steam installs it; FAF still
+  mounts it, `init_faf.lua`) and FAF's blueprints, the latter winning per unit id. Until 3738 the FA
+  repository held only the units FAF had changed (3615 had 275 of the game's 568; before 3615 they
+  were in `schook/units/`), so the generator reads `units.scd` first: `--base-game` names the
+  installation (or `gamedata/`, or the archive), else the environment variable `FA_BASE_GAME`. A unit
+  from `units.scd` gets `UnitSummary.BaseGame` (`"baseGame":true`): FAF had not changed it yet, so it is
+  as the base game shipped it; the Viewer says so on the card, in the details and in the history.
+  `UnitData.Compare` ignores the flag, so a unit that FAF took into the repository unchanged has not
+  changed. Since 3738 the repository holds every unit of `units.scd`, so the update workflow, which
+  has no game installation, passes `--without-base-game`.
+- Releases 3623 to 3690 hold two blueprints for `ueb4202` (a copy in `units/UEB0402/`); the last one
+  read in path order wins (`units/UEB4202/`), and the generator prints a note.
 
 - `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
   health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
@@ -79,14 +94,16 @@ Every release from 3801 (there is no 3800 tag) is there; the oldest version is a
   `UnitData.From` fills `Buildable` and `Builds` in; `UnitData.GetBuilders` is the inverse.
 - The game version is the release tag, which is also the last number of a replay header's version.
   `mod_info.lua` usually says the same (`version`, read with `LuaSourceParser`), but not always:
-  release 3805 still says 3804. So the backfill script and the workflow pass the tag (`--version`); the
-  generator falls back to `mod_info.lua` without it and notes a mismatch.
+  release 3805 still says 3804, and releases before 3650 have no `mod_info.lua`. So the backfill script
+  and the workflow pass the tag (`--version`); the generator falls back to `mod_info.lua` without it
+  and notes a mismatch.
 - `.github/workflows/update-unit-data.yml` adds a new release and opens a pull request when FA
   publishes one (a `repository_dispatch` from the FA repository, by hand, or a daily check).
 - **Adding a field** (a property on `UnitSummary` or `UnitSummaryWeapon`, its line in `From`, a test)
   changes every data file: regenerate them all from scratch with
-  `pwsh tools/backfill-unit-data.ps1 -Source <fa clone>` (it extracts each release tag with an archive
-  of `units/` and `mod_info.lua`, so the clone is left alone) and commit `data/units/`. The generator
+  `pwsh tools/backfill-unit-data.ps1 -Source <fa clone> -BaseGame <Forged Alliance folder>` (it extracts
+  each release tag with an archive of `units/`, `schook/units/` and `mod_info.lua`, so the clone is left
+  alone; `-Output` writes elsewhere) and commit `data/units/`. The generator
   refuses to overwrite a file that other versions share.
 
 ## Blueprint ids, unit names and factions
