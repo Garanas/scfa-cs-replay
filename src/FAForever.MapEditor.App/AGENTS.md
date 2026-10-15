@@ -468,8 +468,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     that changed and the larger ones holding them (4 ms after a stroke on an 81 km map); another map
     makes it anew, on a thread of the pool for 20 km and more (31 ms for 81 km), the camera resting
     on the middle's height meanwhile.
-  `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the normal decals
-  and the water; `TerrainShaders` follows the FAF map editor's port of the game's
+  `Rendering/Gpu/TerrainRenderer` draws the frame's normal buffer (the normal decals' tilt), then
+  the terrain, the albedo decals and the water; `TerrainShaders`
+  follows the FAF map editor's port of the game's
   `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
   the lower albedo, the strata by their masks (`clamp(mask * 2 - 1)`), the upper albedo by its alpha,
   each repeating every `AlbedoScale` ogrids, and the game's lighting (`CalculateXPLighting`
@@ -486,8 +487,23 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Decals keep the map's order (which lies on top) and are drawn instanced: a run of decals with
     the same texture and size class is one draw (Seton's Clutch: 2230 decals, 48 textures, 523
     draws). A decal's position is its corner, and it turns around that corner. Normal decals
-    (DXT5nm) change the lit colour below by the ratio of the light with and without them,
-    blended as `2 × source × destination`, since the view has no deferred lighting.
+    (DXT5nm) go into the frame's normal buffer first, as the game's do. The game keeps two things
+    apart in its normal buffer: the detail (the strata's normal maps, `TTerrainNormals`, over which
+    the normal decals blend their own normal's x and z by red, `TDecalsNormals` with `Write_RG`) and
+    the heightmap's normal (`TTerrainBasis`, blue and alpha), and its `TCreateBasis` pass
+    (`frame.fx`, `BasisPS`) turns the detail, a tilt in the ground's own frame, onto the heightmap's
+    normal; so a decal shapes the shading without taking the heightmap's away. The view does the
+    same with the strata's normal maps left out: the buffer (a texture of the view's size, span
+    `3d.draw-normals`) is cleared flat, the terrain is drawn into its depth alone, and each normal
+    decal blends its tilt into red and green (`TerrainShaders.DecalNormalFragment`); the terrain and
+    the albedo decals are then lit once from the heightmap's normal with that tilt turned onto it as
+    `BasisPS` turns it (`surfaceNormal` of `TerrainShaders.SurfaceNormal`, unit 15), so normal decals
+    stacked on each other blend and never compound. Without normal decals the terrain takes the
+    heightmap's normals; a card that refuses the buffer (`state.gpu.normalBuffer.works`) draws no
+    normal decals. Every decal fades as the engine fades it (`CWldTerrainDecal::GetLODAlpha` in
+    faf-re): by the depth of its middle in the view, out from 0.75 of its far cut-off to nothing at
+    it (a near cut-off above 0 fades it in from 0.75 of that instead), so a map seen from further
+    than its decals' cut-offs shows none, as the game shows none; a cut-off of 0 or less never fades.
   - What lies on the terrain (decals, the brush) is drawn on the terrain's own lattice: the
     cells under it, their corners made by the same invariant code as the terrain's
     (`TerrainShaders.Lattice`), so the two are one surface and the depth test with a small
@@ -552,8 +568,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
     the heights (`usampler2D`), 1 a decal's texture or a model's albedo (the objects set it
     active before their textures upload, since an upload binds to the active unit), 2 to 11 the
-    layers, 12 and 13 the masks, 14 the brush's picture; the overlays' pass binds walkability to
-    13 and the painted grid to 15 itself (section "Handles, hover and the 3D view's overlays").
+    layers, 12 and 13 the masks, 14 the brush's picture, 15 the frame's normal buffer while the
+    terrain and the albedo decals are lit; the overlays' pass binds walkability to 13 and the
+    painted grid to 15 itself (section "Handles, hover and the 3D view's overlays").
     A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
     their own sampler.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
@@ -1457,7 +1474,9 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   `ExportStep.DecalsOrder` runs the library's `MapWideDecalsExport` (an 8192 normals decal and its
   mipmaps take about 3 s). `state.wideDecals`.
 - **Normal decals in 3D** follow the game: the decal's normal is its own (up in its frame, turned by
-  the decal's heading), replacing the terrain's by red (`TerrainShaders.DecalNormalFragment`).
+  the decal's heading), its tilt blended into the frame's normal buffer by red and turned onto the
+  heightmap's normal when the ground is lit (`TerrainShaders.DecalNormalFragment`,
+  `TerrainShaders.SurfaceNormal`; section "Structure", the 3D view's decals).
 - **Decal-masks layers**: the add choice `LayerStackViewModel.DecalMasksChoice` in the heightmap's
   stack (`terrain.addLayer kind=decals {mask?, height?}`, then `terrain.setDecalMasks {layer?, mask?,
   sets?, height?}`, the inspector's Decal masks fields) and in every stack of coverage (`layers.add
@@ -3399,8 +3418,10 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
   Logged now: commands run and asked for while not built; opening, importing, saving, exporting
   with their duration, or why they failed; files read again; the workspace and the conversion of
   the assets (files skipped); the OpenGL the 3D view runs on, why it could not start or draw, a
-  texture that could not be read; stalls of 250 ms or more; crashes (unhandled exceptions, also
-  of the window's thread, written at once).
+  texture that could not be read, the first error the card reports in a frame of the terrain
+  (`TerrainRenderer.DrawError`, also `state.gpu.drawError`: a draw the card refused leaves no
+  other trace); stalls of 250 ms or more; crashes (unhandled exceptions, also of the window's
+  thread, written at once).
 - **Metrics** (`Diagnostics/EditorMetrics`, `System.Diagnostics.Metrics`): `editor.commands`
   (command, result), `editor.log.records` (level, category), `editor.span.duration` (the
   `Performance` spans), `editor.ui.latency`, `editor.ui.stalls`, `editor.operation.duration`
@@ -3453,7 +3474,9 @@ faf-map editor close                                      # closes without askin
 
 - The state's `gpu` says which OpenGL the 3D view runs on, its error if it could not start, the
   textures on the card, the last texture that could not be read, the decals with their draws
-  and textures, and `objects`: the props, units and markers drawn in the last frame, their draws,
+  and textures, `normalBuffer` (whether the card draws the normal decals' buffer and whether the
+  last frame made one), `drawError` (the first error the card reported in the last frame, or
+  null), and `objects`: the props, units and markers drawn in the last frame, their draws,
   the models on the card (`meshes`, one per level), read and being read, the blueprints drawn as
   a box (`missingMeshes`) and the triangles of the models.
 - The state includes `busy` and `stage` (`SetUp`, `UpdateAssets`, `Converting`, `Ready`), with

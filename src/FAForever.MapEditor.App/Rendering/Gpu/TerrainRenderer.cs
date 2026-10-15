@@ -69,12 +69,14 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     // covers a decal; one wider than the largest takes every second (or more) corner
     private static readonly int[] DecalGridCells = [4, 16, 64, 256];
 
-    // corner, edge u, edge v: six floats per decal
-    private const int DecalStride = 6 * sizeof(float);
+    // corner, edge u, edge v, the far and near cut-offs: eight floats per decal
+    private const int DecalFloats = 8;
+    private const int DecalStride = DecalFloats * sizeof(float);
 
     private readonly GL _gl;
     private readonly GpuTextureCache _textures;
     private readonly Program _terrain;
+    private readonly Program _terrainDepth;
     private readonly Program _decalAlbedo;
     private readonly Program _decalNormal;
     private readonly Program _decalHighlight;
@@ -122,6 +124,14 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly List<DecalRun> _highlightRuns = [];
     private (int Width, int Height) _mapSize;
 
+    // the frame's normal buffer: the normal decals' tilt in the ground's own frame (red and green,
+    // flat where none lies), the viewport's size, with a depth buffer of its own
+    private uint _normalFrame;
+    private uint _normalTexture;
+    private uint _normalDepth;
+    private (int Width, int Height) _normalSize;
+    private (int X, int Y) _viewportOrigin;
+
     private sealed record DecalRun(bool Normals, string Texture, int SizeClass, int First, int Count);
 
     public TerrainRenderer(GL gl, bool es, Action textureLoaded)
@@ -129,6 +139,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl = gl;
         _textures = new GpuTextureCache(gl, textureLoaded);
         _terrain = new Program(gl, TerrainShaders.TerrainVertex(es), TerrainShaders.TerrainFragment(es));
+        _terrainDepth = new Program(gl, TerrainShaders.TerrainVertex(es), TerrainShaders.TerrainDepthFragment(es));
         _decalAlbedo = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalAlbedoFragment(es));
         _decalNormal = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalNormalFragment(es));
         _decalHighlight = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalHighlightFragment(es));
@@ -178,6 +189,39 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     public (int Decals, int Draws, int Textures) DecalState =>
         (_runs.Sum(run => run.Count), _runs.Count, _runs.Select(run => run.Texture.ToLowerInvariant()).Distinct().Count());
+
+    /// <summary>
+    /// Whether the normal decals are blended into a normal buffer the terrain and the albedo decals
+    /// are lit from, as the game does; false once the card refused the buffer's frame buffer (the
+    /// normal decals then change nothing).
+    /// </summary>
+    public bool NormalBufferWorks { get; private set; } = true;
+
+    /// <summary>
+    /// Whether the last frame made the normal buffer: the map has normal decals that show.
+    /// </summary>
+    public bool NormalBufferDrawn { get; private set; }
+
+    /// <summary>
+    /// The last error the card reported after a pass of the terrain (the pass and OpenGL's name for
+    /// it), or null; the view logs it once.
+    /// </summary>
+    public string? DrawError { get; private set; }
+
+    /// <summary>
+    /// Notes the card's error since the last check, if any, as <paramref name="pass"/>'s.
+    /// </summary>
+    private void CheckError(string pass)
+    {
+        GLEnum error = _gl.GetError();
+        if (error != GLEnum.NoError && _frameError is null)
+        {
+            _frameError = $"{pass}: {error}";
+        }
+    }
+
+    // the first error of the frame being drawn
+    private string? _frameError;
 
     /// <summary>
     /// Whether the last frame drew the sky's cube map behind the map (user story L-1); false while
@@ -251,10 +295,28 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.DepthFunc(DepthFunction.Lequal);
         _gl.DepthMask(true);
 
+        // the normal decals go into the frame's normal buffer first, as the game's do (TDecalsNormals
+        // over the detail of TTerrainNormals): the terrain and the albedo decals are lit from it once,
+        // the tilt turned onto the heightmap's normal, so decals stacked on each other blend and never
+        // compound
+        bool normals = false;
+        _frameError = null;
+        CheckError("before the terrain");
+        if (showDecals)
+        {
+            using (Performance.Measure("3d.draw-normals"))
+            {
+                normals = DrawNormalBuffer(document, viewProjection, findTexture);
+            }
+            CheckError("the normal buffer");
+        }
+        NormalBufferDrawn = normals;
+
         using (Performance.Measure("3d.draw-terrain"))
         {
-            DrawTerrain(document, viewProjection, findTexture);
+            DrawTerrain(document, viewProjection, findTexture, normals);
         }
+        CheckError("the terrain");
         objects?.Renderer.DrawModels(document, viewProjection, objects.Value.Frame, sweep);
 
         // decals lie on the terrain: no depth writes, and pulled towards the camera so the ground does not hide them
@@ -266,9 +328,10 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             using (Performance.Measure("3d.draw-decals"))
             {
-                DrawDecals(document, viewProjection, findTexture, normals: false);
-                DrawDecals(document, viewProjection, findTexture, normals: true);
+                DrawAlbedoDecals(document, viewProjection, findTexture, normals);
+                CheckError("the albedo decals");
                 DrawHighlights(document, viewProjection, decals?.Color ?? Vector3.One);
+                CheckError("the highlighted decals");
             }
         }
         _gl.Disable(EnableCap.PolygonOffsetFill);
@@ -318,6 +381,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         }
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
+        CheckError("the rest of the frame");
+        DrawError = _frameError;
 
         for (int unit = 0; unit < 16; unit++)
         {
@@ -329,7 +394,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         }
     }
 
-    private void DrawTerrain(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture)
+    private void DrawTerrain(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, bool normals)
     {
         Program program = _terrain;
         program.Use();
@@ -369,8 +434,128 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uMask0", 12);
         Bind(13, _mask1, _masks);
         program.Set("uMask1", 13);
+        BindNormals(program, normals);
 
         _grid.Draw();
+    }
+
+    /// <summary>
+    /// Gives a pass that lights the ground the frame's normal buffer on unit 15, or tells it to take
+    /// the heightmap's normals when the frame made none.
+    /// </summary>
+    private void BindNormals(Program program, bool normals)
+    {
+        // a complete texture of the sampler's kind on the unit whether or not it is read: the card
+        // refuses a draw whose sampler meets a texture of another kind
+        if (normals)
+        {
+            Bind(15, _normalTexture, 0);
+        }
+        else
+        {
+            Bind(15, _white, _clamp);
+        }
+        program.Set("uNormals", 15);
+        program.Set("uUseNormals", normals ? 1 : 0);
+        program.Set("uViewportOrigin", (float)_viewportOrigin.X, (float)_viewportOrigin.Y);
+    }
+
+    /// <summary>
+    /// The frame's normal buffer: the detail of the ground in its own frame, flat everywhere (the
+    /// strata's normal maps are not drawn), then each normal decal's sideways tilt blended into red
+    /// and green by its red channel and its fade, as the game's <c>TDecalsNormals</c> blends over its
+    /// <c>TTerrainNormals</c> detail with <c>Write_RG</c>. The terrain is drawn first for its depth
+    /// alone, so a decal on a hidden slope does not reach the pixel of the slope in front. The
+    /// lighting turns the tilt onto the heightmap's normal (<see cref="TerrainShaders.SurfaceNormal"/>).
+    /// A texture of the viewport's size with a depth buffer of its own, made again when the size
+    /// changes.
+    /// </summary>
+    /// <returns>False when there is nothing to blend (the terrain then takes the heightmap's normals)
+    /// or the card refuses the frame buffer.</returns>
+    private bool DrawNormalBuffer(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture)
+    {
+        if (!NormalBufferWorks || !_runs.Any(run => run.Normals))
+        {
+            return false;
+        }
+        _gl.GetInteger(GetPName.DrawFramebufferBinding, out int scene);
+        Span<int> viewport = stackalloc int[4];
+        _gl.GetInteger(GetPName.Viewport, viewport);
+        int width = viewport[2];
+        int height = viewport[3];
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+        _viewportOrigin = (viewport[0], viewport[1]);
+        if (_normalFrame == 0)
+        {
+            _normalFrame = _gl.GenFramebuffer();
+            _normalTexture = _gl.GenTexture();
+            _normalDepth = _gl.GenRenderbuffer();
+        }
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _normalFrame);
+        if (_normalSize != (width, height))
+        {
+            _gl.ActiveTexture(TextureUnit.Texture15);
+            _gl.BindTexture(TextureTarget.Texture2D, _normalTexture);
+            _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _normalTexture, 0);
+            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _normalDepth);
+            _gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.DepthComponent24, (uint)width, (uint)height);
+            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, 0);
+            _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _normalDepth);
+            _gl.ActiveTexture(TextureUnit.Texture0);
+            _normalSize = (width, height);
+            if (_gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+            {
+                _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)scene);
+                NormalBufferWorks = false;
+                return false;
+            }
+        }
+        // flat detail everywhere; the scene's clear colour is put back afterwards
+        Span<float> clearColor = stackalloc float[4];
+        _gl.GetFloat(GetPName.ColorClearValue, clearColor);
+        _gl.ClearColor(0.5f, 0.5f, 0, 1);
+        _gl.ClearDepth(1);
+        _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+        _gl.ClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+
+        // the terrain for its depth alone
+        Program program = _terrainDepth;
+        program.Use();
+        SetCommon(program, document, viewProjection);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
+        _gl.ColorMask(false, false, false, false);
+        _grid.Draw();
+
+        // the decals on the terrain's lattice as in the scene, blended by their weight into red and green
+        _gl.DepthMask(false);
+        _gl.Enable(EnableCap.PolygonOffsetFill);
+        _gl.PolygonOffset(-1, -4);
+        _gl.Enable(EnableCap.Blend);
+        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        _gl.ColorMask(true, true, false, false);
+        program = _decalNormal;
+        program.Use();
+        SetCommon(program, document, viewProjection);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
+        program.Set("uTexture", 1);
+        DrawDecalRuns(program, normals: true, findTexture);
+        _gl.ColorMask(true, true, true, true);
+        _gl.Disable(EnableCap.Blend);
+        _gl.Disable(EnableCap.PolygonOffsetFill);
+        _gl.DepthMask(true);
+
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)scene);
+        return true;
     }
 
     /// <summary>
@@ -674,24 +859,28 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _brushPictureOf = shape;
     }
 
-    private void DrawDecals(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, bool normals)
+    /// <summary>
+    /// The albedo decals over the lit terrain, lit from the frame's normal buffer when there is one,
+    /// premultiplied over what lies below.
+    /// </summary>
+    private void DrawAlbedoDecals(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, bool normals)
     {
-        Program program = normals ? _decalNormal : _decalAlbedo;
+        Program program = _decalAlbedo;
         program.Use();
         SetCommon(program, document, viewProjection);
         program.Set("uMapSize", document.Width, document.Height);
         program.Set("uCells", _gridCells.X, _gridCells.Z);
         program.Set("uTexture", 1);
-        if (normals)
-        {
-            // 2 × source × destination: the shader outputs half the factor, so it can brighten too
-            _gl.BlendFunc(BlendingFactor.DstColor, BlendingFactor.SrcColor);
-        }
-        else
-        {
-            _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
-        }
+        BindNormals(program, normals);
+        _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        DrawDecalRuns(program, normals: false, findTexture);
+    }
 
+    /// <summary>
+    /// The runs of albedo or of normal decals, each run one instanced draw with its texture on unit 1.
+    /// </summary>
+    private void DrawDecalRuns(Program program, bool normals, Func<string, TextureSource?> findTexture)
+    {
         foreach (DecalRun run in _runs)
         {
             if (run.Normals != normals)
@@ -707,15 +896,23 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             Mesh mesh = _decalGrids[run.SizeClass];
             program.Set("uPatchCells", (float)DecalGridCells[run.SizeClass]);
             mesh.Bind();
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _decalInstances);
-            nint offset = run.First * DecalStride;
-            for (uint attribute = 1; attribute <= 3; attribute++)
-            {
-                _gl.EnableVertexAttribArray(attribute);
-                _gl.VertexAttribPointer(attribute, 2, VertexAttribPointerType.Float, false, DecalStride, (void*)(offset + (attribute - 1) * 2 * sizeof(float)));
-                _gl.VertexAttribDivisor(attribute, 1);
-            }
+            BindInstances(_decalInstances, run);
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)mesh.IndexCount, DrawElementsType.UnsignedInt, null, (uint)run.Count);
+        }
+    }
+
+    /// <summary>
+    /// The instance attributes of a run, one set per decal: its corner, its two edges and its cut-offs.
+    /// </summary>
+    private void BindInstances(uint buffer, DecalRun run)
+    {
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, buffer);
+        nint offset = run.First * DecalStride;
+        for (uint attribute = 1; attribute <= 4; attribute++)
+        {
+            _gl.EnableVertexAttribArray(attribute);
+            _gl.VertexAttribPointer(attribute, 2, VertexAttribPointerType.Float, false, DecalStride, (void*)(offset + (attribute - 1) * 2 * sizeof(float)));
+            _gl.VertexAttribDivisor(attribute, 1);
         }
     }
 
@@ -949,14 +1146,15 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             Vector2 edgeU = new Vector2(decal.Scale.X * cos, decal.Scale.X * sin);
             Vector2 edgeV = new Vector2(-decal.Scale.Z * sin, decal.Scale.Z * cos);
             int sizeClass = SizeClassOf(corner, edgeU, edgeV);
-            int index = instances.Count / 6;
-            instances.AddRange([corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]);
+            int index = instances.Count / DecalFloats;
+            float[] instance = [corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y, decal.CutOffLod, decal.NearCutOffLod];
+            instances.AddRange(instance);
 
             AddToRun(normals, decal.Textures[0], sizeClass, index);
-            // a decal set's normals lie with its albedo: the same place, turn and size (D-1)
+            // a decal set's normals lie with its albedo: the same place, turn, size and cut-offs (D-1)
             if (!normals && decal.Set?.Normals is { Length: > 0 } setNormals)
             {
-                instances.AddRange([corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]);
+                instances.AddRange(instance);
                 AddToRun(true, setNormals, sizeClass, index + 1);
             }
         }
@@ -1006,12 +1204,13 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             Vector2 corner = new Vector2(decal.Position.X, decal.Position.Z);
             Vector2 edgeU = new Vector2(decal.Scale.X * cos, decal.Scale.X * sin);
             Vector2 edgeV = new Vector2(-decal.Scale.Z * sin, decal.Scale.Z * cos);
-            found.Add((SizeClassOf(corner, edgeU, edgeV), [corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]));
+            // no cut-offs: the selection's outline shows at any distance
+            found.Add((SizeClassOf(corner, edgeU, edgeV), [corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y, 0, 0]));
         }
         List<float> instances = [];
         foreach (IGrouping<int, (int SizeClass, float[] Instance)> sizeClass in found.GroupBy(item => item.SizeClass))
         {
-            int first = instances.Count / 6;
+            int first = instances.Count / DecalFloats;
             foreach ((int _, float[] instance) in sizeClass)
             {
                 instances.AddRange(instance);
@@ -1044,14 +1243,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             Mesh mesh = _decalGrids[run.SizeClass];
             program.Set("uPatchCells", (float)DecalGridCells[run.SizeClass]);
             mesh.Bind();
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _highlightInstances);
-            nint offset = run.First * DecalStride;
-            for (uint attribute = 1; attribute <= 3; attribute++)
-            {
-                _gl.EnableVertexAttribArray(attribute);
-                _gl.VertexAttribPointer(attribute, 2, VertexAttribPointerType.Float, false, DecalStride, (void*)(offset + (attribute - 1) * 2 * sizeof(float)));
-                _gl.VertexAttribDivisor(attribute, 1);
-            }
+            BindInstances(_highlightInstances, run);
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)mesh.IndexCount, DrawElementsType.UnsignedInt, null, (uint)run.Count);
         }
     }
@@ -1092,8 +1284,15 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     {
         _textures.Dispose();
         _terrain.Dispose();
+        _terrainDepth.Dispose();
         _decalAlbedo.Dispose();
         _decalNormal.Dispose();
+        if (_normalFrame != 0)
+        {
+            _gl.DeleteFramebuffer(_normalFrame);
+            _gl.DeleteTexture(_normalTexture);
+            _gl.DeleteRenderbuffer(_normalDepth);
+        }
         _decalHighlight.Dispose();
         _water.Dispose();
         _sky.Dispose();

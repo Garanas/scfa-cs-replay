@@ -69,6 +69,37 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
+    /// The normal of the ground at a pixel, for the passes that light it: the heightmap's normal,
+    /// with the frame's detail turned onto it when the frame made a normal buffer. The buffer's red
+    /// and green hold a tilt in the ground's own frame (the normal decals; flat where none lies),
+    /// as the game's normal buffer holds its detail, and the game's <c>TCreateBasis</c> pass
+    /// (<c>frame.fx</c>, <c>BasisPS</c>) turns that tilt onto the heightmap's normal: the frame of
+    /// the heightmap's normal is made from the half vector between it and up. So a flat detail
+    /// leaves the heightmap's shading as it is. Fragment shaders only.
+    /// </summary>
+    internal const string SurfaceNormal = """
+        uniform sampler2D uNormals;
+        uniform int uUseNormals;
+        uniform vec2 uViewportOrigin;
+
+        vec3 surfaceNormal(vec2 p)
+        {
+            vec3 base = normalAt(p);
+            if (uUseNormals != 1)
+            {
+                return base;
+            }
+            vec2 tilt = texelFetch(uNormals, ivec2(gl_FragCoord.xy - uViewportOrigin), 0).rg * 2.0 - 1.0;
+            vec3 detail = vec3(tilt.x, sqrt(max(0.0, 1.0 - dot(tilt, tilt))), tilt.y);
+            vec3 h = normalize(base + vec3(0.0, 1.0, 0.0));
+            vec3 xAxis = h.x * h * vec3(-2.0, 2.0, -2.0) + vec3(1.0, 0.0, 0.0);
+            vec3 zAxis = h.z * h * vec3(-2.0, 2.0, -2.0) + vec3(0.0, 0.0, 1.0);
+            return normalize(vec3(dot(detail, xAxis), dot(detail, base), dot(detail, zAxis)));
+        }
+
+        """;
+
+    /// <summary>
     /// A corner of the terrain's lattice (whole cells from its top left) as a place of the terrain:
     /// the terrain and the brush both make their vertices with it, invariantly, so that the brush
     /// lies exactly on the terrain.
@@ -98,7 +129,7 @@ internal static class TerrainShaders
         }
         """;
 
-    public static string TerrainFragment(bool es) => Header(es) + Heights + Lighting + """
+    public static string TerrainFragment(bool es) => Header(es) + Heights + Lighting + SurfaceNormal + """
         in vec3 vWorld;
         out vec4 outColor;
 
@@ -155,15 +186,31 @@ internal static class TerrainShaders
             vec4 upper = texture(uUpper, p / uScalesC.y);
             albedo.rgb = mix(albedo.rgb, upper.rgb, upper.a * uBlend.w);
 
-            vec3 color = lightOf(normalAt(p)) * albedo.rgb;
+            vec3 normal = surfaceNormal(p);
+            vec3 color = lightOf(normal) * albedo.rgb;
             if (uDebug == 1) color = albedo.rgb;
-            if (uDebug == 2) color = lightOf(normalAt(p)) * 0.5;
-            if (uDebug == 3) color = normalAt(p) * 0.5 + 0.5;
+            if (uDebug == 2) color = lightOf(normal) * 0.5;
+            if (uDebug == 3) color = normal * 0.5 + 0.5;
             if (uDebug == 4) color = vec3(vWorld.y / 256.0);
             if (uDebug == 5) color = texture(uLower, p / uScalesA.x).rgb;
             if (uDebug == 6) color = mask0.rgb;
             if (uDebug == 7) color = texture(uMask0, maskUv).rgb;
             outColor = vec4(color, 1.0);
+        }
+        """;
+
+    /// <summary>
+    /// The terrain into the normal buffer's depth, the first pass of a frame with normal decals,
+    /// so that the decals meet the ground there as they do in the scene; its colour is the flat
+    /// detail the buffer is cleared to, and the pass writes no colour.
+    /// </summary>
+    public static string TerrainDepthFragment(bool es) => Header(es) + Heights + """
+        in vec3 vWorld;
+        out vec4 outColor;
+
+        void main()
+        {
+            outColor = vec4(0.5, 0.5, 0.0, 1.0);
         }
         """;
 
@@ -377,20 +424,59 @@ internal static class TerrainShaders
     /// its corner (the decal's position) and its two edges; its patch of the lattice has
     /// <c>uPatchCells</c> cells a side, the corners it does not need folded onto its far edge, and a
     /// decal wider than that takes every second (or more) corner. Where a point lies in the decal is
-    /// its place turned back by the edges; the fragment drops what lies outside.
+    /// its place turned back by the edges; the fragment drops what lies outside. Each instance also
+    /// carries its cut-offs: how much of it shows at its depth in the view (<c>vFade</c>) follows the
+    /// engine's fade, and one that shows nothing is sent out of the view.
     /// </summary>
     public static string DecalVertex(bool es) => Header(es) + Heights + Lattice + """
         layout(location = 0) in vec2 aCorner;
         layout(location = 1) in vec2 iCorner;
         layout(location = 2) in vec2 iEdgeU;
         layout(location = 3) in vec2 iEdgeV;
+        // the decal's far and near cut-off distances
+        layout(location = 4) in vec2 iCutOff;
         uniform float uPatchCells;
         out vec2 vUv;
         out vec3 vWorld;
         out vec2 vTangent;
+        out float vFade;
+
+        // how much of a decal shows at a depth in the view, as the engine's CWldTerrainDecal::GetLODAlpha:
+        // nothing beyond the far cut-off; with a near cut-off above 0 it fades in from 0.75 of it, else it
+        // fades out from 0.75 of the far cut-off (ren_DecalFadeFraction); a far cut-off of 0 or less never fades
+        float decalFade(float depth, float cutOff, float nearCutOff)
+        {
+            if (cutOff > 0.0 && depth > cutOff)
+            {
+                return 0.0;
+            }
+            if (nearCutOff > 0.0)
+            {
+                float begin = nearCutOff * 0.75;
+                return clamp((depth - begin) / max(nearCutOff - begin, 1e-3), 0.0, 1.0);
+            }
+            if (cutOff <= 0.0)
+            {
+                return 1.0;
+            }
+            float begin = cutOff * 0.75;
+            return 1.0 - clamp((depth - begin) / max(cutOff - begin, 1e-3), 0.0, 1.0);
+        }
 
         void main()
         {
+            // the depth of the decal's middle in the view, where the engine measures the fade
+            vec2 middle = iCorner + (iEdgeU + iEdgeV) * 0.5;
+            vFade = decalFade((uViewProjection * vec4(middle.x, heightAt(middle), middle.y, 1.0)).w, iCutOff.x, iCutOff.y);
+            if (vFade <= 0.0)
+            {
+                // not drawn: every corner outside the view, so nothing of it is rasterised
+                vUv = vec2(0.0);
+                vWorld = vec3(0.0);
+                vTangent = vec2(1.0, 0.0);
+                gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+                return;
+            }
             vec2 cell = uMapSize / uCells;
             vec2 b = iCorner + iEdgeU;
             vec2 c = iCorner + iEdgeV;
@@ -408,12 +494,14 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// An albedo decal, lit as the terrain under it and blended by its alpha (premultiplied).
+    /// An albedo decal, lit as the terrain under it (from the frame's normal buffer when there is
+    /// one) and blended by its alpha and its fade (premultiplied).
     /// </summary>
-    public static string DecalAlbedoFragment(bool es) => Header(es) + Heights + Lighting + """
+    public static string DecalAlbedoFragment(bool es) => Header(es) + Heights + Lighting + SurfaceNormal + """
         in vec2 vUv;
         in vec3 vWorld;
         in vec2 vTangent;
+        in float vFade;
         out vec4 outColor;
         uniform sampler2D uTexture;
 
@@ -424,11 +512,12 @@ internal static class TerrainShaders
                 discard;
             }
             vec4 color = texture(uTexture, vUv);
-            if (color.a < 0.003)
+            float alpha = color.a * vFade;
+            if (alpha < 0.003)
             {
                 discard;
             }
-            outColor = vec4(lightOf(normalAt(vWorld.xz)) * color.rgb * color.a, color.a);
+            outColor = vec4(lightOf(surfaceNormal(vWorld.xz)) * color.rgb * alpha, alpha);
         }
         """;
 
@@ -456,18 +545,21 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// A normal decal (DXT5nm: x in alpha, z in green, opacity in red). As the game's terrain shader
-    /// reads it (<c>effects/terrain.fx</c>, <c>DecalsNormalsPS</c>): the normal is the decal's own,
-    /// up in its frame and turned only by the decal's turn about the vertical axis (the engine's
-    /// <c>TangentMatrix</c>), and it replaces the terrain's normal by the red channel's weight; so a
-    /// map-wide normals decal holds the terrain's normals themselves. The view draws no deferred
-    /// lighting, so the decal changes the lit colour below it by how much its normal changes the
-    /// light: it outputs half that factor, blended as <c>2 × source × destination</c>.
+    /// A normal decal (DXT5nm: x in alpha, z in green, opacity in red) into the frame's normal
+    /// buffer, as the game's <c>DecalsNormalsPS</c> writes it (<c>effects/terrain.fx</c>): the normal
+    /// is the decal's own, up in its frame and turned only by the decal's turn about the vertical
+    /// axis (the engine's <c>TangentMatrix</c>); its sideways parts, x and z, go into red and green
+    /// over the detail there by the red channel's weight and the decal's fade (the game's
+    /// <c>Write_RG</c> with alpha blending). The buffer holds a tilt in the ground's own frame, which
+    /// the lighting turns onto the heightmap's normal (<see cref="SurfaceNormal"/>), so the decal
+    /// shapes the ground's shading without taking the heightmap's away, and decals stacked on each
+    /// other blend instead of compounding.
     /// </summary>
-    public static string DecalNormalFragment(bool es) => Header(es) + Heights + Lighting + """
+    public static string DecalNormalFragment(bool es) => Header(es) + Heights + """
         in vec2 vUv;
         in vec3 vWorld;
         in vec2 vTangent;
+        in float vFade;
         out vec4 outColor;
         uniform sampler2D uTexture;
 
@@ -478,7 +570,7 @@ internal static class TerrainShaders
                 discard;
             }
             vec4 raw = texture(uTexture, vUv);
-            float opacity = raw.r;
+            float opacity = raw.r * vFade;
             if (opacity < 0.004)
             {
                 discard;
@@ -486,14 +578,11 @@ internal static class TerrainShaders
             vec2 xy = vec2(raw.a, raw.g) * 2.0 - 1.0;
             float z = sqrt(max(0.0, 1.0 - dot(xy, xy)));
 
-            vec3 normal = normalAt(vWorld.xz);
             // the decal's own axes on the ground: x along its width, z along its length
             vec3 tangent = normalize(vec3(vTangent.x, 0.0, vTangent.y));
             vec3 bitangent = vec3(-tangent.z, 0.0, tangent.x);
             vec3 decalNormal = normalize(tangent * xy.x + bitangent * xy.y + vec3(0.0, z, 0.0));
-
-            vec3 factor = lightOf(decalNormal) / max(lightOf(normal), vec3(0.02));
-            outColor = vec4(clamp(mix(vec3(1.0), factor, opacity) * 0.5, 0.0, 1.0), 1.0);
+            outColor = vec4(decalNormal.x * 0.5 + 0.5, decalNormal.z * 0.5 + 0.5, 0.0, opacity);
         }
         """;
 

@@ -218,6 +218,19 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     public (int Decals, int Draws, int Textures) DecalState => _renderer?.DecalState ?? (0, 0, 0);
 
     /// <summary>
+    /// Whether the normal decals are blended into a normal buffer the ground is lit from (false once the
+    /// card refused it), and whether the last frame made one (the map has normal decals that show).
+    /// </summary>
+    public (bool Works, bool Drawn) NormalBufferState => (_renderer?.NormalBufferWorks ?? false, _renderer?.NormalBufferDrawn ?? false);
+
+    /// <summary>
+    /// The last error the card reported after a pass of the terrain, or null.
+    /// </summary>
+    public string? DrawError => _renderer?.DrawError;
+
+    private string? _loggedDrawError;
+
+    /// <summary>
     /// Whether the last frame drew the sky's cube map and the water's reflection (user story L-1).
     /// </summary>
     public (bool Sky, bool Reflection) SkyState => (_renderer?.SkyDrawn ?? false, _renderer?.ReflectionDrawn ?? false);
@@ -390,6 +403,11 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             {
                 _loggedModelError = modelError;
                 Log.LogWarning("A model could not be read; it shows as a box: {Reason}", modelError);
+            }
+            if (_renderer.DrawError is string drawError && drawError != _loggedDrawError)
+            {
+                _loggedDrawError = drawError;
+                Log.LogWarning("The card reported an error drawing the terrain: {Reason}", drawError);
             }
             WatchAssets(workspace);
         }

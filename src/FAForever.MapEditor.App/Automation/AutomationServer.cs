@@ -682,6 +682,8 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["decals"] = window.View3D.DecalState.Decals,
                 ["decalDraws"] = window.View3D.DecalState.Draws,
                 ["decalTextures"] = window.View3D.DecalState.Textures,
+                ["normalBuffer"] = new JsonObject { ["works"] = window.View3D.NormalBufferState.Works, ["drawn"] = window.View3D.NormalBufferState.Drawn },
+                ["drawError"] = window.View3D.DrawError,
                 ["objects"] = ObjectState(),
             },
             ["pid"] = Environment.ProcessId,
