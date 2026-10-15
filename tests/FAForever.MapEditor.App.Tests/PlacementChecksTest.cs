@@ -1,5 +1,7 @@
+using System.Numerics;
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
@@ -46,7 +48,7 @@ namespace FAForever.MapEditor.App.Tests
         /// The test assets with a land factory (5 by 5, skirt 8 by 8, land only), a naval factory
         /// (water only, 1.5 deep at least) and a mobile unit.
         /// </summary>
-        private static AssetCatalog Catalog()
+        internal static AssetCatalog Catalog()
         {
             string folder = TestAssets.Folder();
             void Write(string id, string json)
@@ -72,6 +74,51 @@ namespace FAForever.MapEditor.App.Tests
 
         private static Task<CommandRun> Run(MainViewModel model, string id, JsonObject? arguments = null) =>
             model.Commands.RunAsync(id, arguments ?? [], interactive: false);
+
+        /// <summary>
+        /// The skirt (8 by 8 around the factory's 5 by 5) is drawn dashed in the preview, and the 3D
+        /// view gets a ghost of the factory where the click puts it, standing on the ground, marked
+        /// when the place breaks a rule.
+        /// </summary>
+        [TestMethod]
+        public async Task TheSkirtIsDashedAroundTheFootprintAndAGhostStandsWhereAClickPlaces()
+        {
+            MainViewModel model = await Open();
+            Water(model, -1000);
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uxb0101" });
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            model.Pointer = (100, 100);
+
+            IReadOnlyList<ToolShape> shapes = tool.Shapes(ToolView.Flat(0.5f));
+            ToolLine[] dashed = [.. shapes.OfType<ToolLine>().Where(line => line.Dash == ToolDash.Dashed)];
+            Assert.AreEqual(1, dashed.Length, "the skirt, dashed");
+            Assert.AreEqual(ToolInk.Selection, dashed[0].Ink);
+            ToolLine footprint = shapes.OfType<ToolLine>().First(line => line.Dash == ToolDash.Solid && line.Ink == ToolInk.Selection);
+            // at two pixels an ogrid: the skirt 16 pixels wide around the footprint's 10
+            Assert.AreEqual(16, dashed[0].Points.Max(point => point.X) - dashed[0].Points.Min(point => point.X), 0.01);
+            Assert.AreEqual(10, footprint.Points.Max(point => point.X) - footprint.Points.Min(point => point.X), 0.01);
+            Assert.AreEqual(1, tool.Describe()["skirts"]!.GetValue<int>());
+
+            MapDocument document = model.ShownDocument!;
+            IReadOnlyList<UnitGhost> ghosts = tool.Ghosts(document);
+            Assert.AreEqual(1, ghosts.Count);
+            Assert.AreSame(ghosts, tool.Ghosts(document), "kept while nothing changed");
+            Assert.AreEqual("uxb0101", ghosts[0].Blueprint);
+            Assert.IsFalse(ghosts[0].Blocked);
+            Vector3 at = ghosts[0].Placement.Translation;
+            Assert.AreEqual((100.5f, 100.5f), (at.X, at.Z), "an odd footprint snaps to a half ogrid");
+            Assert.AreEqual(document.Terrain.Heightmap.HeightAt(100.5f, 100.5f), at.Y, 0.001, "on the ground");
+            Assert.AreEqual(1, tool.Describe()["ghosts"]!.GetValue<int>());
+
+            // a factory placed there: the ghost over it is marked, and a mobile unit has no skirt
+            await Run(model, "units.add", new JsonObject { ["x"] = 100, ["z"] = 100 });
+            model.Pointer = (100, 100);
+            ghosts = tool.Ghosts(model.ShownDocument!);
+            Assert.IsTrue(ghosts[0].Blocked, "overlaps the factory");
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uxl0001" });
+            Assert.AreEqual(0, tool.Shapes(ToolView.Flat(0.5f)).OfType<ToolLine>().Count(line => line.Dash == ToolDash.Dashed));
+            Assert.AreEqual("uxl0001", tool.Ghosts(model.ShownDocument!)[0].Blueprint);
+        }
 
         private static (int Blocked, string? Why) Preview(MainViewModel model)
         {

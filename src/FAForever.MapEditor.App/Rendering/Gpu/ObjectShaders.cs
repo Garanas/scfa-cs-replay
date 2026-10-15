@@ -53,6 +53,8 @@ internal static class ObjectShaders
         // the alpha below which a pixel is cut out; below 0 for none
         uniform float uAlphaTest;
         uniform vec3 uHighlight;
+        // the alpha the model is drawn with: 1, or less for the ghost of a unit to be placed (U-12)
+        uniform float uGhostAlpha;
         // what the albedo is multiplied with: white for a model, the theme's colour for the box of a missing one
         uniform vec3 uColor;
         // how the albedo reads: 0 as it is (props), 1 the metal of UEF, Aeon and Cybran units, which
@@ -100,7 +102,7 @@ internal static class ObjectShaders
             vec3 color = lightOf(normal) * base * uColor;
             color = mix(color, vec3(dot(color, vec3(0.3, 0.59, 0.11))) * vec3(0.5, 0.47, 0.45), vWreck);
             color = mix(color, uHighlight, vHighlight * 0.55);
-            outColor = vec4(color, 1.0);
+            outColor = vec4(color, uGhostAlpha);
         }
         """;
 

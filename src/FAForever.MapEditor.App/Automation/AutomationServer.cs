@@ -657,6 +657,8 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["place"] = model.Tool<UnitPlaceTool>().Describe(),
                 ["tree"] = model.Armies.DescribeGroups(),
                 ["palette"] = model.UnitPalettes.Describe(),
+                // the placed structures' skirts the top view drew last (U-12; the 3D view's are in gpu.objects.skirts)
+                ["skirtsDrawn"] = window.MapView.UnitsDrawn.Skirts,
             },
             ["armies"] = model.Armies.DescribeArmies(),
             ["generated"] = new JsonArray([.. model.Generation.States.Select(state => (JsonNode)new JsonObject
@@ -808,6 +810,9 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         {
             ["props"] = state.Props,
             ["units"] = state.Units,
+            // the place tool's ghosts and the placed structures' skirts drawn in the last frame (U-12)
+            ["ghosts"] = state.Ghosts,
+            ["skirts"] = window.View3D.SkirtsDrawn,
             ["markers"] = state.Markers,
             ["draws"] = state.Draws,
             ["meshes"] = state.Meshes,

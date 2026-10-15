@@ -39,7 +39,7 @@ public sealed partial class HeightmapView : Control
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
         IBrush Prop, IBrush PropSparse, IBrush PropRim, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
-        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow, IPen GridLine, IPen DecalOutline);
+        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow, IPen GridLine, IPen DecalOutline, IPen Skirt);
 
     public HeightmapView()
     {
@@ -98,7 +98,8 @@ public sealed partial class HeightmapView : Control
         new Pen(Token<IBrush>("MapWreckBrush"), 2),
         new Pen(Token<IBrush>("OverlayShadowBrush"), 4),
         new Pen(Token<IBrush>("MapGridLineBrush"), 1),
-        new Pen(Token<IBrush>("MapDecalBrush"), 1));
+        new Pen(Token<IBrush>("MapDecalBrush"), 1),
+        new Pen(Token<IBrush>("MapSkirtBrush"), 1, new DashStyle([4, 3], 0)));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
@@ -608,6 +609,7 @@ public sealed partial class HeightmapView : Control
         [ToolInk.Handle] = Token<IBrush>("MapSketchHandleBrush"),
         [ToolInk.Sun] = Token<IBrush>("WarningBrush"),
         [ToolInk.Danger] = Token<IBrush>("DangerBrush"),
+        [ToolInk.Skirt] = Token<IBrush>("MapSkirtBrush"),
     })[ink];
 
     /// <summary>

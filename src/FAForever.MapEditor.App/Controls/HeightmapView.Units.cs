@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -13,7 +14,9 @@ namespace FAForever.MapEditor.App.Controls;
 /// outlined and filled faintly in its army's colour; a mobile unit as a small diamond in that colour;
 /// a wreck as an ashen cross. Zoomed so far out that a footprint is under a few pixels, a structure
 /// is the small square again. With the overlay <c>armyColours</c> off every unit but a wreck is the
-/// square of the theme's unit colour.
+/// square of the theme's unit colour. In the Units mode a structure whose skirt reaches beyond its
+/// footprint gets the skirt dashed around it (user story U-12: the ground the game reserves, so a
+/// new structure can be set skirt to skirt).
 /// </summary>
 public sealed partial class HeightmapView
 {
@@ -25,9 +28,10 @@ public sealed partial class HeightmapView
     private readonly Dictionary<uint, ArmyInk> _armyInks = [];
 
     /// <summary>
-    /// How many units the top view drew the last time as footprints, diamonds, squares and crosses (automation).
+    /// How many units the top view drew the last time as footprints, diamonds, squares and crosses,
+    /// and how many skirts (automation).
     /// </summary>
-    public (int Footprints, int Diamonds, int Squares, int Wrecks) UnitsDrawn { get; private set; }
+    public (int Footprints, int Diamonds, int Squares, int Wrecks, int Skirts) UnitsDrawn { get; private set; }
 
     private ArmyInk InkOf(uint argb)
     {
@@ -43,16 +47,19 @@ public sealed partial class HeightmapView
     private void DrawUnits(DrawingContext context, Overlay overlay, MapDocument document, MainViewModel model, Rect shown)
     {
         using Performance.Span measure = Performance.Measure("top.units");
-        int footprints = 0, diamonds = 0, squares = 0, wrecks = 0;
+        int footprints = 0, diamonds = 0, squares = 0, wrecks = 0, skirts = 0;
         bool colours = model.ShowArmyColours;
+        bool withSkirts = model.SelectedMode?.Definition.Id == "units";
         AssetCatalog catalog = model.Assets.Catalog;
         foreach (PlacedUnit unit in document.AllUnits())
         {
             Point at = MapToControl(unit.Unit.Position.X, unit.Unit.Position.Z);
             AssetEntry? entry = catalog.Find(unit.Unit.Blueprint);
             (double SizeX, double SizeZ)? footprint = entry is { IsStructure: true } ? entry.Footprint ?? (1, 1) : null;
-            // a footprint reaches beyond the centre: what is left of the view still shows
-            double reach = footprint is (double sizeX, double sizeZ) ? Math.Max(sizeX, sizeZ) * _zoom : 0;
+            // a footprint, and its skirt, reach beyond the centre: what is left of the view still shows
+            double reach = footprint is (double sizeX, double sizeZ)
+                ? Math.Max(Math.Max(sizeX, sizeZ), entry?.Limits?.Skirt is { } reserved ? Math.Max(reserved.SizeX, reserved.SizeZ) : 0) * _zoom
+                : 0;
             if (!shown.Inflate(reach).Contains(at) || !model.IsDrawn(ObjectRef.Unit(unit.Unit.Name)))
             {
                 continue;
@@ -84,6 +91,18 @@ public sealed partial class HeightmapView
                 }
                 context.DrawGeometry(ink!.Faint, ink.Outline, outline);
                 footprints++;
+                if (withSkirts)
+                {
+                    float x = unit.Unit.Position.X;
+                    float z = unit.Unit.Position.Z;
+                    float heading = unit.Unit.Orientation.Y;
+                    PlacementRect skirt = PlacementChecks.SkirtOf(entry!, x, z, heading);
+                    if (skirt != PlacementChecks.FootprintOf(entry!, x, z, heading))
+                    {
+                        context.DrawRectangle(null, overlay.Skirt, new Rect(MapToControl(skirt.MinX, skirt.MinZ), MapToControl(skirt.MaxX, skirt.MaxZ)).Normalize());
+                        skirts++;
+                    }
+                }
             }
             else if (colours && footprint is null)
             {
@@ -106,6 +125,6 @@ public sealed partial class HeightmapView
                 squares++;
             }
         }
-        UnitsDrawn = (footprints, diamonds, squares, wrecks);
+        UnitsDrawn = (footprints, diamonds, squares, wrecks, skirts);
     }
 }

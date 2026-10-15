@@ -1544,6 +1544,10 @@ change, span `model.armies`), the place tool and the commands.
   degrees, a mobile unit 15, shift 90); the select tool turns a selection of structures 90.
   A blueprint the workspace lacks is placed as it is, with a warning. A single unit's footprint
   shows under the mouse where a click puts it (a structure on the build grid), as a preset's does.
+  The 3D view draws only when asked, so while the Place tool is active every mouse move asks it
+  for a frame (`TerrainViewGpu.OnPointerMoved`, as a brush and the select tools do; `MouseFrames`
+  counts them for the tests): a tool whose shapes depend on the mouse that is left out of that
+  list follows the mouse only while the camera glides or a model loads, then freezes.
 - **Many at once** (U-7; `UnitPlaceTool.Mode`, `Tools/UnitPlans.cs`, `Commands/Units/AddUnits.cs`;
   the maths is the library's `UnitLayouts`, its guide): the options row's combo box
   How to place (`Single`, `Line`, `Rectangle`, `Ring`, `Scatter`; `set label="How to place"
@@ -1589,7 +1593,22 @@ change, span `model.armies`), the place tool and the commands.
   (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`); a place
   beyond the map's edge is drawn the same way, and left out when placed (`state.units.place.outside`;
   the status line says how many). A line or rectangle may start or end outside the map: the units
-  inside are placed and `units.addMany` returns `outside`. More than 500 units
+  inside are placed and `units.addMany` returns `outside`. **The skirt** (the ground the game
+  reserves, `PlacementChecks.SkirtOf`; for a power generator 2 by 2 around a 1 by 1 footprint) is
+  drawn dashed around every footprint of the preview whose skirt reaches beyond it, in the same ink
+  (`PreviewOutline.Skirt`, `PresetPreview.OfUnit`), and in the Units mode around every placed
+  structure in both views (the top view in `HeightmapView.Units.cs`, `UnitsDrawn.Skirts`; the 3D view
+  as dashed lines on the ground, `TerrainViewGpu.Skirts.cs`, span `3d.unit-skirts`, `SkirtsDrawn`),
+  in `ToolInk.Skirt`, the token `MapSkirtBrush`: a line of structures is spaced by the skirt, so the
+  dashes show the skirts meeting while the footprints stand apart. **Ghosts** (`UnitPlaceTool.Ghosts`,
+  span `tool.place-ghosts`): the 3D view draws the model of the tool's unit at every place a click or
+  release would fill (single, line, rectangle, ring), and a preset's units around the mouse, translucent
+  (`ObjectRenderer.DrawGhosts` right after the models, depth writes off, blending with the blend
+  function put back; span `3d.draw-ghosts`; `ObjectFrame.Ghosts`, `Rendering/UnitGhost`), a place that
+  breaks a rule mixed with the danger colour. The tool works the places, outlines and verdict out
+  once per change (`Preview`) for both views, the ghosts and the status line. `state.units.place`
+  has `skirts` and `ghosts`, `state.units.skirtsDrawn` the top view's, `state.gpu.objects` `ghosts`
+  and `skirts` the 3D view's. More than 500 units
   (`AddManyUnits.AskAbove`) are asked about first (`Place many units`, `dialog button=Place`);
   `units.addMany confirm=true` skips the question, and a run for automation without it fails with
   that hint. Structures in a line, rectangle or ring are spaced by the skirt (`UnitPlans.SkirtSize`,
@@ -2228,11 +2247,12 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   are `ToolModifiers.AxisX` and `AxisZ` (the views keep them from key down to key up).
 - **What a tool draws at its size on screen**: `IMapTool.Shapes(view)`, lines, squares and
   triangles in the view's pixels in an ink by use (`ToolInk`: selection, fill, hover, the axes'
-  `MapHandleAxisXBrush` and `MapHandleAxisZBrush`, shadow, sun), or a `ToolMapLine` in a colour of
+  `MapHandleAxisXBrush` and `MapHandleAxisZBrush`, shadow, sun, danger, the skirts' `MapSkirtBrush`), or a `ToolMapLine` in a colour of
   the map's own (the 3D view's links between path nodes). The top view draws them with
   Avalonia (`HeightmapView.DrawShapes`), the 3D view over everything without the depth test
   (`Rendering/Gpu/ShapeRenderer`, triangles made every frame, span `3d.draw-shapes`), with the
-  tool's `Marks` at the terrain's height. A `ToolMapLine` with a `Depth` (the links between path
+  tool's `Marks` at the terrain's height and its `Box` (an area being drawn, the new map's size) as a
+  rectangle laid along the terrain in the selection's ink. A `ToolMapLine` with a `Depth` (the links between path
   nodes) is drawn first with the depth test and without writing depth, so a hill or model in front
   hides it. The 3D box selection (`SelectOnScreen` with the eye) leaves out what the terrain hides
   from the camera (`ObjectPlacement.IsHiddenByTerrain`, the line of sight in at most 256 steps, the
@@ -2328,6 +2348,9 @@ mode panel's and inspector's templates only name it).
   -z), the elevation above the horizon; the map keeps the vector towards the sun.
 - **Tools**: `AreaTool` (`map.areas`): drag on empty ground draws an area, a handle of a selected
   area resizes it, its edge or inside moves it, whole ogrids, one step from press to release;
+  the rectangle being drawn shows in both views (the top view over the map, the 3D view on the
+  terrain); Escape while dragging gives it up or throws the move or resize away (the status line
+  says `Cancelled the area`, `Cancelled the move`), else it selects nothing;
   `RulerTool` (`terrain.ruler`): distance in ogrids and km (256 ogrids are 5 km), rise, slope,
   until the next drag; `SunTool` (`lighting.sun`): the sun stands where the mouse points seen from
   the middle of the map (straight up there, 5 degrees at half the map's size), one step a drag, in
@@ -2403,7 +2426,8 @@ library's (`MapResize`, `MapScript`; its guide).
   placeholder) stays missing.
 - Automation: `state.mapSize` (size, playable area and whether it is named, version, next version,
   folder, the tool's settings and summary).
-- Not built yet: the rectangle and handles in the 3D view.
+- The 3D view draws the new map's rectangle on the terrain (every tool's `Box` is drawn so, section
+  "Handles, hover and the 3D view's overlays"); its handles are not built yet there.
 
 ## Uploading to the vault
 

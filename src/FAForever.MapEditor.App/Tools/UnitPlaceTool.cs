@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
@@ -145,6 +146,9 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
 
     private IReadOnlyList<PreviewOutline> _outlines = [];
 
+    // the preset's units, for their ghosts in the 3D view
+    private UnitGroup? _presetUnits;
+
     /// <summary>
     /// The army role of the preset it places (<see cref="UnitPresetSettings.Role"/>), which picks the
     /// army its units go to in place of <see cref="Army"/>; null for a preset without one.
@@ -158,6 +162,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     public void UsePreset(string name, UnitGroup units, string? role = null)
     {
         _outlines = PresetPreview.OfUnits(units, model.Assets.Catalog);
+        _presetUnits = units;
         PresetRole = role;
         Preset = name;
     }
@@ -168,6 +173,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     public void ClearPreset()
     {
         _outlines = [];
+        _presetUnits = null;
         PresetRole = null;
         Preset = null;
     }
@@ -359,6 +365,10 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         ["heading"] = Heading,
         ["asWrecks"] = AsWrecks,
         ["previewOutlines"] = Preset is not null ? _outlines.Count : _dragging ? _planned.Length : Unit is null ? 0 : Mode == PlaceMode.Ring ? _ring?.Places.Length ?? 0 : Mode == PlaceMode.Scatter ? 0 : 1,
+        // the skirts dashed around the footprints, and the ghosts the 3D view draws (U-12)
+        ["skirts"] = Preset is not null ? _outlines.Count(outline => outline.Skirt is not null)
+            : Unit is AssetEntry previewed && model.ShownDocument is MapDocument previewedIn ? Preview(previewedIn, previewed).Outlines.Count(outline => outline.Skirt is not null) : 0,
+        ["ghosts"] = model.ShownDocument is MapDocument ghostsIn ? Ghosts(ghostsIn).Count : 0,
         ["structure"] = Unit?.IsStructure,
         ["footprint"] = Unit?.Footprint is (double x, double z) ? new JsonArray(x, z) : null,
         ["mode"] = Mode.ToString(),
@@ -574,13 +584,122 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         {
             return [];
         }
+        (_, IReadOnlyList<PreviewOutline> outlines, PlaceVerdict verdict) = Preview(document, unit);
+        return outlines.Count == 0 ? [] : PresetPreview.ShapesAt(model, view, outlines, "tool.place-preview", verdict.Blocked);
+    }
+
+    private (MapDocument Document, AssetEntry Unit, object Of, ImmutableArray<UnitPlace> Places, IReadOnlyList<PreviewOutline> Outlines, PlaceVerdict Verdict)? _preview;
+
+    /// <summary>
+    /// What a click or release would place now, worked out once per change of the mouse, the plan,
+    /// the map or the catalogue: the places (<see cref="PreviewPlaces"/>), their outlines with the
+    /// skirts, and the verdict (<see cref="VerdictOf"/>). Both views ask every frame, the ghosts and
+    /// the status line too, so the checks run once for all of them.
+    /// </summary>
+    private (ImmutableArray<UnitPlace> Places, IReadOnlyList<PreviewOutline> Outlines, PlaceVerdict Verdict) Preview(MapDocument document, AssetEntry unit)
+    {
         ImmutableArray<UnitPlace> places = PreviewPlaces(document, unit);
+        // a single place is made anew each time and compared by its values; a plan or a ring by its array
+        object of = places.Length == 1 ? (places[0], AsWrecks, model.Assets.Catalog) : (places, AsWrecks, model.Assets.Catalog);
+        if (_preview is { } made && ReferenceEquals(made.Document, document) && ReferenceEquals(made.Unit, unit) && Equals(made.Of, of))
+        {
+            return (made.Places, made.Outlines, made.Verdict);
+        }
+        IReadOnlyList<PreviewOutline> outlines = Outlines(unit, places);
+        PlaceVerdict verdict = VerdictOf(document, unit, places);
+        _preview = (document, unit, of, places, outlines, verdict);
+        return (places, outlines, verdict);
+    }
+
+    private (MapDocument Document, object Of, IReadOnlyList<UnitGhost> Ghosts)? _ghosts;
+
+    /// <summary>
+    /// The models the 3D view draws under the mouse (user story U-12): the tool's unit at every place
+    /// a click or release would fill, or the preset's units around the mouse, each standing on the
+    /// terrain and turned as it will be placed; a place that breaks a rule is marked. The list is
+    /// made again only when the places or the map change, so the view keeps its instances meanwhile.
+    /// </summary>
+    public IReadOnlyList<UnitGhost> Ghosts(MapDocument document)
+    {
+        if (Preset is not null)
+        {
+            return PresetGhosts(document);
+        }
+        if (Unit is not AssetEntry unit)
+        {
+            return [];
+        }
+        (ImmutableArray<UnitPlace> places, _, PlaceVerdict verdict) = Preview(document, unit);
         if (places.IsEmpty)
         {
             return [];
         }
-        return PresetPreview.ShapesAt(model, view, Outlines(unit, places), "tool.place-preview", VerdictOf(document, unit, places).Blocked);
+        // the verdict is made anew exactly when the places, the map or the catalogue change
+        if (_ghosts is { } made && ReferenceEquals(made.Document, document) && ReferenceEquals(made.Of, verdict))
+        {
+            return made.Ghosts;
+        }
+        using Performance.Span measure = Performance.Measure("tool.place-ghosts");
+        Heightmap heights = document.Terrain.Heightmap;
+        UnitGhost[] ghosts = new UnitGhost[Math.Min(places.Length, PresetPreview.MaxOutlines)];
+        for (int i = 0; i < ghosts.Length; i++)
+        {
+            UnitPlace place = places[i];
+            ghosts[i] = new UnitGhost(unit.Key, Standing(document, heights, place.X, place.Z, 0, place.Heading), i < verdict.Blocked.Length && verdict.Blocked[i]);
+        }
+        _ghosts = (document, verdict, ghosts);
+        return ghosts;
     }
+
+    /// <summary>
+    /// The ghosts of a preset's units: each where the click would put it, around the mouse and
+    /// turned as the tool turns the preset, as high above the terrain as the preset keeps it.
+    /// </summary>
+    private IReadOnlyList<UnitGhost> PresetGhosts(MapDocument document)
+    {
+        if (_presetUnits is not UnitGroup units || model.Pointer is not (float px, float pz))
+        {
+            return [];
+        }
+        Vector2 middle = new Vector2(MathF.Round(px), MathF.Round(pz));
+        float turn = BuildGrid.SnapHeading((float)(Heading * Math.PI / 180));
+        object of = (Preset, middle, turn);
+        if (_ghosts is { } made && ReferenceEquals(made.Document, document) && Equals(made.Of, of))
+        {
+            return made.Ghosts;
+        }
+        using Performance.Span measure = Performance.Measure("tool.place-ghosts");
+        Heightmap heights = document.Terrain.Heightmap;
+        (float sin, float cos) = MathF.SinCos(turn);
+        List<UnitGhost> ghosts = [];
+        void Add(UnitGroup group)
+        {
+            foreach (var unit in group.Units)
+            {
+                if (ghosts.Count >= PresetPreview.MaxOutlines)
+                {
+                    return;
+                }
+                Vector2 at = middle + new Vector2(unit.Position.X * cos - unit.Position.Z * sin, unit.Position.X * sin + unit.Position.Z * cos);
+                ghosts.Add(new UnitGhost(unit.Blueprint, Standing(document, heights, at.X, at.Y, unit.Position.Y, unit.Orientation.Y + turn), false));
+            }
+            foreach (UnitGroup child in group.Groups)
+            {
+                Add(child);
+            }
+        }
+        Add(units);
+        _ghosts = (document, of, ghosts);
+        return ghosts;
+    }
+
+    /// <summary>
+    /// A unit's placement standing on the terrain at a place, <paramref name="above"/> it, turned by its heading
+    /// (as <see cref="ObjectPlacement.Unit"/> places a unit of the map).
+    /// </summary>
+    private static Matrix4x4 Standing(MapDocument document, Heightmap heights, float x, float z, float above, float heading) =>
+        Matrix4x4.CreateFromYawPitchRoll(heading, 0, 0)
+        * Matrix4x4.CreateTranslation(x, heights.HeightAt(Math.Clamp(x, 0, document.Width), Math.Clamp(z, 0, document.Height)) + above, z);
 
     private string? _toldWhy;
 
@@ -707,7 +826,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The verdict for what a click or release would place now, for automation.
     /// </summary>
     private PlaceVerdict? CurrentVerdict() =>
-        Unit is AssetEntry unit && Preset is null && model.ShownDocument is MapDocument document ? VerdictOf(document, unit, PreviewPlaces(document, unit)) : null;
+        Unit is AssetEntry unit && Preset is null && model.ShownDocument is MapDocument document ? Preview(document, unit).Verdict : null;
 
     /// <summary>
     /// The palette's keys (user story U-8): 1 to 9 and 0 pick a slot of the chosen palette (its
@@ -921,7 +1040,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         PreviewOutline[] outlines = new PreviewOutline[Math.Min(places.Length, PresetPreview.MaxOutlines)];
         for (int i = 0; i < outlines.Length; i++)
         {
-            outlines[i] = PresetPreview.Footprint(unit.Footprint, places[i].X, places[i].Z, places[i].Heading);
+            outlines[i] = PresetPreview.OfUnit(unit, places[i].X, places[i].Z, places[i].Heading);
         }
         return outlines;
     }

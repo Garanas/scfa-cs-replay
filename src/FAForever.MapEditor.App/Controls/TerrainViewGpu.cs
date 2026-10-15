@@ -150,12 +150,12 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// the card, the models read and being read, the blueprints without a model (drawn as a box),
     /// and the triangles of the models.
     /// </summary>
-    public (int Props, int Units, int Markers, int Draws, int Meshes, int Missing, int ModelsRead, int ModelsLoading, long Triangles) ObjectState
+    public (int Props, int Units, int Ghosts, int Markers, int Draws, int Meshes, int Missing, int ModelsRead, int ModelsLoading, long Triangles) ObjectState
     {
         get
         {
-            (int props, int units, int markers, int draws, int meshes, int missing, long triangles) = _objects?.State ?? default;
-            return (props, units, markers, draws, meshes, missing, _models.Loaded, _models.Loading, triangles);
+            (int props, int units, int ghosts, int markers, int draws, int meshes, int missing, long triangles) = _objects?.State ?? default;
+            return (props, units, ghosts, markers, draws, meshes, missing, _models.Loaded, _models.Loading, triangles);
         }
     }
 
@@ -200,6 +200,13 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// The OpenGL the view runs on, e.g. <c>OpenGLES 3.0</c>; null until it has drawn.
     /// </summary>
     public string? Renderer { get; private set; }
+
+    /// <summary>
+    /// How many frames the mouse moving over the view asked for: one per move while the active tool
+    /// shows something under the mouse (a brush, handles, a preview). For the tests, which have no
+    /// graphics card and so never see the frames themselves.
+    /// </summary>
+    public int MouseFrames { get; private set; }
 
     /// <summary>
     /// The textures on the card, and the last one that could not be read.
@@ -524,7 +531,10 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
             _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered, _model.Isolated,
-            ThemeColor("MapEffectPropBrush"));
+            ThemeColor("MapEffectPropBrush"),
+            // the ghosts of the units the place tool would place (U-12)
+            Ghosts: _model.ActiveTool?.Tool is UnitPlaceTool place && _model.ShownDocument is MapDocument shown ? place.Ghosts(shown) : null,
+            DangerColor: ThemeColor("DangerBrush"));
         return (_objects, frame);
     }
 
@@ -745,10 +755,15 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             tool.Drag(place.X, place.Z, InputAt(place, e.KeyModifiers));
         }
-        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 } or SelectTool or DecalSelectTool or AreaTool or SunTool or SelectionPresetTool or UnitPlaceTool { HasPreset: true })
+        if (_pressed is not null || _model?.ActiveTool?.Tool is { CursorRadius: > 0 } or SelectTool or DecalSelectTool or AreaTool or SunTool or SelectionPresetTool or UnitPlaceTool)
         {
-            // the brush and a preset's preview follow the mouse; the handle and the thing under it light up
+            // a drag changes what its tool draws (a box, a line), the brush, a preset's preview and
+            // the footprints the place tool shows follow the mouse; the handle and the thing under it
+            // light up. The view draws only when asked, so a tool whose shapes depend on the mouse
+            // must ask here: otherwise its preview follows the mouse only while something else (the
+            // camera gliding, a model loading) keeps frames coming.
             _hoverStale = true;
+            MouseFrames++;
             RequestNextFrameRendering();
         }
         ReportCursor();
@@ -892,7 +907,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// the box), and its marks (the area tool's handles, the ruler's line, a curve) at the terrain's
     /// height.
     /// </summary>
-    private IReadOnlyList<ToolShape> ToolShapes(MapDocument document)
+    public IReadOnlyList<ToolShape> ToolShapes(MapDocument document)
     {
         if (_model is null)
         {
@@ -909,9 +924,29 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             GeneratedPaths(document, view, shapes);
         }
+        if (_model.ShowUnits && _model.SelectedMode?.Definition.Id == "units")
+        {
+            // the skirts of the placed structures (U-12), where units are placed and arranged
+            UnitSkirts(document, view, shapes);
+        }
+        else
+        {
+            SkirtsDrawn = 0;
+        }
         if (_model.ActiveTool?.Tool is not IMapTool tool)
         {
             return shapes;
+        }
+        if (tool.Box is (float bx0, float bz0, float bx1, float bz1))
+        {
+            // the rectangle a tool drags out (an area being drawn, the new map's size): on the
+            // terrain, as the top view draws it over the map
+            Heightmap ground = document.Terrain.Heightmap;
+            if (TerrainLine(ground, view, [(bx0, bz0), (bx1, bz0), (bx1, bz1), (bx0, bz1), (bx0, bz0)]) is Vector2[] box)
+            {
+                shapes.Add(new ToolLine(box, false, 4, ToolInk.Shadow));
+                shapes.Add(new ToolLine(box, false, 2, ToolInk.Selection));
+            }
         }
         if (tool.Marks is ToolMarks marks && tool is not SunTool)
         {
@@ -1076,6 +1111,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             ToolInk.Shadow => "OverlayShadowBrush",
             ToolInk.Handle => "MapSketchHandleBrush",
             ToolInk.Danger => "DangerBrush",
+            ToolInk.Skirt => "MapSkirtBrush",
             _ => "WarningBrush",
         };
         return ThemeColorWithAlpha(key);

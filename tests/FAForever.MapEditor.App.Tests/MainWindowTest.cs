@@ -535,6 +535,121 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+        /// <summary>
+        /// The 3D view draws only when asked. The place tool's footprint is drawn where the mouse was in
+        /// the last frame, so every move must ask for one, or the footprint stops following the mouse once
+        /// nothing else (the camera gliding, a model loading) keeps the frames coming.
+        /// </summary>
+        [TestMethod]
+        public Task ThePlaceToolsFootprintFollowsTheMouseInThe3DView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(UnitsTest.Catalog());
+            Show(window, MapViewTab.ThreeD);
+            model.SelectTool("units.place");
+            await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uel0101" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            Assert.IsFalse(tool.HasPreset, "a unit, not a preset");
+            Point middle = Middle(window.View3D, window);
+            int before = window.View3D.MouseFrames;
+
+            window.MouseMove(middle);
+            window.MouseMove(middle + new Vector(40, 0));
+            window.MouseMove(middle + new Vector(40, 30));
+
+            Assert.AreEqual(before + 3, window.View3D.MouseFrames, "a frame per move, so the footprint is drawn under the mouse");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task EscapeCancelsAnAreaBeingDrawnInTheTopView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectMode("map");
+            model.SelectTool("map.areas");
+            Dispatcher.UIThread.RunJobs();
+            int areas = model.ShownDocument!.Markers.Areas.Count();
+            Point from = Middle(window.MapView, window);
+
+            window.MouseMove(from);
+            window.MouseDown(from, MouseButton.Left);
+            window.MouseMove(from + new Vector(80, 50));
+            AreaTool tool = model.Tool<AreaTool>();
+            Assert.IsNotNull(tool.Box, "the rectangle follows the drag");
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Assert.IsNull(tool.Box, "Escape gives it up");
+            window.MouseUp(from + new Vector(80, 50), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.AreEqual(areas, model.ShownDocument!.Markers.Areas.Count(), "nothing added");
+            StringAssert.Contains(model.Status, "Cancelled the area");
+            window.Close();
+        });
+
+        /// <summary>
+        /// The 3D view draws the rectangle a tool drags out on the terrain (the top view draws it over
+        /// the map), every move of the drag drawing a frame, until it is let go or given up.
+        /// </summary>
+        [TestMethod]
+        public Task TheAreaBeingDrawnShowsInThe3DViewUntilEscape() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.ThreeD);
+            model.SelectMode("map");
+            model.SelectTool("map.areas");
+            Dispatcher.UIThread.RunJobs();
+            Point from = Middle(window.View3D, window);
+            int frames = window.View3D.MouseFrames;
+
+            window.MouseMove(from);
+            window.MouseDown(from, MouseButton.Left);
+            window.MouseMove(from + new Vector(60, 40));
+            AreaTool tool = model.Tool<AreaTool>();
+            Assert.IsNotNull(tool.Box, "the rectangle follows the drag");
+            ToolLine[] box = [.. window.View3D.ToolShapes(model.ShownDocument!).OfType<ToolLine>().Where(line => line.Ink == ToolInk.Selection && line.Points.Length >= 5)];
+            Assert.AreEqual(1, box.Length, "the rectangle on the terrain, in the selection's ink");
+            Assert.IsTrue(window.View3D.MouseFrames > frames, "every move of the drag draws a frame");
+
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Assert.IsNull(tool.Box, "Escape gives it up");
+            Assert.AreEqual(0, window.View3D.ToolShapes(model.ShownDocument!).OfType<ToolLine>().Count(line => line.Ink == ToolInk.Selection && line.Points.Length >= 5));
+            window.MouseUp(from + new Vector(60, 40), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            StringAssert.Contains(model.Status, "Cancelled the area");
+            window.Close();
+        });
+
+        /// <summary>
+        /// In the Units mode the top view draws the skirt of a structure dashed around its footprint,
+        /// so a new structure can be set skirt to skirt; the other modes show the footprints alone.
+        /// </summary>
+        [TestMethod]
+        public Task TheTopViewDrawsTheSkirtsOfStructuresInTheUnitsMode() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(PlacementChecksTest.Catalog());
+            Show(window, MapViewTab.Top);
+            model.SelectMode("units");
+            model.SelectTool("units.place");
+            await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uxb0101" }, interactive: false);
+            await model.Commands.RunAsync("units.add", new JsonObject { ["x"] = 100, ["z"] = 100 }, interactive: false);
+            await model.Commands.RunAsync("view.zoomTo", new JsonObject { ["x"] = 100, ["z"] = 100, ["zoom"] = 4 }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(1, window.MapView.UnitsDrawn.Skirts, $"the factory's skirt: {window.MapView.UnitsDrawn}");
+            Assert.IsTrue(window.MapView.UnitsDrawn.Footprints >= 1);
+
+            model.SelectMode("map");
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(0, window.MapView.UnitsDrawn.Skirts, "only in the Units mode");
+            window.Close();
+        });
+
         [TestMethod]
         public Task SwitchingViewsKeepsBothInTheWindow() => Run(async () =>
         {

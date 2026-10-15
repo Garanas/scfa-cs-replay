@@ -101,6 +101,8 @@
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
+      <!-- the ground a structure reserves, its skirt (U-12): a dashed line around placed structures in the Units mode and around the place tool's footprints -->
+      <SolidColorBrush x:Key="MapSkirtBrush" Color="#CC7FD6E6" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
@@ -189,6 +191,8 @@
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
+      <!-- the ground a structure reserves, its skirt (U-12): a dashed line around placed structures in the Units mode and around the place tool's footprints -->
+      <SolidColorBrush x:Key="MapSkirtBrush" Color="#CC7FD6E6" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />

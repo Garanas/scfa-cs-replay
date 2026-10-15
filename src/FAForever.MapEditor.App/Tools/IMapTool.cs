@@ -245,6 +245,11 @@ public enum ToolInk
     /// What would break a rule: a place preview over another structure or ground it cannot stand on (<c>DangerBrush</c>).
     /// </summary>
     Danger,
+
+    /// <summary>
+    /// The ground a placed structure reserves, its skirt, dashed around it in the Units mode (<c>MapSkirtBrush</c>).
+    /// </summary>
+    Skirt,
 }
 
 /// <summary>

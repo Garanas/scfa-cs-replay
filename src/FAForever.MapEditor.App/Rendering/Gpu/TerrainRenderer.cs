@@ -318,6 +318,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         }
         CheckError("the terrain");
         objects?.Renderer.DrawModels(document, viewProjection, objects.Value.Frame, sweep);
+        // the ghosts of the units the place tool would place (U-12): translucent, among the models they would stand with
+        objects?.Renderer.DrawGhosts(document, viewProjection, objects.Value.Frame);
 
         // decals lie on the terrain: no depth writes, and pulled towards the camera so the ground does not hide them
         _gl.DepthMask(false);

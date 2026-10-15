@@ -25,6 +25,8 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="MarkerKinds">The kinds of markers that show, of those <paramref name="Markers"/> and <paramref name="PathNodes"/> show (user story R-6).</param>
 /// <param name="Hovered">The object under the mouse, drawn lightly highlighted; null for none.</param>
 /// <param name="EffectColor">The colour of the diamond drawn for a prop the game shows as an effect, from the theme.</param>
+/// <param name="Ghosts">The units the place tool would place, drawn translucent where they would stand (user story U-12); null for none.</param>
+/// <param name="DangerColor">The colour a ghost that breaks a rule is mixed with, from the theme.</param>
 internal sealed record ObjectFrame(
     AssetCatalog Catalog,
     bool Props,
@@ -38,7 +40,9 @@ internal sealed record ObjectFrame(
     MarkerKinds MarkerKinds = MarkerKinds.All,
     ObjectRef? Hovered = null,
     IReadOnlySet<ObjectRef>? Isolated = null,
-    Vector3 EffectColor = default)
+    Vector3 EffectColor = default,
+    IReadOnlyList<UnitGhost>? Ghosts = null,
+    Vector3 DangerColor = default)
 {
     /// <summary>
     /// Whether the thing is drawn: every thing, or only those of the isolated selection.
@@ -84,6 +88,12 @@ internal sealed unsafe class ObjectRenderer : IDisposable
 
     private readonly Instances _props;
     private readonly Instances _units;
+    private readonly Instances _ghosts;
+
+    /// <summary>
+    /// How much of a ghost shows: translucent enough to see the ground and the models it would stand among.
+    /// </summary>
+    private const float GhostAlpha = 0.55f;
     private readonly uint _markerInstances;
     private int _markerCount;
     private object? _markersOf;
@@ -110,14 +120,15 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         _diamond = new GpuMesh(gl, diamond, diamondIndices);
         _props = new Instances(gl);
         _units = new Instances(gl);
+        _ghosts = new Instances(gl);
         _markerInstances = gl.GenBuffer();
     }
 
     /// <summary>
-    /// The props, units and markers drawn in the last frame, the draws they took, the models on
+    /// The props, units, ghosts and markers drawn in the last frame, the draws they took, the models on
     /// the card, the blueprints drawn as a box for want of a model, and the triangles of the models.
     /// </summary>
-    public (int Props, int Units, int Markers, int Draws, int Meshes, int Missing, long Triangles) State { get; private set; }
+    public (int Props, int Units, int Ghosts, int Markers, int Draws, int Meshes, int Missing, long Triangles) State { get; private set; }
 
     /// <summary>
     /// The models' albedos being read, not on the card yet.
@@ -147,6 +158,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         SetLighting(_model, document);
         _model.Set("uHighlight", frame.HighlightColor.X, frame.HighlightColor.Y, frame.HighlightColor.Z);
         _model.Set("uAlbedo", 1);
+        _model.Set("uGhostAlpha", 1f);
 
         if (frame.Props)
         {
@@ -183,6 +195,51 @@ internal sealed unsafe class ObjectRenderer : IDisposable
             _textures.Sweep();
         }
         State = State with { Props = props, Units = units, Draws = draws, Meshes = _meshes.Count, Missing = missing, Triangles = _triangles };
+    }
+
+    /// <summary>
+    /// The ghosts of the units the place tool would place (user story U-12): their models drawn
+    /// translucent where a click or release puts them, one that breaks a rule mixed with the danger
+    /// colour. Call right after <see cref="DrawModels"/>: the depth test keeps them among the models
+    /// and behind hills; depth writes are off, so they hide nothing drawn after them. The blend
+    /// function is put back as it was found.
+    /// </summary>
+    public void DrawGhosts(MapDocument document, Matrix4x4 viewProjection, ObjectFrame frame)
+    {
+        if (frame.Ghosts is not { Count: > 0 } ghosts)
+        {
+            State = State with { Ghosts = 0 };
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("3d.draw-ghosts");
+        _gl.ActiveTexture(TextureUnit.Texture1);
+        _model.Use();
+        _model.Set("uViewProjection", viewProjection);
+        SetLighting(_model, document);
+        _model.Set("uHighlight", frame.DangerColor.X, frame.DangerColor.Y, frame.DangerColor.Z);
+        _model.Set("uAlbedo", 1);
+        _model.Set("uGhostAlpha", GhostAlpha);
+        // the list is the tool's, made anew only when the places change: the instances stay meanwhile
+        _ghosts.Update(ghosts, () => ghosts.Select(ghost => (ghost.Blueprint, ghost.Placement, ghost.Blocked ? 1f : 0f, 0f)));
+        _ghosts.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
+        bool blending = _gl.IsEnabled(EnableCap.Blend);
+        _gl.GetInteger(GetPName.BlendSrcRgb, out int sourceRgb);
+        _gl.GetInteger(GetPName.BlendDstRgb, out int destinationRgb);
+        _gl.GetInteger(GetPName.BlendSrcAlpha, out int sourceAlpha);
+        _gl.GetInteger(GetPName.BlendDstAlpha, out int destinationAlpha);
+        _gl.Enable(EnableCap.Blend);
+        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        _gl.DepthMask(false);
+        (int drawn, int runs, _) = DrawRuns(_ghosts, frame);
+        _gl.DepthMask(true);
+        _gl.BlendFuncSeparate((BlendingFactor)sourceRgb, (BlendingFactor)destinationRgb, (BlendingFactor)sourceAlpha, (BlendingFactor)destinationAlpha);
+        if (!blending)
+        {
+            _gl.Disable(EnableCap.Blend);
+        }
+        _gl.BindVertexArray(0);
+        _gl.BindSampler(1, 0);
+        State = State with { Ghosts = drawn, Draws = State.Draws + runs };
     }
 
     /// <summary>
@@ -423,6 +480,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         _meshes.Clear();
         _props.Dispose();
         _units.Dispose();
+        _ghosts.Dispose();
         _gl.DeleteBuffer(_markerInstances);
         _gl.DeleteSampler(_sampler);
         _gl.DeleteTexture(_white);

@@ -3,6 +3,7 @@ using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -27,6 +28,42 @@ namespace FAForever.MapEditor.App.Tests
         private static Task<CommandRun> Run(MainViewModel model, string id, JsonObject? arguments = null) => model.Commands.RunAsync(id, arguments ?? [], interactive: false);
 
         private static string[] Ids(MainViewModel model, string group) => [.. model.MapParts.Parts.Items.Where(part => part.Group == group).Select(part => part.Id)];
+
+        [TestMethod]
+        public async Task EscapeCancelsTheAreaBeingDrawnAndAMoveUnderWay()
+        {
+            MainViewModel model = await Open();
+            model.SelectTool("map.areas");
+            AreaTool tool = model.Tool<AreaTool>();
+            int areas = model.ShownDocument!.Markers.Areas.Count();
+
+            // a rectangle being drawn: Escape gives it up, and letting go adds nothing
+            tool.Press(10, 10, ToolInput.Default);
+            tool.Drag(40, 30, ToolInput.Default);
+            Assert.IsNotNull(tool.Box, "the rectangle shows while it is drawn");
+            Assert.IsTrue(tool.Key("Escape", ToolModifiers.None));
+            Assert.IsNull(tool.Box);
+            tool.Release();
+            await Task.Yield();
+            Assert.AreEqual(areas, model.ShownDocument!.Markers.Areas.Count(), "nothing added");
+            Assert.AreEqual("Cancelled the area", model.Status);
+
+            // a move under way: Escape throws it away, and the area stands as before the press
+            await Run(model, "map.addArea", new JsonObject { ["x0"] = 20, ["z0"] = 20, ["x1"] = 60, ["z1"] = 60 });
+            Area before = model.ShownDocument!.Markers.Areas.Single(area => area.Name == "AREA_1");
+            int steps = model.History.Count;
+            tool.Press(40, 40, ToolInput.Default);
+            tool.Drag(52, 47, ToolInput.Default);
+            Area moved = model.ShownDocument!.Markers.Areas.Single(area => area.Name == "AREA_1");
+            Assert.AreNotEqual(before.X0, moved.X0, "the drag moves it");
+            Assert.IsTrue(tool.Key("Escape", ToolModifiers.None));
+            tool.Release();
+            await Task.Yield();
+            Area after = model.ShownDocument!.Markers.Areas.Single(area => area.Name == "AREA_1");
+            Assert.AreEqual((before.X0, before.Z0, before.X1, before.Z1), (after.X0, after.Z0, after.X1, after.Z1), "as before the press");
+            Assert.AreEqual(steps, model.History.Count, "no step of undo");
+            Assert.AreEqual("Cancelled the move", model.Status);
+        }
 
         [TestMethod]
         public async Task ThePanelListsTheMapItsArmiesAndItsAreas()

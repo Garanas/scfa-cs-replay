@@ -13,7 +13,7 @@ namespace FAForever.MapEditor.App.Tools;
 /// edges, drawn for the selected areas) resizes it, dragging its edge or inside moves it, each one
 /// step of undo held from press to release; a click selects the area under the mouse, or nothing.
 /// Edges move by whole ogrids. Its keys in a view: Delete removes the selected areas, Escape
-/// selects nothing.
+/// cancels the rectangle being drawn or the move or resize under way, else selects nothing.
 /// </summary>
 public sealed partial class AreaTool(MainViewModel model) : ObservableObject, IMapTool
 {
@@ -171,6 +171,21 @@ public sealed partial class AreaTool(MainViewModel model) : ObservableObject, IM
         bool hasAreas = model.Selection.Items.Any(thing => thing.Kind == ObjectKind.Area);
         switch (key)
         {
+            case "Escape" when _edit is EditTransaction edit:
+                // a move or resize under way is thrown away: the area stands as before the press
+                _edit = null;
+                _before = null;
+                _area = null;
+                _original = null;
+                model.EndStroke(edit, keep: false);
+                model.Status = _handle == AreaHandle.Move ? "Cancelled the move" : "Cancelled the resize";
+                return true;
+            case "Escape" when _drawing && Box is not null:
+                // the rectangle being drawn is given up: letting go adds nothing
+                Box = null;
+                _drawing = false;
+                model.Status = "Cancelled the area";
+                return true;
             case "Escape" when !model.Selection.IsEmpty:
                 _ = model.RunWithAsync("select.none", []);
                 return true;
