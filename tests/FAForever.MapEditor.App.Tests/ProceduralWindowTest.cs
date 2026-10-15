@@ -123,12 +123,13 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Auto off", text.Text);
             StringAssert.Contains(Avalonia.Controls.ToolTip.GetTip(chip) as string, "only when asked");
 
-            // on again, with a result shown and out of date: it says one waits
+            // on again, with a result shown and out of date: it says one waits (or, on a slow machine
+            // whose delay passed already, runs)
             Click(window, chip);
             model.ShowNavigation = true;
             await model.Commands.TryRunAsync("generate.auto", new System.Text.Json.Nodes.JsonObject { ["id"] = "navigationMesh", ["on"] = true }, interactive: false);
             Dispatcher.UIThread.RunJobs();
-            Assert.AreEqual("Auto: 1 waiting", text.Text);
+            CollectionAssert.Contains(new[] { "Auto: 1 waiting", "Auto: 1 running" }, text.Text);
             await Until(() => !model.AutoGeneration.IsPending("navigationMesh"));
             Assert.AreEqual("Auto", text.Text);
             window.Close();

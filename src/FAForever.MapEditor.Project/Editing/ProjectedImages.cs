@@ -100,11 +100,12 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// A name from a picture's file: its name without extension, whatever a name cannot hold
-        /// turned into a dash; <c>Image</c> when no letter or digit is left.
+        /// turned into a dash; <c>Image</c> when no letter or digit is left. Either separator ends a
+        /// folder, on every system (a path from Windows read on Linux).
         /// </summary>
         public static string NameOfFile(string path)
         {
-            string stem = Path.GetFileNameWithoutExtension(path);
+            string stem = Path.GetFileNameWithoutExtension(path[(path.LastIndexOfAny(['/', '\\']) + 1)..]);
             string name = new string([.. stem.Select(c => char.IsAsciiLetterOrDigit(c) || c is ' ' or '-' or '_' ? c : '-')]).Trim();
             return name.Any(char.IsAsciiLetterOrDigit) ? name : "Image";
         }

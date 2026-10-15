@@ -14,6 +14,16 @@ namespace FAForever.MapEditor.Project.Tests
     {
         private static readonly LayerTarget Stratum2 = LayerTarget.Stratum(2);
 
+        /// <summary>
+        /// How much longer a step may take on CI (GitHub sets <c>CI</c>): its runners have four
+        /// processors shared with the other test projects, which <c>dotnet test</c> runs alongside,
+        /// and a composite over every tile runs on all of them (a mask reference took 200 ms there,
+        /// 12 ms here).
+        /// </summary>
+        private static readonly double Slack = Environment.GetEnvironmentVariable("CI") is "true" ? 5 : 1;
+
+        private static TimeSpan Limit(double milliseconds) => TimeSpan.FromMilliseconds(milliseconds * Slack);
+
         private static EditSession Large()
         {
             MapDocument document = NewMap.Create(new NewMapSettings { Size = 4096, Height = 35 });
@@ -56,8 +66,8 @@ namespace FAForever.MapEditor.Project.Tests
                 Assert.AreSame(mask, added.Terrain.StratumMasks.Layers[1]);
             });
             Console.WriteLine($"4096 map, stratum mask {mask.Width} by {mask.Height}: first layer {first.TotalMilliseconds:0.0} ms, another {second.TotalMilliseconds:0.0} ms");
-            Assert.IsTrue(first < TimeSpan.FromMilliseconds(60), $"the first layer took {first.TotalMilliseconds:0} ms");
-            Assert.IsTrue(second < TimeSpan.FromMilliseconds(60), $"another layer took {second.TotalMilliseconds:0} ms");
+            Assert.IsTrue(first < Limit(60), $"the first layer took {first.TotalMilliseconds:0} ms");
+            Assert.IsTrue(second < Limit(60), $"another layer took {second.TotalMilliseconds:0} ms");
         }
 
         [TestMethod]
@@ -107,7 +117,7 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument start = session.Document;
             TimeSpan added = Time(() => CoverageLayers.Follow(start, CoverageLayerEdits.Add(start, Stratum2, CoverageLayerEdits.NewMaskRef(start, "Stratum 3", "stratum:3"))));
             Console.WriteLine($"4096 map: a mask reference of the same size {added.TotalMilliseconds:0.0} ms");
-            Assert.IsTrue(added < TimeSpan.FromMilliseconds(150), $"{added.TotalMilliseconds:0} ms");
+            Assert.IsTrue(added < Limit(150), $"{added.TotalMilliseconds:0} ms");
         }
 
         [TestMethod]
@@ -139,7 +149,7 @@ namespace FAForever.MapEditor.Project.Tests
             double mean = moves.Skip(10).Average();
             Console.WriteLine($"4096 map, three layers: a move of four dabs {mean:0.00} ms on average, at most {moves.Skip(10).Max():0.00} ms");
             Assert.IsTrue(session.Document.CoverageStacks[Stratum2.Key].Find("Painted 2")!.Alpha![500, 500] > 0, "the stroke went into the chosen layer");
-            Assert.IsTrue(mean < 8, $"{mean:0.0} ms a move");
+            Assert.IsTrue(mean < 8 * Slack, $"{mean:0.0} ms a move");
         }
     }
 }

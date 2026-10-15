@@ -23,6 +23,12 @@ namespace FAForever.MapEditor.Cli.Guide
         private const double ScrimLight = 1 - 0xB3 / 255.0;
 
         /// <summary>
+        /// The badges' font, a file beside the program: ImageMagick finds no font by name on a
+        /// machine without fontconfig (Linux without its configuration).
+        /// </summary>
+        private static readonly string BadgeFont = Path.Combine(AppContext.BaseDirectory, "Fonts", "IBMPlexSans-SemiBold.ttf");
+
+        /// <summary>
         /// Whether this build of Magick.NET writes WebP; the guide uses PNG when it does not.
         /// </summary>
         public static string Extension { get; } = WebpWorks() ? ".webp" : ".png";
@@ -160,7 +166,7 @@ namespace FAForever.MapEditor.Cli.Guide
         {
             MagickImage image = new MagickImage(MagickColors.Transparent, (uint)size, (uint)size);
             new Drawables()
-                .Font("Arial")
+                .Font(BadgeFont)
                 .FontPointSize(number >= 10 ? 11 : 13)
                 .StrokeColor(MagickColors.Transparent)
                 .FillColor(new MagickColor("#0B1320"))

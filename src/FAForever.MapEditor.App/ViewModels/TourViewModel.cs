@@ -420,12 +420,13 @@ public sealed partial class TourViewModel : ObservableObject
         }
         finally
         {
+            // what the person makes from here on counts for a step that waits for an edit; noted before
+            // the step stops entering, so a look already scheduled does not count the edits of the step before
+            _editsAtStart = TourState.Edits(_model);
             _entering = false;
         }
         OnPropertyChanged(nameof(DoneText));
         await RefreshStageAsync();
-        // what the person makes from here on counts for a step that waits for an edit
-        _editsAtStart = TourState.Edits(_model);
         Evaluate();
     }
 

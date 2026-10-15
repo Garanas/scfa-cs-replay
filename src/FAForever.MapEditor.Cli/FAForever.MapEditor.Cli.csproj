@@ -10,6 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the guide's badge numbers: a font file, since ImageMagick finds no font by name without fontconfig -->
+    <Content Include="..\FAForever.MapEditor.App\Assets\Fonts\IBMPlexSans-SemiBold.ttf" Link="Fonts\IBMPlexSans-SemiBold.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FAForever.MapEditor.Project\FAForever.MapEditor.Project.csproj" />
   </ItemGroup>
 

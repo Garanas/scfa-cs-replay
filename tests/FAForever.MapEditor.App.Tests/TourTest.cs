@@ -196,7 +196,7 @@ namespace FAForever.MapEditor.App.Tests
                     }
                     string at = $"{tour.Id} step {step + 1} ({each.Id})";
                     await WithFrames(model.Tour.StartAsync(tour.Id, (step + 1).ToString()));
-                    Assert.IsFalse(model.Tour.IsDone, $"{at}: it waits for the person at first");
+                    Assert.IsFalse(model.Tour.IsDone, $"{at}: it waits for the person at first (edits {model.Map!.Session.Edits}, history: {string.Join(" | ", model.Map.Session.History.TakeLast(4).Select(entry => entry.Description))})");
                     Assert.IsTrue(model.Tour.IsWaiting && model.Tour.HasDoItForMe, at);
                     Assert.AreEqual("Skip", model.Tour.NextText, at);
 
