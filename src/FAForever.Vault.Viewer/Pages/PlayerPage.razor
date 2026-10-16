@@ -1,19 +1,37 @@
 @page "/players/{Id:int}"
+@using FAForever.Vault.Viewer.Features.Players.Profile
+@using FAForever.Vault.Viewer.Services.Players
 @inherits UrlStateComponent
+@inject IPlayersApi Api
 
 @* A player's profile, by id: the header and a tab per way to look at the player. The tab is in the
    address (?tab=rating, matches or army; Overview has none), the other parameters belong to the
    tabs. Every number comes from the FAF API, so a signed out visitor gets the login gate under the
-   header. Wave 31 draws the chrome; the tabs fill in with the API data. *@
+   header. The profile (name, clan, names, member since) is loaded here and handed to the tabs; an
+   id nobody has gets a quiet card and no tabs. *@
 
-<PageTitle>@(name ?? $"Player {Id}") · Vault of FAForever</PageTitle>
+<PageTitle>@(profile?.Login ?? $"Player {Id}") · Vault of FAForever</PageTitle>
 
 <a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
 
+@if (notFound)
+{
+    <div class="card mx-auto mt-6 max-w-xl text-center">
+        <p class="font-semibold">No player with this id</p>
+        <p class="mt-2 text-sm text-ink-muted">Player @Id does not exist, or the FAForever API has no profile for it.</p>
+        <a href="@PlayerLinks.Landing" class="btn-secondary mt-4 min-h-11">Search for a player</a>
+    </div>
+    return;
+}
+
 <div class="mt-3">
-    <PlayerHeader Id="Id" Name="@name" ClanTag="@clanTag" ClanName="@clanName" MemberSince="memberSince" FormerNames="formerNames">
+    <PlayerHeader Id="Id" Name="@profile?.Login" ClanTag="@profile?.Clan?.Tag" ClanName="@profile?.Clan?.Name" MemberSince="profile?.CreatedAt" FormerNames="formerNames">
         <Actions>
             <a href="@PlayerLinks.CompareWith(Id)" class="btn-secondary min-h-11">Compare with…</a>
+            @if (profile is not null)
+            {
+                <a href="@ProfileLinks.AllReplays(profile.Login)" class="btn-secondary min-h-11">All replays</a>
+            }
             <ShareButton Title="@ShareTitle" Class="btn-secondary min-h-11 gap-1.5 px-3" />
         </Actions>
     </PlayerHeader>
@@ -24,34 +42,52 @@
         <PlayersLoginGate What="this player" />
     </NotAuthorized>
     <Authorized>
-        <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Player sections">
-            @foreach (PlayerTab tab in Enum.GetValues<PlayerTab>())
-            {
-                bool active = tab == activeTab;
-                <button type="button" id="@($"player-tab-{tab.ToString().ToLowerInvariant()}")" aria-current="@(active ? "page" : null)"
-                        class="@(active ? ActiveTabClass : TabClass) inline-flex min-h-11 items-center" @onclick="() => SelectTab(tab)">
-                    @PlayerLinks.TabLabel(tab)
-                </button>
-            }
-        </nav>
+        @if (needsLogin)
+        {
+            <PlayersLoginGate What="this player" />
+        }
+        else if (profileError is not null)
+        {
+            <div class="card mt-6" role="alert">
+                <p class="font-semibold">This profile could not be loaded</p>
+                <p class="mt-1 text-sm text-ink-muted">@profileError</p>
+            </div>
+        }
+        else if (profile is null)
+        {
+            <div class="card mt-6 h-40 animate-pulse" aria-busy="true"></div>
+        }
+        else
+        {
+            <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Player sections">
+                @foreach (PlayerTab tab in Enum.GetValues<PlayerTab>())
+                {
+                    bool active = tab == activeTab;
+                    <button type="button" id="@($"player-tab-{tab.ToString().ToLowerInvariant()}")" aria-current="@(active ? "page" : null)"
+                            class="@(active ? ActiveTabClass : TabClass) inline-flex min-h-11 items-center" @onclick="() => SelectTab(tab)">
+                        @PlayerLinks.TabLabel(tab)
+                    </button>
+                }
+            </nav>
 
-        <div class="py-6">
-            @switch (activeTab)
-            {
-                case PlayerTab.Rating:
-                    <RatingHistoryTab PlayerId="Id" />
-                    break;
-                case PlayerTab.Matches:
-                    <MatchesTab PlayerId="Id" />
-                    break;
-                case PlayerTab.Army:
-                    <ArmyTab PlayerId="Id" />
-                    break;
-                default:
-                    <ProfileOverview PlayerId="Id" />
-                    break;
-            }
-        </div>
+            <div class="py-6">
+                @switch (activeTab)
+                {
+                    case PlayerTab.Rating:
+                        <RatingHistoryTab PlayerId="Id" Profile="profile" />
+                        break;
+                    case PlayerTab.Matches:
+                        <MatchesTab PlayerId="Id" />
+                        break;
+                    case PlayerTab.Army:
+                        <ArmyTab PlayerId="Id" />
+                        break;
+                    default:
+                        <ProfileOverview PlayerId="Id" Profile="profile" />
+                        break;
+                }
+            </div>
+        }
     </Authorized>
 </AuthorizeView>
 
@@ -64,16 +100,72 @@
     private PlayerTab activeTab;
 
     // What the header shows. Not loaded yet: the header then says "Player {id}".
-    private string? name = null;
-    private string? clanTag = null;
-    private string? clanName = null;
-    private DateTimeOffset? memberSince = null;
-    private IReadOnlyList<FormerName>? formerNames = null;
+    private PlayerProfile? profile;
+    private IReadOnlyList<FormerName>? formerNames;
+    private bool notFound;
+    private bool needsLogin;
+    private string? profileError;
+    private int loadedId = -1;
+    private CancellationTokenSource? profileCancellation;
 
-    private string ShareTitle => $"{name ?? $"Player {Id}"} · {PlayerLinks.TabLabel(activeTab)}";
+    private string ShareTitle => $"{profile?.Login ?? $"Player {Id}"} · {PlayerLinks.TabLabel(activeTab)}";
 
     protected override void OnParametersSet()
-        => activeTab = PlayerLinks.ParseTab(UrlQuery.Get(Navigation, PlayerLinks.TabParameter));
+    {
+        activeTab = PlayerLinks.ParseTab(UrlQuery.Get(Navigation, PlayerLinks.TabParameter));
+        if (Id != loadedId)
+        {
+            loadedId = Id;
+            _ = LoadProfileAsync(Id);
+        }
+    }
+
+    private async Task LoadProfileAsync(int id)
+    {
+        profileCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        profileCancellation = cancellation;
+
+        profile = null;
+        formerNames = null;
+        notFound = false;
+        needsLogin = false;
+        profileError = null;
+        StateHasChanged();
+        try
+        {
+            PlayerProfile? loaded = await Api.GetProfileAsync(id, cancellation.Token);
+            if (cancellation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            profile = loaded;
+            notFound = loaded is null;
+            formerNames = loaded?.FormerNames.Select(name => new FormerName(name.Name, name.ChangedAt)).ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (NotAuthenticatedException)
+        {
+            needsLogin = true;
+        }
+        catch (Exception exception)
+        {
+            profileError = $"The FAForever API could not be read: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(profileCancellation, cancellation))
+            {
+                profileCancellation = null;
+            }
+        }
+
+        StateHasChanged();
+    }
 
     /// <summary>Switching tabs leaves the filters alone, except the page of a list.</summary>
     private void SelectTab(PlayerTab tab)
@@ -84,5 +176,11 @@
             ["page"] = null,
         };
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), replace: true);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        profileCancellation?.Cancel();
     }
 }
