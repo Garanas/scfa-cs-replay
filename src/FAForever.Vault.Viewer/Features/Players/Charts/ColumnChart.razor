@@ -30,7 +30,12 @@
     <div class="mt-1.5 flex gap-0.5 text-xs text-ink-muted" aria-hidden="true">
         @foreach (ColumnItem item in Items)
         {
-            <div class="min-w-0 flex-1 truncate text-center">@item.Label</div>
+            <div class="min-w-0 flex-1 text-center">
+                @foreach (string line in item.Label.Split('\n'))
+                {
+                    <div class="truncate">@line</div>
+                }
+            </div>
         }
     </div>
 </div>
