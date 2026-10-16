@@ -7,7 +7,7 @@
         <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-edge bg-raised font-display text-2xl font-bold text-primary sm:h-16 sm:w-16" aria-hidden="true">@Initial</span>
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <h1 class="break-words font-display text-3xl font-bold leading-tight">@(Name ?? $"Player {Id}")</h1>
+                <h1 class="break-words font-display text-3xl font-bold leading-tight text-ink">@(Name ?? $"Player {Id}")</h1>
                 @if (ClanTag is { Length: > 0 })
                 {
                     <span class="inline-flex items-center gap-1.5 rounded-full border border-edge bg-raised px-2.5 py-0.5 text-sm font-semibold">

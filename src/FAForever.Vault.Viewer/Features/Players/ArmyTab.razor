@@ -1,6 +1,7 @@
 @inherits PlayerUrlComponent
 @using FAForever.Vault.Viewer.Features.Players.Army
 @using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Profile
 @using FAForever.Vault.Viewer.Services.Players
 @using FAForever.Vault.Viewer.Services.Players.Statistics
 @inject IPlayersApi Api
@@ -49,16 +50,16 @@
         FactionPlays? main = ArmyFormat.MainFaction(summary.Factions);
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatTile Label="Time in game" Value="@ArmyFormat.Hours(summary.HoursPlayed)" Sub="@ArmyFormat.AverageGame(summary)" />
-            <StatTile Label="Games" Value="@MatchFormat.Count(games)" Sub="@(games > 0 ? $"{MatchFormat.Percent(ArmyFormat.WinShare(summary))} won" : null)" />
-            <StatTile Label="Units built" Value="@MatchFormat.Count(built)"
+            <InfoTile Label="Time in game" Value="@ArmyFormat.Hours(summary.HoursPlayed)" Sub="@ArmyFormat.AverageGame(summary)" />
+            <InfoTile Label="Games with a faction recorded" Value="@MatchFormat.Count(games)" Sub="@(games > 0 ? $"{MatchFormat.Percent(ArmyFormat.WinShare(summary))} won" : null)" />
+            <InfoTile Label="Units built" Value="@MatchFormat.Count(built)"
                       Sub="@($"{MatchFormat.Count(lost)} lost, {MatchFormat.Percent(ArmyFormat.LostShare(built, lost))}")" />
-            <StatTile Label="Engineers built" Value="@MatchFormat.Count(summary.Engineers.Built)" Sub="@($"{MatchFormat.Count(summary.Engineers.Lost)} lost")" />
-            <StatTile Label="ACUs lost per game" Value="@ArmyFormat.PerGame(summary.AcusLostPerGame)" Sub="@($"{MatchFormat.Count(summary.AcusLost)} lost in total")" />
+            <InfoTile Label="Engineers built" Value="@MatchFormat.Count(summary.Engineers.Built)" Sub="@($"{MatchFormat.Count(summary.Engineers.Lost)} lost")" />
+            <InfoTile Label="ACUs lost per game" Value="@ArmyFormat.PerGame(summary.AcusLostPerGame)" Sub="@($"{MatchFormat.Count(summary.AcusLost)} lost in total")" />
         </div>
 
         <section class="card" aria-labelledby="a-factions">
-            <h2 id="a-factions" class="text-base font-semibold text-ink">Games per faction</h2>
+            <h2 id="a-factions" class="text-[1rem] font-semibold text-ink">Games per faction</h2>
             <p class="mt-1 mb-4 text-sm text-ink-muted">Each bar is the games played as that faction, won games solid and lost games pale.</p>
             <BarRows Rows="ArmyFormat.FactionRows(summary.Factions)" AriaLabel="Games per faction" />
             <div class="mt-4">
@@ -78,13 +79,13 @@
         </section>
 
         <section class="card" aria-labelledby="a-modes">
-            <h2 id="a-modes" class="text-base font-semibold text-ink">Where the games were played</h2>
+            <h2 id="a-modes" class="text-[1rem] font-semibold text-ink">Where the games were played</h2>
             <p class="mt-1 mb-4 text-sm text-ink-muted">Custom lobbies against matchmaker games.</p>
             <StackedBar Segments="ArmyFormat.ModeSegments(summary)" AriaLabel="Custom games against matchmaker games" />
         </section>
 
         <section class="card" aria-labelledby="a-units">
-            <h2 id="a-units" class="text-base font-semibold text-ink">Units built and lost</h2>
+            <h2 id="a-units" class="text-[1rem] font-semibold text-ink">Units built and lost</h2>
             <p class="mt-1 mb-4 text-sm text-ink-muted">By category and by tech level. The share lost says how the army is spent.</p>
             <Legend Items="ArmyFormat.BuiltLostLegend" />
             <div class="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -95,7 +96,7 @@
         </section>
 
         <section class="card" aria-labelledby="a-achievements">
-            <h2 id="a-achievements" class="text-base font-semibold text-ink">Achievements</h2>
+            <h2 id="a-achievements" class="text-[1rem] font-semibold text-ink">Achievements</h2>
             @if (rows is not null)
             {
                 <p class="mt-1 text-sm text-ink-muted">@AchievementFilter.Summary(rows) Rarity is the share of all players who hold one.</p>

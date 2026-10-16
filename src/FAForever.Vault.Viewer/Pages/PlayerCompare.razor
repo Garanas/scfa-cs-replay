@@ -12,10 +12,10 @@
 
 <PageTitle>Compare players · Vault of FAForever</PageTitle>
 
-<a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
+<a href="@PlayerLinks.Landing" class="inline-flex min-h-11 items-center text-sm text-ink-muted transition hover:text-primary">← Players</a>
 <div class="mt-2 flex items-start justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold">Compare players</h1>
+        <h1 class="text-2xl font-bold text-ink">Compare players</h1>
         <p class="mt-1 text-sm text-ink-muted">Two players next to each other, on the same scales.</p>
     </div>
     <ShareButton Title="Compare players on Vault of FAForever" Class="btn-secondary min-h-11 shrink-0 gap-1.5 px-3" />
@@ -31,35 +31,35 @@
     </NotAuthorized>
     <Authorized>
         <form class="card mt-6 grid grid-cols-1 gap-4" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-start sm:gap-4">
                 <div class="min-w-0 text-sm">
                     <label for="compare-a" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
                         <span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span>First player
                     </label>
-                    <input id="compare-a" type="search" class="input-field min-h-11" placeholder="A player name" autocomplete="off"
+                    <input id="compare-a" type="search" class="input-field min-h-11 aria-invalid:border-viz-8" placeholder="A player name" autocomplete="off"
+                           aria-invalid="@(messageA is null ? null : "true")" aria-describedby="@(messageA is null ? null : "compare-a-message")"
                            value="@nameA" @onchange="e => nameA = e.Value?.ToString() ?? string.Empty" />
-                    @if (unknownA)
+                    @if (messageA is not null)
                     {
-                        <p class="mt-1 text-xs text-ink-muted" role="status">Unknown name</p>
+                        <p id="compare-a-message" class="mt-1 text-sm text-ink" role="status">@messageA</p>
                     }
                 </div>
-                <button type="button" class="btn-secondary min-h-11 min-w-11 justify-self-start px-3 sm:mt-[1.375rem]" aria-label="Swap the two players" title="Swap the two players" @onclick="Swap">
-                    <svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2 5h11M10.5 2.5 13 5l-2.5 2.5M14 11H3M5.5 8.5 3 11l2.5 2.5" /></svg>
+                <button type="button" class="btn-secondary min-h-11 min-w-11 justify-self-center px-3 sm:mt-[1.375rem]" aria-label="Swap the two players" title="Swap the two players" @onclick="Swap">
+                    <svg class="h-4 w-4 sm:rotate-0" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2 5h11M10.5 2.5 13 5l-2.5 2.5M14 11H3M5.5 8.5 3 11l2.5 2.5" /></svg>
                 </button>
                 <div class="min-w-0 text-sm">
                     <label for="compare-b" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
                         <span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span>Second player
                     </label>
-                    <input id="compare-b" type="search" class="input-field min-h-11" placeholder="A player name" autocomplete="off"
+                    <input id="compare-b" type="search" class="input-field min-h-11 aria-invalid:border-viz-8" placeholder="A player name" autocomplete="off"
+                           aria-invalid="@(messageB is null ? null : "true")" aria-describedby="@(messageB is null ? null : "compare-b-message")"
                            value="@nameB" @onchange="e => nameB = e.Value?.ToString() ?? string.Empty" />
-                    @if (unknownB)
+                    @if (messageB is not null)
                     {
-                        <p class="mt-1 text-xs text-ink-muted" role="status">Unknown name</p>
+                        <p id="compare-b-message" class="mt-1 text-sm text-ink" role="status">@messageB</p>
                     }
                 </div>
-            </div>
-            <div>
-                <button type="submit" class="btn-primary min-h-11" disabled="@isResolving">Compare</button>
+                <button type="submit" class="btn-primary min-h-11 w-full sm:mt-[1.375rem] sm:w-auto" disabled="@isResolving">Compare</button>
             </div>
             <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <ChoiceSelect Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="@PlayerFilters.DefaultBoard" />
@@ -105,7 +105,7 @@
                 </div>
 
                 <section class="card" aria-labelledby="cmp-ratings">
-                    <h2 id="cmp-ratings" class="text-lg font-semibold">Rating per leaderboard</h2>
+                    <h2 id="cmp-ratings" class="text-lg font-semibold text-ink">Rating per leaderboard</h2>
                     @if (d.RatingRows.Count == 0)
                     {
                         <p class="mt-3 text-sm text-ink-muted">The two players have no leaderboard in common.</p>
@@ -113,8 +113,10 @@
                     else
                     {
                         <p class="mb-4 mt-1 text-sm text-ink-muted">Where each player stands now. The gap is from @d.A.Login's side.</p>
+                        <div class="[&_ul[aria-label=Legend]]:hidden">
                         <Dumbbell Rows="d.RatingRows" NameA="@d.A.Login" NameB="@d.B.Login" Min="@d.ScaleMin" MaxValue="@d.ScaleMax"
                                   AriaLabel="@($"Ratings of {d.A.Login} and {d.B.Login} per leaderboard")" />
+                        </div>
                     }
                     @if (d.BoardsOfOne.Count > 0)
                     {
@@ -123,7 +125,7 @@
                 </section>
 
                 <section class="card" aria-labelledby="cmp-facts">
-                    <h2 id="cmp-facts" class="text-lg font-semibold">Side by side</h2>
+                    <h2 id="cmp-facts" class="text-lg font-semibold text-ink">Side by side</h2>
                     <p class="mb-3 mt-1 text-sm text-ink-muted">The better value of each row is in bold.</p>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[20rem] text-sm">
@@ -153,7 +155,7 @@
                 </section>
 
                 <section class="card" aria-labelledby="cmp-history">
-                    <h2 id="cmp-history" class="text-lg font-semibold">Rating over the period</h2>
+                    <h2 id="cmp-history" class="text-lg font-semibold text-ink">Rating over the period</h2>
                     @if (d.SeriesA.Count == 0 || d.SeriesB.Count == 0)
                     {
                         <p class="mt-3 text-sm text-ink-muted">
@@ -179,7 +181,7 @@
                 </section>
 
                 <section class="card" aria-labelledby="cmp-factions">
-                    <h2 id="cmp-factions" class="text-lg font-semibold">Factions played</h2>
+                    <h2 id="cmp-factions" class="text-lg font-semibold text-ink">Factions played</h2>
                     <p class="mb-4 mt-1 text-sm text-ink-muted">Each bar is all the games a player ever played, by faction.</p>
                     <div class="grid grid-cols-1 gap-4">
                         <StackedBar Name="@d.A.Login" Shares="d.SharesA" Color="ChartColor.Viz1" />
@@ -191,7 +193,7 @@
                 </section>
 
                 <section class="card" aria-labelledby="cmp-h2h">
-                    <h2 id="cmp-h2h" class="text-lg font-semibold">Head to head</h2>
+                    <h2 id="cmp-h2h" class="text-lg font-semibold text-ink">Head to head</h2>
                     @if (d.Games.Count == 0)
                     {
                         <p class="mt-3 text-sm text-ink-muted">@d.A.Login and @d.B.Login have not played a game together@(isAllTime ? "" : " in this period").</p>
@@ -200,8 +202,8 @@
                     {
                         HeadToHeadRecord record = d.Record;
                         <p class="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.A.Login wins</span><span class="text-2xl font-semibold">@record.AWins</span></span>
-                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.B.Login wins</span><span class="text-2xl font-semibold">@record.BWins</span></span>
+                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.A.Login wins</span><span class="text-2xl font-semibold text-ink">@record.AWins</span></span>
+                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.B.Login wins</span><span class="text-2xl font-semibold text-ink">@record.BWins</span></span>
                         </p>
                         <p class="mt-1 text-xs text-ink-muted">
                             @record.Opposing @(record.Opposing == 1 ? "game" : "games") against each other@(record.Undecided > 0 ? $", {record.Undecided} without a winner" : "").
@@ -223,8 +225,8 @@
                                     }
                                 </ul>
                             </div>
-                            <div class="mt-4 overflow-x-auto">
-                                <table class="w-full min-w-[30rem] text-sm">
+                            <div class="scroll-hint mt-4 overflow-x-auto">
+                                <table class="list-table w-full text-sm sm:min-w-[30rem]">
                                     <thead>
                                         <tr class="border-b border-edge text-left text-xs text-ink-muted">
                                             <th scope="col" class="py-2 pr-3 font-medium">Date</th>
@@ -239,9 +241,9 @@
                                         {
                                             HeadToHeadWinner winner = CompareStatistics.Winner(game);
                                             <tr class="border-b border-edge last:border-0">
-                                                <td class="py-2.5 pr-3 tabular-nums text-ink-muted">@(game.StartTime?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "Unknown")</td>
-                                                <td class="px-3 py-2.5">@(game.MapName ?? "Unknown map")</td>
-                                                <td class="px-3 py-2.5">
+                                                <td class="py-2.5 pr-3 tabular-nums text-ink-muted max-sm:order-1 max-sm:p-0">@(game.StartTime?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "Unknown")</td>
+                                                <td class="list-table-wide px-3 py-2.5 max-sm:order-6 max-sm:p-0 max-sm:text-ink-muted">@(game.MapName ?? "Unknown map")</td>
+                                                <td class="px-3 py-2.5 max-sm:order-2 max-sm:p-0">
                                                     @if (winner == HeadToHeadWinner.None)
                                                     {
                                                         <span class="text-ink-muted">No winner</span>
@@ -254,8 +256,8 @@
                                                         </span>
                                                     }
                                                 </td>
-                                                <td class="px-3 py-2.5 text-right tabular-nums text-ink-muted">@Length(game.Duration)</td>
-                                                <td class="py-2.5 pl-3 text-right"><a href="replays/@game.GameId" class="inline-flex min-h-11 items-center text-ink-muted underline decoration-edge underline-offset-2 transition hover:text-primary">Open</a></td>
+                                                <td class="px-3 py-2.5 text-right tabular-nums text-ink-muted max-sm:order-3 max-sm:p-0">@Length(game.Duration)</td>
+                                                <td class="py-2.5 pl-3 text-right max-sm:order-5 max-sm:ml-auto max-sm:p-0"><a href="replays/@game.GameId" class="inline-flex min-h-11 min-w-11 items-center justify-end text-ink-muted underline decoration-edge underline-offset-2 transition hover:text-primary">Open</a></td>
                                             </tr>
                                         }
                                     </tbody>
@@ -298,9 +300,17 @@
             .Select(faction => new LegendItem(Factions.Name(faction) ?? "Unknown", ChartColor.Faint, LegendKind.Swatch, 1, Factions.Swatch(faction))),
     ];
 
+    private const string SamePlayerMessage = CompareInput.SamePlayerMessage;
+
     private string nameA = "";
     private string nameB = "";
-    private bool unknownA, unknownB, isResolving;
+    private string? messageA, messageB;
+    private bool isResolving;
+
+    // The names of the players the address names, read from their profile as soon as it is known.
+    private readonly Dictionary<int, string> names = [];
+    private int? shownA, shownB;
+    private CancellationTokenSource? nameCancellation;
 
     private int? idA, idB;
     private string board = PlayerFilters.DefaultBoard;
@@ -335,13 +345,23 @@
         }
 
         loadedKey = key;
-        if (idA is null || idB is null)
+        bool samePlayer = CompareInput.IsSamePlayer(idA, idB);
+        if (samePlayer)
+        {
+            messageB = SamePlayerMessage;
+        }
+        else if (messageB == SamePlayerMessage)
+        {
+            messageB = null;
+        }
+
+        ShowNames();
+        if (idA is null || idB is null || samePlayer)
         {
             cancellation?.Cancel();
             data = null;
             error = null;
             isLoading = false;
-            ShowNamesOf(idA, idB);
             return;
         }
 
@@ -350,17 +370,81 @@
 
     private int? ReadId(string name) => int.TryParse(Read(name), NumberStyles.None, CultureInfo.InvariantCulture, out int id) && id > 0 ? id : null;
 
-    /// <summary>Fills the fields with the names of players whose profile is known already.</summary>
-    private void ShowNamesOf(int? a, int? b)
+    /// <summary>
+    /// Puts the name of each player the address names in its field, as soon as the name is known: from
+    /// an earlier load, else from the profile alone. A field whose id is gone keeps what was typed.
+    /// </summary>
+    private void ShowNames()
     {
-        if (a is { } first && bundles.TryGetValue(first, out PlayerBundle? bundleA))
+        if (idA != shownA)
         {
-            nameA = bundleA.Profile.Login;
+            shownA = idA;
+            if (idA is { } first)
+            {
+                messageA = null;
+                FillName(first);
+            }
         }
 
-        if (b is { } second && bundles.TryGetValue(second, out PlayerBundle? bundleB))
+        if (idB != shownB)
         {
-            nameB = bundleB.Profile.Login;
+            shownB = idB;
+            if (idB is { } second)
+            {
+                if (messageB != SamePlayerMessage)
+                {
+                    messageB = null;
+                }
+
+                FillName(second);
+            }
+        }
+    }
+
+    private void FillName(int id)
+    {
+        if (names.TryGetValue(id, out string? known))
+        {
+            SetName(id, known);
+            return;
+        }
+
+        nameCancellation ??= new CancellationTokenSource();
+        _ = FetchNameAsync(id, nameCancellation.Token);
+    }
+
+    private async Task FetchNameAsync(int id, CancellationToken token)
+    {
+        try
+        {
+            PlayerProfile? profile = await Api.GetProfileAsync(id, token);
+            if (profile is not null && !token.IsCancellationRequested)
+            {
+                names[id] = profile.Login;
+                SetName(id, profile.Login);
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went away.
+        }
+        catch (Exception exception) when (exception is NotAuthenticatedException or HttpRequestException)
+        {
+            // The comparison reports it when it loads; the field stays as it is.
+        }
+    }
+
+    private void SetName(int id, string login)
+    {
+        if (idA == id)
+        {
+            nameA = login;
+        }
+
+        if (idB == id)
+        {
+            nameB = login;
         }
     }
 
@@ -370,14 +454,23 @@
         CancellationTokenSource mine = new();
         resolveCancellation = mine;
         isResolving = true;
-        unknownA = unknownB = false;
+        messageA = messageB = null;
         error = null;
         try
         {
             (int? a, bool missA) = await ResolveAsync(nameA, idA, mine.Token);
             (int? b, bool missB) = await ResolveAsync(nameB, idB, mine.Token);
-            unknownA = missA;
-            unknownB = missB;
+            messageA = missA ? CompareInput.UnknownMessage(nameA) : null;
+            messageB = missB ? CompareInput.UnknownMessage(nameB) : null;
+            if (CompareInput.IsSamePlayer(a, b))
+            {
+                // The same player twice is refused: the second field is cleared from the address.
+                messageB = SamePlayerMessage;
+            }
+
+            (a, b) = CompareInput.Resolved(a, b);
+
+            // The address keeps the players that resolved, so the comparison below always matches it.
             Write(
                 new Dictionary<string, string?>
                 {
@@ -416,19 +509,26 @@
             return (null, false);
         }
 
-        if (current is { } id && bundles.TryGetValue(id, out PlayerBundle? known) && string.Equals(known.Profile.Login, trimmed, StringComparison.Ordinal))
+        if (current is { } id && names.TryGetValue(id, out string? known) && string.Equals(known, trimmed, StringComparison.OrdinalIgnoreCase))
         {
             return (id, false);
         }
 
         PlayerSearchHit? hit = await Api.FindPlayerByNameAsync(trimmed, token);
-        return hit is null ? (current, true) : (hit.Id, false);
+        if (hit is null)
+        {
+            return (null, true);
+        }
+
+        names[hit.Id] = hit.Login;
+        return (hit.Id, false);
     }
+
 
     private void Swap()
     {
         (nameA, nameB) = (nameB, nameA);
-        (unknownA, unknownB) = (unknownB, unknownA);
+        (messageA, messageB) = (messageB == SamePlayerMessage ? null : messageB, messageA);
         if (idA is not null || idB is not null)
         {
             Write(
@@ -493,9 +593,11 @@
                 all,
                 opposing,
                 CompareStatistics.Record(all));
-            nameA = first.Profile.Login;
-            nameB = second.Profile.Login;
-            unknownA = unknownB = false;
+            names[a] = first.Profile.Login;
+            names[b] = second.Profile.Login;
+            SetName(a, first.Profile.Login);
+            SetName(b, second.Profile.Login);
+            messageA = messageB = null;
         }
         catch (OperationCanceledException)
         {
@@ -599,5 +701,6 @@
         base.Dispose();
         cancellation?.Cancel();
         resolveCancellation?.Cancel();
+        nameCancellation?.Cancel();
     }
 }

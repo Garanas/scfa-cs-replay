@@ -12,7 +12,7 @@
 
 <PageTitle>@(profile?.Login ?? $"Player {Id}") · Vault of FAForever</PageTitle>
 
-<a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
+<a href="@PlayerLinks.Landing" class="inline-flex min-h-11 items-center text-sm text-ink-muted transition hover:text-primary">← Players</a>
 
 @if (notFound)
 {
@@ -59,14 +59,14 @@
         }
         else
         {
-            <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Player sections">
+            <nav class="tab-strip scroll-hint scroll-hint-base mt-6 border-b border-edge pb-px" aria-label="Player sections">
                 @foreach (PlayerTab tab in Enum.GetValues<PlayerTab>())
                 {
                     bool active = tab == activeTab;
-                    <button type="button" id="@($"player-tab-{tab.ToString().ToLowerInvariant()}")" aria-current="@(active ? "page" : null)"
-                            class="@(active ? ActiveTabClass : TabClass) inline-flex min-h-11 items-center" @onclick="() => SelectTab(tab)">
+                    <a href="@TabHref(tab)" id="@($"player-tab-{tab.ToString().ToLowerInvariant()}")" aria-current="@(active ? "page" : null)"
+                       class="@(active ? ActiveTabClass : TabClass) inline-flex min-h-11 items-center">
                         @PlayerLinks.TabLabel(tab)
-                    </button>
+                    </a>
                 }
             </nav>
 
@@ -92,8 +92,8 @@
 </AuthorizeView>
 
 @code {
-    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
-    private const string ActiveTabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
+    private const string TabClass = "shrink-0 whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveTabClass = "shrink-0 whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
 
     [Parameter] public int Id { get; set; }
 
@@ -167,15 +167,18 @@
         StateHasChanged();
     }
 
-    /// <summary>Switching tabs leaves the filters alone, except the page of a list.</summary>
-    private void SelectTab(PlayerTab tab)
+    /// <summary>
+    /// The address of a tab, base relative: the current query with the tab changed and the page of a
+    /// list dropped, so the filters stay. A link, so a tab opens in a new tab too.
+    /// </summary>
+    private string TabHref(PlayerTab tab)
     {
         var parameters = new Dictionary<string, object?>
         {
             [PlayerLinks.TabParameter] = PlayerLinks.TabToken(tab),
             ["page"] = null,
         };
-        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), replace: true);
+        return Navigation.ToBaseRelativePath(Navigation.GetUriWithQueryParameters(parameters));
     }
 
     public override void Dispose()

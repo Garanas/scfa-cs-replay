@@ -53,8 +53,8 @@ public class CompareStatisticsTest
         Assert.AreEqual(Better.A, Row("Games in the period").Better);
         Assert.AreEqual("2", Row("Games in the period").A);
         Assert.AreEqual(Better.A, Row("Win share in the period").Better);
-        Assert.AreEqual("100 %", Row("Win share in the period").A);
-        Assert.AreEqual("0 %", Row("Win share in the period").B);
+        Assert.AreEqual("100%", Row("Win share in the period").A);
+        Assert.AreEqual("0%", Row("Win share in the period").B);
         Assert.AreEqual(Better.A, Row("Peak rating in the period").Better);
         Assert.AreEqual(Better.A, Row("Games played in total").Better);
         Assert.AreEqual("150", Row("Games played in total").A);

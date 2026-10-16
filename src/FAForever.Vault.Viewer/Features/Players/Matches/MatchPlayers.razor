@@ -15,11 +15,11 @@
             }
             else
             {
-                <a href="@PlayerLinks.Profile(player.PlayerId)" class="text-ink transition hover:text-primary">@player.Login</a>
+                <a href="@PlayerLinks.Profile(player.PlayerId)" class="text-ink transition hover:text-primary max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">@player.Login</a>
             }
             @if (player.Rating is { } rating)
             {
-                @(" ")<span class="text-ink-faint">(@rating)</span>
+                @(" ")<span class="text-ink-faint">(@MatchFormat.Count(rating))</span>
             }
         }
         @if (Players.Count > MaxShown)

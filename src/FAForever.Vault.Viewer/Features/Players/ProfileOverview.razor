@@ -44,7 +44,7 @@
                             <span class="text-sm font-semibold">@rating.Board.DisplayName</span>
                             <span class="text-xs text-ink-muted">@ProfileFormat.Number(rating.TotalGames) games</span>
                         </span>
-                        <span class="mt-2 block text-3xl font-semibold leading-tight">@ProfileFormat.Number(rating.Rating)</span>
+                        <span class="mt-2 block text-3xl font-semibold leading-tight text-ink">@ProfileFormat.Number(rating.Rating)</span>
                         <span class="mt-1 flex min-h-4 items-center gap-1.5 text-xs text-ink-muted">
                             @if (changesLoad is null)
                             {
@@ -80,7 +80,7 @@
                         <span class="mt-1 block text-xs text-ink-muted">@(rating.WinShare is null ? "No games" : ProfileFormat.Percent(rating.WinShare) + " won")</span>
                         @if (league is not null)
                         {
-                            <span class="mt-2 block border-t border-edge pt-2 text-xs text-ink-muted"><span class="font-semibold text-ink">@league.Title</span> · @league.Detail</span>
+                            <span class="mt-auto block pt-2"><span class="block border-t border-edge pt-2 text-xs text-ink-muted"><span class="font-semibold text-ink">@league.Title</span> · @league.Detail</span></span>
                         }
                     </button>
                 }
@@ -90,7 +90,7 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="card min-w-0" aria-labelledby="ov-chart-title">
-            <h2 id="ov-chart-title" class="text-lg font-semibold">Rating over time</h2>
+            <h2 id="ov-chart-title" class="text-lg font-semibold text-ink">Rating over time</h2>
             <p class="mt-1 text-sm text-ink-muted">@ChartSubtitle</p>
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] sm:items-end">
                 @if (ratingList.Count > 0)
@@ -137,12 +137,12 @@
                 <p class="mt-2 text-xs text-ink-muted" role="status">Loading rated games@(chartProgress > 0 ? $", {chartProgress.ToString("N0", CultureInfo.InvariantCulture)} so far" : "")&hellip;</p>
             }
             <p class="mt-4 text-xs text-ink-muted">Rating is μ − 3σ, as the game and the FAF client show it. Hover or tap for a game.</p>
-            <p class="mt-2 text-sm"><a class="text-primary underline-offset-2 hover:underline" href="@RatingTabLink">Full history and table view</a></p>
+            <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@RatingTabLink">Full history and table view</a></p>
         </section>
 
         <aside class="grid content-start gap-4" aria-label="About this player">
             <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold">Clan</h2>
+                <h2 class="text-sm font-semibold text-ink">Clan</h2>
                 @if (Profile?.Clan is { } clan)
                 {
                     <p class="mt-2 flex flex-wrap items-center gap-2 text-sm">
@@ -157,7 +157,7 @@
             </section>
 
             <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold">Name history</h2>
+                <h2 class="text-sm font-semibold text-ink">Name history</h2>
                 @if (Profile is not null)
                 {
                     <ul class="mt-2 grid gap-1.5 text-sm">
@@ -173,7 +173,7 @@
             </section>
 
             <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold">Achievements</h2>
+                <h2 class="text-sm font-semibold text-ink">Achievements</h2>
                 @if (achievementsLoad is null)
                 {
                     <div class="mt-2 h-16 animate-pulse rounded-md bg-raised"></div>
@@ -185,14 +185,14 @@
                 else if (achievementsLoad.Value is { } summary)
                 {
                     <p class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-semibold">@summary.Unlocked</span>
+                        <span class="text-2xl font-semibold text-ink">@summary.Unlocked</span>
                         <span class="text-sm text-ink-muted">of @summary.Total unlocked · @ProfileFormat.Number(summary.ExperiencePoints) XP</span>
                     </p>
                     @if (summary.Rarest is { } rarest)
                     {
                         <p class="mt-1 text-sm text-ink-muted">Rarest: <span class="text-ink">@rarest.Name</span>, held by @rarest.UnlockersPercent.ToString("0.#", CultureInfo.InvariantCulture)% of players</p>
                     }
-                    <p class="mt-2 text-sm"><a class="text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Army)">All achievements</a></p>
+                    <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Army)">All achievements</a></p>
                 }
             </section>
         </aside>
@@ -219,18 +219,18 @@
         {
             BuiltAndLost experimentals = army.ByTech.First(group => group.Label == "Experimental");
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <StatTile Label="Hours in game" Value="@ProfileFormat.Number(army.HoursPlayed)" Sub="@($"About {ProfileFormat.Number(army.HoursPlayed / 24)} days")" />
-                <StatTile Label="Games recorded" Value="@ProfileFormat.Number(army.CustomGames + army.LadderGames)" Sub="@($"{ProfileFormat.Number(army.CustomGames)} custom, {ProfileFormat.Number(army.LadderGames)} ladder")" />
-                <StatTile Label="ACUs lost" Value="@ProfileFormat.Number(army.AcusLost)" Sub="@(army.AcusLostPerGame is { } perGame ? $"{perGame.ToString("0.00", CultureInfo.InvariantCulture)} per game" : null)" />
-                <StatTile Label="Experimentals built" Value="@ProfileFormat.Number(experimentals.Built)" Sub="@($"{ProfileFormat.Number(experimentals.Lost)} lost")" />
+                <InfoTile Label="Hours in game" Value="@ProfileFormat.Number(army.HoursPlayed)" Sub="@($"About {ProfileFormat.Number(army.HoursPlayed / 24)} days")" />
+                <InfoTile Label="Custom and ladder games recorded" Value="@ProfileFormat.Number(army.CustomGames + army.LadderGames)" Sub="@($"{ProfileFormat.Number(army.CustomGames)} custom, {ProfileFormat.Number(army.LadderGames)} ladder")" />
+                <InfoTile Label="ACUs lost" Value="@ProfileFormat.Number(army.AcusLost)" Sub="@(army.AcusLostPerGame is { } perGame ? $"{perGame.ToString("0.00", CultureInfo.InvariantCulture)} per game" : null)" />
+                <InfoTile Label="Experimentals built" Value="@ProfileFormat.Number(experimentals.Built)" Sub="@($"{ProfileFormat.Number(experimentals.Lost)} lost")" />
             </div>
         }
     </section>
 
     <section class="card min-w-0" aria-labelledby="ov-recent-title">
         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 id="ov-recent-title" class="text-lg font-semibold">Recent games</h2>
-            <a class="text-sm text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Matches)">@(recentLoad?.Value is { TotalRecords: { } total } ? $"All {ProfileFormat.Number(total)} games with filters" : "All games with filters")</a>
+            <h2 id="ov-recent-title" class="text-lg font-semibold text-ink">Recent games</h2>
+            <a class="inline-flex min-h-11 items-center text-sm text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Matches)">@(recentLoad?.Value is { TotalRecords: { } total } ? $"All {ProfileFormat.Number(total)} games with filters" : "All games with filters")</a>
         </div>
         @if (recentLoad is null)
         {
@@ -242,8 +242,8 @@
         }
         else if (recentLoad.Value is { Items.Count: > 0 } recent)
         {
-            <div class="relative mt-4 overflow-x-auto">
-                <table class="w-full min-w-[40rem] text-left text-sm">
+            <div class="scroll-hint relative mt-4 overflow-x-auto">
+                <table class="list-table w-full text-left text-sm sm:min-w-[40rem]">
                     <thead class="text-xs text-ink-muted">
                         <tr>
                             <th scope="col" class="py-2 pr-4 font-medium">Date</th>
@@ -261,10 +261,10 @@
                         {
                             DeltaTone resultTone = ProfileFormat.Tone(match.Result);
                             <tr class="border-t border-edge">
-                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums">@ProfileFormat.Date(match.StartTime)</td>
-                                <td class="max-w-[14rem] truncate py-2 pr-4" title="@match.MapName">@(match.MapName ?? "Unknown map")</td>
-                                <td class="whitespace-nowrap py-2 pr-4">@ProfileFormat.ModeName(match.Board)</td>
-                                <td class="whitespace-nowrap py-2 pr-4">
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(match.StartTime)</td>
+                                <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0 max-sm:text-ink-muted" title="@match.MapName">@(match.MapName ?? "Unknown map")</td>
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:hidden">@ProfileFormat.ModeName(match.Board)</td>
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:order-4 max-sm:p-0">
                                     <span class="inline-flex items-center gap-1.5">
                                         @if (Factions.IconPath(match.Faction) is { } icon)
                                         {
@@ -273,7 +273,7 @@
                                         @(Factions.Name(match.Faction) ?? "Random")
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap py-2 pr-4">
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:order-2 max-sm:p-0">
                                     <span class="inline-flex items-center gap-1.5">
                                         @if (resultTone != DeltaTone.Neutral)
                                         {
@@ -282,7 +282,7 @@
                                         @ProfileFormat.ResultWord(match.Result)
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums">
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-3 max-sm:p-0">
                                     @if (match.RatingAfter is { } after)
                                     {
                                         <span>@ProfileFormat.Number(after)</span>
@@ -296,8 +296,8 @@
                                         <span class="text-ink-muted">Unrated</span>
                                     }
                                 </td>
-                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums">@ProfileFormat.Duration(match.Duration)</td>
-                                <td class="whitespace-nowrap py-2 text-right"><a class="text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(match.GameId)">Replay</a></td>
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:hidden">@ProfileFormat.Duration(match.Duration)</td>
+                                <td class="whitespace-nowrap py-2 text-right max-sm:order-5 max-sm:ml-auto max-sm:p-0"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(match.GameId)">Replay</a></td>
                             </tr>
                         }
                     </tbody>
@@ -374,7 +374,7 @@
     }
 
     private static string CardClass(bool active)
-        => "card block w-full min-w-0 cursor-pointer p-4 text-left transition hover:border-primary sm:p-4 "
+        => "card flex h-full w-full min-w-0 cursor-pointer flex-col items-stretch justify-start p-4 text-left text-ink transition hover:border-primary sm:p-4 "
             + (active ? "border-primary ring-1 ring-primary" : "");
 
     private static string WinWidth(PlayerRating rating)

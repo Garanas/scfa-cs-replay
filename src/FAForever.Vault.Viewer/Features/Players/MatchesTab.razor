@@ -1,5 +1,6 @@
 @inherits PlayerUrlComponent
 @using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Profile
 @using FAForever.Vault.Viewer.Services.Players
 @using FAForever.Vault.Viewer.Services.Players.Statistics
 @inject IPlayersApi Api
@@ -14,8 +15,8 @@
         <ChoiceSelect Label="Mode" Query="mode" Options="PlayerFilters.Modes" Default="all" />
         <ChoiceSelect Label="Faction" Query="faction" Options="PlayerFilters.Factions" Default="any" />
         <ChoiceSelect Label="Result" Query="result" Options="PlayerFilters.Results" Default="any" />
-        <TextFilter Label="Map" Query="map" Placeholder="Part of the map name" />
-        <TextFilter Label="With or against" Query="with" Placeholder="Player name" />
+        <TextFilter Label="Map" Query="map" Placeholder="Part of the map name, then Enter" />
+        <TextFilter Label="With or against" Query="with" Placeholder="Player name, then Enter" />
         <ChoiceSelect Label="Order" Query="sort" Options="MatchUrl.Sorts" Default="@MatchUrl.DefaultSort" />
         <div class="flex items-end">
             <button type="button" class="btn-secondary min-h-11 w-full sm:w-auto" disabled="@(!MatchUrl.AnyFilter(Read))" @onclick="Reset">Reset filters</button>
@@ -67,39 +68,39 @@
                 }
                 <div class="space-y-6 transition-opacity @(chartsLoading ? "opacity-50" : "")">
                     <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                        <StatTile Label="Games" Value="@MatchFormat.Count(data.Summary.Games)" />
-                        <StatTile Label="Win share" Value="@MatchFormat.Percent(data.Summary.WinShare)" Sub="@MatchFormat.Record(data.Summary)" />
-                        <StatTile Label="Average length" Value="@MatchFormat.Minutes(data.Summary.AverageLength)" />
+                        <InfoTile Label="Games" Value="@MatchFormat.Count(data.Summary.Games)" />
+                        <InfoTile Label="Win share" Value="@MatchFormat.Percent(data.Summary.WinShare)" Sub="@MatchFormat.Record(data.Summary)" />
+                        <InfoTile Label="Average length" Value="@MatchFormat.Minutes(data.Summary.AverageLength)" />
                         @if (data.Summary.AverageRatingChange is { } change)
                         {
-                            <StatTile Label="Average rating change" Value="@MatchFormat.SignedDecimal(change)" Tone="@MatchFormat.Tone(change)" Up="@(change >= 0)" Sub="per rated game" />
+                            <InfoTile Label="Average rating change" Value="@MatchFormat.SignedDecimal(change)" Tone="@MatchFormat.Tone(change)" Up="@(change >= 0)" Sub="per rated game" />
                         }
                         else
                         {
-                            <StatTile Label="Average rating change" Value="Unrated" Sub="no rated games" />
+                            <InfoTile Label="Average rating change" Value="Unrated" Sub="no rated games" />
                         }
-                        <StatTile Label="Most played map" Value="@(data.Summary.MostPlayedMap ?? "Unknown")"
+                        <InfoTile Label="Most played map" Value="@(data.Summary.MostPlayedMap ?? "Unknown")"
                                   Sub="@(data.Summary.MostPlayedMap is null ? null : $"{MatchFormat.Games(data.Summary.MostPlayedMapGames)}, {MatchFormat.Percent(data.TopMapShare)} won")" />
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <section class="card" aria-labelledby="m-faction">
-                            <h2 id="m-faction" class="text-base font-semibold text-ink">Win share by faction</h2>
+                            <h2 id="m-faction" class="text-[1rem] font-semibold text-ink">Win share by faction</h2>
                             <p class="mt-1 mb-4 text-sm text-ink-muted">The share of decided games won; the games say how much to trust it. The thin line marks 50%.</p>
                             <BarRows Rows="data.FactionRows" Max="100" Marker="50" AriaLabel="Win share by faction" />
                         </section>
                         <section class="card" aria-labelledby="m-length">
-                            <h2 id="m-length" class="text-base font-semibold text-ink">Win share by game length</h2>
+                            <h2 id="m-length" class="text-[1rem] font-semibold text-ink">Win share by game length</h2>
                             <p class="mt-1 mb-4 text-sm text-ink-muted">Rushes against long games, in minutes of game time. The thin line marks 50%.</p>
                             <ColumnChart Items="data.LengthColumns" Max="100" Marker="50" MarkerLabel="50%" Height="200" AriaLabel="Win share by game length" />
                         </section>
                         <section class="card" aria-labelledby="m-maps">
-                            <h2 id="m-maps" class="text-base font-semibold text-ink">Maps, most played first</h2>
+                            <h2 id="m-maps" class="text-[1rem] font-semibold text-ink">Maps, most played first</h2>
                             <p class="mt-1 mb-4 text-sm text-ink-muted">The win share per map; a map name opens its page.</p>
                             <BarRows Rows="data.MapRows" Max="100" Marker="50" AriaLabel="Win share by map" />
                         </section>
                         <section class="card" aria-labelledby="m-heat">
-                            <h2 id="m-heat" class="text-base font-semibold text-ink">When the games were played</h2>
+                            <h2 id="m-heat" class="text-[1rem] font-semibold text-ink">When the games were played</h2>
                             <p class="mt-1 mb-4 text-sm text-ink-muted">Games per weekday and block of four hours, in your time zone; the columns start at the hour shown.</p>
                             <Heatmap Values="data.Heat" RowLabels="MatchFormat.DayLabels" ColumnLabels="MatchFormat.BlockLabels"
                                      CellTitle="MatchFormat.CellText" LowLabel="Fewer games" HighLabel="More games" AriaLabel="Games per weekday and time of day" />
@@ -112,7 +113,7 @@
                 </div>
 
                 <section aria-labelledby="m-games">
-                    <h2 id="m-games" class="mb-3 text-base font-semibold">Games</h2>
+                    <h2 id="m-games" class="mb-3 text-[1rem] font-semibold text-ink">Games</h2>
                     @if (tableError is not null)
                     {
                         <div class="card" role="alert">
@@ -126,8 +127,8 @@
                     }
                     else
                     {
-                        <div class="card relative overflow-x-auto p-0 sm:p-0 transition-opacity @(tableLoading ? "opacity-50" : "")">
-                            <table class="w-full min-w-[56rem] text-left text-sm">
+                        <div class="card scroll-hint relative overflow-x-auto p-0 sm:p-0 transition-opacity @(tableLoading ? "opacity-50" : "")">
+                            <table class="list-table w-full text-left text-sm sm:min-w-[56rem]">
                                 <thead class="border-b border-edge text-xs text-ink-muted">
                                     <tr>
                                         <th scope="col" class="px-3 py-2.5 font-medium">Date</th>
@@ -147,19 +148,19 @@
                                     {
                                         (IReadOnlyList<MatchParticipant> mates, IReadOnlyList<MatchParticipant> opponents) = MatchFormat.Others(match, PlayerId);
                                         <tr @key="match.GameId">
-                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink-muted">@MatchFormat.When(match.StartTime)</td>
-                                            <td class="max-w-[12rem] px-3 py-2">
+                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink-muted max-sm:p-0">@MatchFormat.When(match.StartTime)</td>
+                                            <td class="max-w-[12rem] px-3 py-2 max-sm:p-0">
                                                 @if (match.MapName is not null && match.MapFolder is not null)
                                                 {
-                                                    <a href="@MapLinks.Map(match.MapFolder)" class="block truncate text-ink transition hover:text-primary">@match.MapName</a>
+                                                    <a href="@MapLinks.Map(match.MapFolder)" class="flex min-h-11 items-center text-ink transition hover:text-primary"><span class="truncate">@match.MapName</span></a>
                                                 }
                                                 else
                                                 {
                                                     <span class="block truncate">@(match.MapName ?? "Unknown map")</span>
                                                 }
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-2">@MatchFormat.Mode(match.Board)</td>
-                                            <td class="whitespace-nowrap px-3 py-2">
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">@MatchFormat.Mode(match.Board)</td>
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">
                                                 @if (Factions.IconPath(match.Faction) is { } icon)
                                                 {
                                                     <span class="inline-flex items-center gap-1.5">
@@ -171,11 +172,11 @@
                                                     <span class="text-ink-muted">Unknown</span>
                                                 }
                                             </td>
-                                            <td class="min-w-[14rem] max-w-[20rem] space-y-0.5 px-3 py-2">
+                                            <td class="list-table-wide space-y-0.5 px-3 py-2 sm:min-w-[14rem] sm:max-w-[20rem] max-sm:order-last max-sm:p-0">
                                                 <MatchPlayers Label="With" Players="mates" />
                                                 <MatchPlayers Label="Against" Players="opponents" />
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-2">
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">
                                                 <span class="inline-flex items-center gap-1.5">
                                                     @if (match.Result is MatchResult.Victory or MatchResult.Defeat)
                                                     {
@@ -193,11 +194,11 @@
                                                     @MatchFormat.ResultWord(match.Result)
                                                 </span>
                                             </td>
-                                            <td class="px-3 py-2 text-right tabular-nums">@(match.Score is { } score ? MatchFormat.Count(score) : "Unknown")</td>
-                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums">
+                                            <td class="px-3 py-2 text-right tabular-nums max-sm:hidden">@(match.Score is { } score ? MatchFormat.Count(score) : "Unknown")</td>
+                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums max-sm:p-0">
                                                 @if (match.RatingBefore is { } before && match.RatingAfter is { } after && match.RatingChange is { } delta)
                                                 {
-                                                    <span>@before to @after</span>
+                                                    <span>@MatchFormat.Count(before) to @MatchFormat.Count(after)</span>
                                                     <span class="ml-1 inline-flex items-center gap-1 text-ink-muted">
                                                         @if (delta != 0)
                                                         {
@@ -220,8 +221,8 @@
                                                     <span class="text-ink-muted">Unrated</span>
                                                 }
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums">@MatchFormat.Length(match.Duration)</td>
-                                            <td class="px-3 py-2">
+                                            <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums max-sm:p-0">@MatchFormat.Length(match.Duration)</td>
+                                            <td class="px-3 py-2 max-sm:ml-auto max-sm:p-0">
                                                 <a href="replays/@match.GameId" class="inline-flex min-h-11 items-center text-primary transition hover:underline">Replay</a>
                                             </td>
                                         </tr>

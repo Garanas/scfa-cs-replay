@@ -16,7 +16,7 @@
         <p class="font-display text-sm font-bold tracking-[0.2em] text-primary">PLAYERS</p>
         <ShareButton Title="Players on Vault of FAForever" Class="btn-secondary min-h-11 gap-1.5 px-3" />
     </div>
-    <h1 class="mt-2 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">Every player on FAF</h1>
+    <h1 class="mt-2 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl text-ink">Every player on FAF</h1>
     <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-muted">
         Look up a player to see their ratings, their games and the factions they play. Or see who is
         on top, how the leagues stand, and how two players compare.
@@ -72,7 +72,7 @@
                                     {
                                         <span class="text-sm text-ink-muted">formerly @former</span>
                                     }
-                                    <a href="@PlayerLinks.CompareWith(hit.Id)" class="ml-auto text-sm text-ink-muted transition hover:text-primary">Compare</a>
+                                    <a href="@PlayerLinks.CompareWith(hit.Id)" class="ml-auto inline-flex min-h-11 items-center text-sm text-ink-muted transition hover:text-primary">Compare</a>
                                 </li>
                             }
                         </ul>
