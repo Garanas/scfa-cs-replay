@@ -22,7 +22,13 @@
                     @row.AText &middot; @row.BText
                     @if (row.GapText is { Length: > 0 })
                     {
-                        <span class="block text-xs text-ink-faint">@row.GapText</span>
+                        <span class="flex items-center justify-end gap-1.5 text-xs text-ink-faint">
+                            @if (row.GapTone != DeltaTone.Neutral)
+                            {
+                                <span class="h-2 w-2 shrink-0 rounded-full @(row.GapTone == DeltaTone.Good ? "bg-viz-3" : "bg-viz-8")" aria-hidden="true"></span>
+                            }
+                            @row.GapText
+                        </span>
                     }
                 </div>
             </div>

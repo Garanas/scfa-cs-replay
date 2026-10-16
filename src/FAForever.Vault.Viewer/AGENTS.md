@@ -558,7 +558,7 @@ filter components inherit `PlayerUrlComponent`, which writes with `replace: true
 
 | Parameter | Page | Meaning | Default when absent | Implemented |
 |---|---|---|---|---|
-| `q` | landing, rankings | Search text; on rankings, part of a name in the table | none | the field (wave 31), the results (wave 32) |
+| `q` | landing, rankings | Search text; on rankings, part of a name in the table | none | the field (wave 31), the landing results (wave 32D; rankings with its page) |
 | `tab` | profile | `rating`, `matches`, `army` | Overview | wave 31 |
 | `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31), the data (wave 32) |
 | `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31), the data (wave 32) |
@@ -568,7 +568,7 @@ filter components inherit `PlayerUrlComponent`, which writes with `replace: true
 | `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31) |
 | `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31) |
 | `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the latest season | wave 32 |
-| `a`, `b` | compare | Player ids | none | wave 32 |
+| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | none | wave 32D |
 
 Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`), `ChoiceSelect`
 (a select) and `TextFilter` (a search field written on change), each bound to one query parameter by its
@@ -590,6 +590,7 @@ around marks, 2 px between bars. Tailwind only sees class names that appear lite
 | `LineChart` | Over time; measures its width (`fafReplay.observeWidth`, a ResizeObserver) and draws at pixel size; optional wash, step line, marked point, second line, vertical marks, second panel on the same time axis; crosshair and tooltip (`RenderFragment<LinePoint>`) on pointer or arrow keys |
 | `BarRows`, `ColumnChart`, `Histogram`, `Heatmap`, `Dumbbell` | HTML and CSS (no measuring) |
 | `Sparkline`, `ScoreMeter`, `StatTile`, `Legend` | Small parts |
+| `StackedBar` (`Features/Players/Compare/`) | One 100 % bar per player split by faction swatch; the pure parts of the compare page (facts, head to head record, faction shares) are in `CompareStatistics` |
 
 `Pages/ChartGallery.razor` (`/dev/charts`) is the visual test bench: every component in every variant with
 fixed demo data. It renders only when `IWebAssemblyHostEnvironment.IsDevelopment()` (the 404 page

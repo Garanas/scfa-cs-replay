@@ -1,8 +1,14 @@
 @page "/players/compare"
-@inherits UrlStateComponent
+@inherits PlayerUrlComponent
+@using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Compare
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inject IPlayersApi Api
 
-@* Two players side by side: their ids in a and b, a leaderboard and a period. A shell: finding a
-   player by name arrives with the data. *@
+@* Two players side by side: their ids in a and b, a leaderboard and a period. The names typed in
+   the two fields are resolved to ids on submit; everything else is read from the address. The first
+   player is viz-1 and the second viz-2 on every part of the page, whatever the values. *@
 
 <PageTitle>Compare players · Vault of FAForever</PageTitle>
 
@@ -24,22 +30,574 @@
         <PlayersLoginGate What="the comparison" />
     </NotAuthorized>
     <Authorized>
-        <div class="card mt-6 grid grid-cols-1 gap-4">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label class="block min-w-0 text-sm">
-                    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">First player</span>
-                    <input type="search" class="input-field min-h-11" placeholder="A player name" disabled />
-                </label>
-                <label class="block min-w-0 text-sm">
-                    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Second player</span>
-                    <input type="search" class="input-field min-h-11" placeholder="A player name" disabled />
-                </label>
+        <form class="card mt-6 grid grid-cols-1 gap-4" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
+                <div class="min-w-0 text-sm">
+                    <label for="compare-a" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                        <span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span>First player
+                    </label>
+                    <input id="compare-a" type="search" class="input-field min-h-11" placeholder="A player name" autocomplete="off"
+                           value="@nameA" @onchange="e => nameA = e.Value?.ToString() ?? string.Empty" />
+                    @if (unknownA)
+                    {
+                        <p class="mt-1 text-xs text-ink-muted" role="status">Unknown name</p>
+                    }
+                </div>
+                <button type="button" class="btn-secondary min-h-11 min-w-11 justify-self-start px-3 sm:mt-[1.375rem]" aria-label="Swap the two players" title="Swap the two players" @onclick="Swap">
+                    <svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2 5h11M10.5 2.5 13 5l-2.5 2.5M14 11H3M5.5 8.5 3 11l2.5 2.5" /></svg>
+                </button>
+                <div class="min-w-0 text-sm">
+                    <label for="compare-b" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                        <span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span>Second player
+                    </label>
+                    <input id="compare-b" type="search" class="input-field min-h-11" placeholder="A player name" autocomplete="off"
+                           value="@nameB" @onchange="e => nameB = e.Value?.ToString() ?? string.Empty" />
+                    @if (unknownB)
+                    {
+                        <p class="mt-1 text-xs text-ink-muted" role="status">Unknown name</p>
+                    }
+                </div>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary min-h-11" disabled="@isResolving">Compare</button>
             </div>
             <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <ChoiceSelect Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="@PlayerFilters.DefaultBoard" />
                 <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
             </div>
-        </div>
-        <NextStepNote Text="Choosing two players and the comparison itself arrive in the next step." />
+        </form>
+
+        @if (needsLogin)
+        {
+            <PlayersLoginGate What="the comparison" />
+        }
+        else if (error is not null)
+        {
+            <div class="card mt-6" role="alert">
+                <p class="font-semibold">The comparison did not load</p>
+                <p class="mt-1 text-sm text-ink-muted">@error</p>
+            </div>
+        }
+        else if (idA is null || idB is null)
+        {
+            <p class="mt-6 rounded-md border-l-4 border-edge bg-raised px-4 py-3 text-sm text-ink-muted">
+                Type two player names and press Compare. You will see their ratings per leaderboard, their facts side by side,
+                the factions they play and the games they played against each other.
+            </p>
+        }
+        else if (data is null)
+        {
+            <div class="mt-6 grid grid-cols-1 gap-6" aria-busy="true">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="card h-48 animate-pulse" aria-hidden="true"></div>
+                }
+                <p class="sr-only" role="status">Loading the comparison</p>
+            </div>
+        }
+        else
+        {
+            CompareData d = data;
+            <div class="mt-6 grid grid-cols-1 gap-6 transition-opacity @(isLoading ? "opacity-50" : "")" aria-busy="@(isLoading ? "true" : "false")">
+                <div class="card flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3">
+                    <Legend Items="PlayerLegend(d)" />
+                    <span class="text-xs text-ink-muted">@BoardName, @PeriodLabel</span>
+                </div>
+
+                <section class="card" aria-labelledby="cmp-ratings">
+                    <h2 id="cmp-ratings" class="text-lg font-semibold">Rating per leaderboard</h2>
+                    @if (d.RatingRows.Count == 0)
+                    {
+                        <p class="mt-3 text-sm text-ink-muted">The two players have no leaderboard in common.</p>
+                    }
+                    else
+                    {
+                        <p class="mb-4 mt-1 text-sm text-ink-muted">Where each player stands now. The gap is from @d.A.Login's side.</p>
+                        <Dumbbell Rows="d.RatingRows" NameA="@d.A.Login" NameB="@d.B.Login" Min="@d.ScaleMin" MaxValue="@d.ScaleMax"
+                                  AriaLabel="@($"Ratings of {d.A.Login} and {d.B.Login} per leaderboard")" />
+                    }
+                    @if (d.BoardsOfOne.Count > 0)
+                    {
+                        <p class="mt-4 text-xs text-ink-faint">Only one of the two has a rating on @string.Join(", ", d.BoardsOfOne).</p>
+                    }
+                </section>
+
+                <section class="card" aria-labelledby="cmp-facts">
+                    <h2 id="cmp-facts" class="text-lg font-semibold">Side by side</h2>
+                    <p class="mb-3 mt-1 text-sm text-ink-muted">The better value of each row is in bold.</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[20rem] text-sm">
+                            <thead>
+                                <tr class="border-b border-edge text-left text-xs text-ink-muted">
+                                    <th scope="col" class="py-2 pr-3 font-medium"><span class="sr-only">Fact</span></th>
+                                    <th scope="col" class="px-3 py-2 text-right font-medium">
+                                        <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span>@d.A.Login</span>
+                                    </th>
+                                    <th scope="col" class="py-2 pl-3 text-right font-medium">
+                                        <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span>@d.B.Login</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (FactRow row in d.Facts)
+                                {
+                                    <tr class="border-b border-edge last:border-0">
+                                        <th scope="row" class="py-2.5 pr-3 text-left font-normal text-ink-muted">@row.Label</th>
+                                        <td class="px-3 py-2.5 text-right tabular-nums @(row.Better == Better.A ? "font-bold text-ink" : "text-ink-muted")">@row.A</td>
+                                        <td class="py-2.5 pl-3 text-right tabular-nums @(row.Better == Better.B ? "font-bold text-ink" : "text-ink-muted")">@row.B</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="card" aria-labelledby="cmp-history">
+                    <h2 id="cmp-history" class="text-lg font-semibold">Rating over the period</h2>
+                    @if (d.SeriesA.Count == 0 || d.SeriesB.Count == 0)
+                    {
+                        <p class="mt-3 text-sm text-ink-muted">
+                            @(d.SeriesA.Count == 0 && d.SeriesB.Count == 0
+                                ? "Neither player has a rated game on this leaderboard in this period."
+                                : $"{(d.SeriesA.Count == 0 ? d.A.Login : d.B.Login)} has no rated game on this leaderboard in this period, so there is no line to put next to the other.")
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="mb-4 mt-1 text-sm text-ink-muted">Both ratings on one scale, after every rated game of @BoardName.</p>
+                        <LineChart Points="d.SeriesA" Name="@d.A.Login" Color="ChartColor.Viz1"
+                                   Other="d.SeriesB" OtherName="@d.B.Login" OtherColor="ChartColor.Viz2"
+                                   VerticalMarks="d.Meetings" AriaLabel="@($"Ratings of {d.A.Login} and {d.B.Login} over the period")" />
+                        @if (d.Meetings.Count > 0)
+                        {
+                            <p class="mt-3 flex items-center gap-2 text-xs text-ink-muted">
+                                <span class="inline-block h-3.5 w-0 border-l border-dashed border-ink-faint" aria-hidden="true"></span>
+                                A game the two played against each other (@d.Meetings.Count in this period)
+                            </p>
+                        }
+                    }
+                </section>
+
+                <section class="card" aria-labelledby="cmp-factions">
+                    <h2 id="cmp-factions" class="text-lg font-semibold">Factions played</h2>
+                    <p class="mb-4 mt-1 text-sm text-ink-muted">Each bar is all the games a player ever played, by faction.</p>
+                    <div class="grid grid-cols-1 gap-4">
+                        <StackedBar Name="@d.A.Login" Shares="d.SharesA" Color="ChartColor.Viz1" />
+                        <StackedBar Name="@d.B.Login" Shares="d.SharesB" Color="ChartColor.Viz2" />
+                    </div>
+                    <div class="mt-4">
+                        <Legend Items="FactionLegend" />
+                    </div>
+                </section>
+
+                <section class="card" aria-labelledby="cmp-h2h">
+                    <h2 id="cmp-h2h" class="text-lg font-semibold">Head to head</h2>
+                    @if (d.Games.Count == 0)
+                    {
+                        <p class="mt-3 text-sm text-ink-muted">@d.A.Login and @d.B.Login have not played a game together@(isAllTime ? "" : " in this period").</p>
+                    }
+                    else
+                    {
+                        HeadToHeadRecord record = d.Record;
+                        <p class="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.A.Login wins</span><span class="text-2xl font-semibold">@record.AWins</span></span>
+                            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span><span class="text-sm text-ink-muted">@d.B.Login wins</span><span class="text-2xl font-semibold">@record.BWins</span></span>
+                        </p>
+                        <p class="mt-1 text-xs text-ink-muted">
+                            @record.Opposing @(record.Opposing == 1 ? "game" : "games") against each other@(record.Undecided > 0 ? $", {record.Undecided} without a winner" : "").
+                            @if (record.SameTeam > 0)
+                            {
+                                <text> @record.SameTeam more on the same team, not counted.</text>
+                            }
+                        </p>
+                        @if (d.Opposing.Count > 0)
+                        {
+                            <div class="mt-4">
+                                <p class="mb-1.5 text-xs text-ink-muted" id="cmp-last">Last @d.LastFive.Count (newest first)</p>
+                                <ul class="flex gap-1.5" aria-labelledby="cmp-last">
+                                    @foreach (HeadToHeadGame game in d.LastFive)
+                                    {
+                                        HeadToHeadWinner winner = CompareStatistics.Winner(game);
+                                        string text = ResultText(d, game, winner);
+                                        <li class="h-5 w-5 rounded-[4px] @WinnerClass(winner)" title="@text" aria-label="@text"></li>
+                                    }
+                                </ul>
+                            </div>
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="w-full min-w-[30rem] text-sm">
+                                    <thead>
+                                        <tr class="border-b border-edge text-left text-xs text-ink-muted">
+                                            <th scope="col" class="py-2 pr-3 font-medium">Date</th>
+                                            <th scope="col" class="px-3 py-2 font-medium">Map</th>
+                                            <th scope="col" class="px-3 py-2 font-medium">Winner</th>
+                                            <th scope="col" class="px-3 py-2 text-right font-medium">Length</th>
+                                            <th scope="col" class="py-2 pl-3 text-right font-medium">Replay</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (HeadToHeadGame game in d.Opposing)
+                                        {
+                                            HeadToHeadWinner winner = CompareStatistics.Winner(game);
+                                            <tr class="border-b border-edge last:border-0">
+                                                <td class="py-2.5 pr-3 tabular-nums text-ink-muted">@(game.StartTime?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "Unknown")</td>
+                                                <td class="px-3 py-2.5">@(game.MapName ?? "Unknown map")</td>
+                                                <td class="px-3 py-2.5">
+                                                    @if (winner == HeadToHeadWinner.None)
+                                                    {
+                                                        <span class="text-ink-muted">No winner</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="inline-flex items-center gap-1.5">
+                                                            <span class="h-2.5 w-2.5 rounded-full @WinnerClass(winner)" aria-hidden="true"></span>
+                                                            @(winner == HeadToHeadWinner.A ? d.A.Login : d.B.Login)
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td class="px-3 py-2.5 text-right tabular-nums text-ink-muted">@Length(game.Duration)</td>
+                                                <td class="py-2.5 pl-3 text-right"><a href="replays/@game.GameId" class="inline-flex min-h-11 items-center text-ink-muted underline decoration-edge underline-offset-2 transition hover:text-primary">Open</a></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                </section>
+            </div>
+        }
     </Authorized>
 </AuthorizeView>
+
+@code {
+    private sealed record CompareData(
+        PlayerProfile A,
+        PlayerProfile B,
+        IReadOnlyList<DumbbellRow> RatingRows,
+        double? ScaleMin,
+        double? ScaleMax,
+        IReadOnlyList<string> BoardsOfOne,
+        IReadOnlyList<FactRow> Facts,
+        IReadOnlyList<LinePoint> SeriesA,
+        IReadOnlyList<LinePoint> SeriesB,
+        IReadOnlyList<DateTimeOffset> Meetings,
+        IReadOnlyList<FactionShare> SharesA,
+        IReadOnlyList<FactionShare> SharesB,
+        IReadOnlyList<HeadToHeadGame> Games,
+        IReadOnlyList<HeadToHeadGame> Opposing,
+        HeadToHeadRecord Record)
+    {
+        public IReadOnlyList<HeadToHeadGame> LastFive => [.. Opposing.Take(5)];
+    }
+
+    private sealed record PlayerBundle(PlayerProfile Profile, IReadOnlyList<PlayerRating> Ratings, PlayerEventCounts Events, int Unlocked);
+
+    private static readonly IReadOnlyList<LegendItem> FactionLegend =
+    [
+        .. new[] { Faction.Uef, Faction.Aeon, Faction.Cybran, Faction.Seraphim }
+            .Select(faction => new LegendItem(Factions.Name(faction) ?? "Unknown", ChartColor.Faint, LegendKind.Swatch, 1, Factions.Swatch(faction))),
+    ];
+
+    private string nameA = "";
+    private string nameB = "";
+    private bool unknownA, unknownB, isResolving;
+
+    private int? idA, idB;
+    private string board = PlayerFilters.DefaultBoard;
+    private string period = PlayerFilters.DefaultPeriod;
+    private string? loadedKey;
+
+    private CompareData? data;
+    private bool isLoading, needsLogin, isAllTime;
+    private string? error;
+    private CancellationTokenSource? cancellation;
+    private CancellationTokenSource? resolveCancellation;
+    private readonly Dictionary<int, PlayerBundle> bundles = [];
+    private int achievementsTotal;
+
+    private string BoardName => Leaderboards.DisplayName(board);
+
+    private string PeriodLabel => PlayerFilters.Periods.First(option => option.Token == period).Label.ToLowerInvariant();
+
+    protected override void OnParametersSet()
+    {
+        idA = ReadId("a");
+        idB = ReadId("b");
+        string? boardValue = Read("board");
+        board = boardValue is not null && PlayerFilters.Boards.Any(option => option.Token == boardValue) ? boardValue : PlayerFilters.DefaultBoard;
+        period = Periods.Normalize(Read("period"));
+        isAllTime = period == Periods.All;
+
+        string key = $"{idA}|{idB}|{board}|{period}";
+        if (key == loadedKey)
+        {
+            return;
+        }
+
+        loadedKey = key;
+        if (idA is null || idB is null)
+        {
+            cancellation?.Cancel();
+            data = null;
+            error = null;
+            isLoading = false;
+            ShowNamesOf(idA, idB);
+            return;
+        }
+
+        _ = LoadAsync(idA.Value, idB.Value, board, period);
+    }
+
+    private int? ReadId(string name) => int.TryParse(Read(name), NumberStyles.None, CultureInfo.InvariantCulture, out int id) && id > 0 ? id : null;
+
+    /// <summary>Fills the fields with the names of players whose profile is known already.</summary>
+    private void ShowNamesOf(int? a, int? b)
+    {
+        if (a is { } first && bundles.TryGetValue(first, out PlayerBundle? bundleA))
+        {
+            nameA = bundleA.Profile.Login;
+        }
+
+        if (b is { } second && bundles.TryGetValue(second, out PlayerBundle? bundleB))
+        {
+            nameB = bundleB.Profile.Login;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        resolveCancellation?.Cancel();
+        CancellationTokenSource mine = new();
+        resolveCancellation = mine;
+        isResolving = true;
+        unknownA = unknownB = false;
+        error = null;
+        try
+        {
+            (int? a, bool missA) = await ResolveAsync(nameA, idA, mine.Token);
+            (int? b, bool missB) = await ResolveAsync(nameB, idB, mine.Token);
+            unknownA = missA;
+            unknownB = missB;
+            Write(
+                new Dictionary<string, string?>
+                {
+                    ["a"] = a?.ToString(CultureInfo.InvariantCulture),
+                    ["b"] = b?.ToString(CultureInfo.InvariantCulture),
+                });
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer submit took over.
+        }
+        catch (NotAuthenticatedException)
+        {
+            needsLogin = true;
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(resolveCancellation, mine))
+            {
+                resolveCancellation = null;
+                isResolving = false;
+            }
+        }
+    }
+
+    /// <summary>The id for a typed name: the current one when the name is unchanged, none when empty or unknown.</summary>
+    private async Task<(int? Id, bool Unknown)> ResolveAsync(string name, int? current, CancellationToken token)
+    {
+        string trimmed = name.Trim();
+        if (trimmed.Length == 0)
+        {
+            return (null, false);
+        }
+
+        if (current is { } id && bundles.TryGetValue(id, out PlayerBundle? known) && string.Equals(known.Profile.Login, trimmed, StringComparison.Ordinal))
+        {
+            return (id, false);
+        }
+
+        PlayerSearchHit? hit = await Api.FindPlayerByNameAsync(trimmed, token);
+        return hit is null ? (current, true) : (hit.Id, false);
+    }
+
+    private void Swap()
+    {
+        (nameA, nameB) = (nameB, nameA);
+        (unknownA, unknownB) = (unknownB, unknownA);
+        if (idA is not null || idB is not null)
+        {
+            Write(
+                new Dictionary<string, string?>
+                {
+                    ["a"] = idB?.ToString(CultureInfo.InvariantCulture),
+                    ["b"] = idA?.ToString(CultureInfo.InvariantCulture),
+                });
+        }
+    }
+
+    private async Task LoadAsync(int a, int b, string boardName, string periodToken)
+    {
+        cancellation?.Cancel();
+        CancellationTokenSource mine = new();
+        cancellation = mine;
+        CancellationToken token = mine.Token;
+        isLoading = true;
+        error = null;
+        needsLogin = false;
+        StateHasChanged();
+        try
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset? since = Periods.Since(periodToken, now);
+
+            Task<PlayerBundle> bundleA = BundleAsync(a, token);
+            Task<PlayerBundle> bundleB = BundleAsync(b, token);
+            Task<IReadOnlyList<RatingJournalEntry>> journalA = Api.GetRatingHistoryAsync(a, boardName, since, null, token);
+            Task<IReadOnlyList<RatingJournalEntry>> journalB = Api.GetRatingHistoryAsync(b, boardName, since, null, token);
+            Task<IReadOnlyList<HeadToHeadGame>> games = Api.GetHeadToHeadAsync(a, b, since, token);
+            Task<int> total = AchievementsTotalAsync(token);
+            await Task.WhenAll(bundleA, bundleB, journalA, journalB, games, total);
+
+            PlayerBundle first = bundleA.Result, second = bundleB.Result;
+            bundles[a] = first;
+            bundles[b] = second;
+            token.ThrowIfCancellationRequested();
+
+            IReadOnlyList<HeadToHeadGame> all = games.Result;
+            IReadOnlyList<HeadToHeadGame> opposing = CompareStatistics.Opposing(all);
+            IReadOnlyList<DumbbellRow> rows = CompareStatistics.RatingRows(first.Ratings, second.Ratings);
+            (double? lo, double? hi) = Scale(rows);
+
+            data = new CompareData(
+                first.Profile,
+                second.Profile,
+                rows,
+                lo,
+                hi,
+                CompareStatistics.BoardsOfOne(first.Ratings, second.Ratings),
+                CompareStatistics.Facts(
+                    new PlayerFacts(journalA.Result, first.Events, first.Unlocked),
+                    new PlayerFacts(journalB.Result, second.Events, second.Unlocked),
+                    total.Result,
+                    now),
+                [.. RatingStatistics.Series(journalA.Result).Select(point => new LinePoint(point.Date, point.Rating))],
+                [.. RatingStatistics.Series(journalB.Result).Select(point => new LinePoint(point.Date, point.Rating))],
+                [.. opposing.Where(game => game.StartTime is not null).Select(game => game.StartTime!.Value)],
+                CompareStatistics.FactionShares(first.Events),
+                CompareStatistics.FactionShares(second.Events),
+                all,
+                opposing,
+                CompareStatistics.Record(all));
+            nameA = first.Profile.Login;
+            nameB = second.Profile.Login;
+            unknownA = unknownB = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer comparison or a navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            needsLogin = true;
+        }
+        catch (PlayerNotFoundException exception)
+        {
+            data = null;
+            error = exception.Message;
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(cancellation, mine))
+            {
+                cancellation = null;
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private sealed class PlayerNotFoundException(int id) : Exception($"There is no player with the id {id}.");
+
+    private async Task<PlayerBundle> BundleAsync(int id, CancellationToken token)
+    {
+        if (bundles.TryGetValue(id, out PlayerBundle? known))
+        {
+            return known;
+        }
+
+        Task<PlayerProfile?> profile = Api.GetProfileAsync(id, token);
+        Task<IReadOnlyList<PlayerRating>> ratings = Api.GetRatingsAsync(id, token);
+        Task<PlayerEventCounts> events = Api.GetEventCountsAsync(id, token);
+        Task<IReadOnlyList<PlayerAchievement>> achievements = Api.GetPlayerAchievementsAsync(id, token);
+        await Task.WhenAll(profile, ratings, events, achievements);
+        return new PlayerBundle(
+            profile.Result ?? throw new PlayerNotFoundException(id),
+            ratings.Result,
+            events.Result,
+            achievements.Result.Count(item => item.State == AchievementState.Unlocked));
+    }
+
+    private async Task<int> AchievementsTotalAsync(CancellationToken token)
+    {
+        if (achievementsTotal == 0)
+        {
+            achievementsTotal = (await Api.GetAchievementsAsync(token)).Count;
+        }
+
+        return achievementsTotal;
+    }
+
+    /// <summary>The dumbbell's scale: 800 to 2,000, widened to fit the data when a rating is outside it.</summary>
+    private static (double? Min, double? Max) Scale(IReadOnlyList<DumbbellRow> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return (null, null);
+        }
+
+        double low = rows.Min(row => Math.Min(row.A, row.B));
+        double high = rows.Max(row => Math.Max(row.A, row.B));
+        return (Math.Min(800, Math.Floor(low / 100) * 100), Math.Max(2000, Math.Ceiling(high / 100) * 100));
+    }
+
+    private static IReadOnlyList<LegendItem> PlayerLegend(CompareData d)
+        => [new LegendItem(d.A.Login, ChartColor.Viz1, LegendKind.Dot), new LegendItem(d.B.Login, ChartColor.Viz2, LegendKind.Dot)];
+
+    private static string WinnerClass(HeadToHeadWinner winner) => winner switch
+    {
+        HeadToHeadWinner.A => "bg-viz-1",
+        HeadToHeadWinner.B => "bg-viz-2",
+        _ => "bg-edge",
+    };
+
+    private static string ResultText(CompareData d, HeadToHeadGame game, HeadToHeadWinner winner)
+    {
+        string date = game.StartTime?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "Unknown date";
+        string who = winner switch
+        {
+            HeadToHeadWinner.A => $"{d.A.Login} won",
+            HeadToHeadWinner.B => $"{d.B.Login} won",
+            _ => "No winner",
+        };
+        return $"{date}, {game.MapName ?? "unknown map"}: {who}";
+    }
+
+    private static string Length(TimeSpan? duration)
+        => duration is { } span ? $"{(int)span.TotalMinutes}:{span.Seconds:00}" : "Unknown";
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        cancellation?.Cancel();
+        resolveCancellation?.Cancel();
+    }
+}
