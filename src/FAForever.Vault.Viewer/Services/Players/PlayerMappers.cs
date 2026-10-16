@@ -53,7 +53,7 @@ public static class PlayerMappers
     public static PlayerSearchHit? MapFirstHit(JsonApiDocument players)
         => MapSearchHits(players, null).FirstOrDefault();
 
-    /// <summary>A profile from <c>/data/player/{id}?include=names,clanMembership.clan,currentAvatar.avatar</c>.</summary>
+    /// <summary>A profile from <c>/data/player/{id}?include=names,clanMembership.clan,avatarAssignments.avatar</c>.</summary>
     public static PlayerProfile? MapProfile(JsonApiDocument document)
     {
         if (document.Data.FirstOrDefault() is not { } player)
@@ -74,8 +74,11 @@ public static class PlayerMappers
         }
         formerNames.Sort((left, right) => (right.ChangedAt ?? DateTimeOffset.MinValue).CompareTo(left.ChangedAt ?? DateTimeOffset.MinValue));
 
-        JsonApiResource? assignment = document.FindIncluded(player.Relationship("currentAvatar"));
-        JsonApiResource? avatar = document.FindIncluded(assignment?.Relationship("avatar")) ?? assignment; // unverified: the assignment may carry the url itself
+        // The current avatar is the assignment that is selected; with none selected the player wears no avatar.
+        JsonApiResource? assignment = player.Relationships("avatarAssignments")
+            .Select(reference => document.FindIncluded(reference)).OfType<JsonApiResource>()
+            .FirstOrDefault(candidate => candidate.GetBoolean("selected") == true);
+        JsonApiResource? avatar = document.FindIncluded(assignment?.Relationship("avatar"));
 
         return new PlayerProfile(Id(player.Id), login, player.GetDateTimeOffset("createTime"), ClanOf(player, document), formerNames)
         {
@@ -302,7 +305,11 @@ public static class PlayerMappers
             score.GetInt32("score") ?? 0,
             score.GetInt32("gameCount") ?? 0,
             score.GetBoolean("returningPlayer") ?? false,
-            document.FindIncluded(score.Relationship("leagueSeasonDivisionSubdivision")) is { } subdivision ? ReadSubdivision(subdivision, document) : null))];
+            document.FindIncluded(score.Relationship("leagueSeasonDivisionSubdivision")) is { } subdivision ? ReadSubdivision(subdivision, document) : null)
+        {
+            // A player in placement has no score yet (null) and no subdivision.
+            InPlacement = score.GetInt32("score") is null,
+        })];
 
     /// <summary>A page of standings; <paramref name="players"/> resolves the names.</summary>
     public static PlayerPage<LeagueStanding> MapStandings(JsonApiDocument scores, JsonApiDocument? players, int page, int pageSize)
@@ -339,14 +346,20 @@ public static class PlayerMappers
                 document.FindIncluded(entry.Relationship("leagueSeasonDivisionSubdivisionAfter")) is { } after ? ReadSubdivision(after, document) : null))
             .OrderBy(entry => entry.GameId)];
 
-    /// <summary>The games two players were in, newest first; games without both are left out.</summary>
+    /// <summary>
+    /// The games two players were in, newest first; games without both are left out. The rows are the
+    /// <c>gamePlayerStats</c> of <paramref name="playerA"/> (<see cref="PlayerRequests.HeadToHead"/>), each
+    /// with its game; a row that is a <c>game</c> itself is read as that game.
+    /// </summary>
     public static IReadOnlyList<HeadToHeadGame> MapHeadToHead(JsonApiDocument document, int playerA, int playerB)
     {
         List<HeadToHeadGame> games = [];
-        foreach (JsonApiResource game in document.Data)
+        foreach (JsonApiResource row in document.Data)
         {
+            JsonApiResource? game = row.Type == "game" ? row : document.FindIncluded(row.Relationship("game"));
             IReadOnlyList<MatchParticipant> participants = Participants(game, document);
-            if (participants.FirstOrDefault(participant => participant.PlayerId == playerA) is not { } a
+            if (game is null
+                || participants.FirstOrDefault(participant => participant.PlayerId == playerA) is not { } a
                 || participants.FirstOrDefault(participant => participant.PlayerId == playerB) is not { } b)
             {
                 continue;

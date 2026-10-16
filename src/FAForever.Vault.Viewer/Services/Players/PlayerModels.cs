@@ -346,7 +346,14 @@ public sealed record LeagueSubdivision(int Id, int Index, string Name, LeagueDiv
 }
 
 /// <summary>A player's place in a season. <c>Subdivision</c> is null while the player is still in placement.</summary>
-public sealed record LeagueEntry(int PlayerId, int SeasonId, int Score, int GameCount, bool ReturningPlayer, LeagueSubdivision? Subdivision);
+public sealed record LeagueEntry(int PlayerId, int SeasonId, int Score, int GameCount, bool ReturningPlayer, LeagueSubdivision? Subdivision)
+{
+    /// <summary>
+    /// True while the player is in placement: the API's score is null and there is no subdivision
+    /// yet (<see cref="Score"/> is then 0, <see cref="GameCount"/> counts the placement games played).
+    /// </summary>
+    public bool InPlacement { get; init; }
+}
 
 /// <summary>A row of a subdivision's standings.</summary>
 public sealed record LeagueStanding(int Rank, int PlayerId, string Login, int Score, int GameCount);

@@ -24,7 +24,7 @@ public class SamplePlayersApiTest
     [TestMethod]
     public void EveryFixtureIsEmbeddedAndParses()
     {
-        Assert.AreEqual(27, (SamplePlayersApi.ResourceNames).Count);
+        Assert.AreEqual(25, (SamplePlayersApi.ResourceNames).Count);
         foreach (string name in SamplePlayersApi.ResourceNames)
         {
             using Stream stream = typeof(SamplePlayersApi).Assembly.GetManifestResourceStream("players-sample/" + name)!;
@@ -79,7 +79,7 @@ public class SamplePlayersApiTest
 
         IReadOnlyList<Leaderboard> boards = await api.GetLeaderboardsAsync(Token);
         CollectionAssert.AreEqual(
-            new[] { "Global", "Ladder 1v1", "2v2", "4v4 full share", "4v4 share until death" },
+            new[] { "Global", "Ladder 1v1", "2v2", "4v4 full share", "4v4 share until death", "3v3" },
             boards.Select(board => board.DisplayName).ToArray());
 
         IReadOnlyList<PlayerRating> ratings = await api.GetRatingsAsync(SamplePlayersApi.SamplePlayerId, Token);
@@ -284,8 +284,8 @@ public class SamplePlayersApiTest
 
         PlayerPage<RankingRow> page = await api.GetRankingAsync(new RankingQuery(), Token);
         Assert.AreEqual(50, (page.Items).Count);
-        Assert.AreEqual(8423, page.TotalRecords);
-        Assert.AreEqual(169, page.TotalPages);
+        Assert.AreEqual(6065, page.TotalRecords, "the settled share of 8,423");
+        Assert.AreEqual(122, page.TotalPages);
         CollectionAssert.AreEqual(Enumerable.Range(1, 50).ToArray(), page.Items.Select(row => row.Rank).ToArray());
         Assert.IsTrue(page.Items.Zip(page.Items.Skip(1)).All(pair => pair.First.Rating >= pair.Second.Rating));
         Assert.IsTrue(page.Items.Any(row => row.ClanTag is not null));
@@ -328,15 +328,18 @@ public class SamplePlayersApiTest
         SamplePlayersApi api = Create();
 
         IReadOnlyList<League> leagues = await api.GetLeaguesAsync(Token);
-        Assert.AreEqual(1, (leagues).Count);
-        Assert.AreEqual("ladder_1v1", leagues[0].TechnicalName);
+        Assert.AreEqual(4, (leagues).Count);
+        Assert.AreEqual("1v1_league", leagues[0].TechnicalName);
+        Assert.AreEqual("1v1_league.name", leagues[0].NameKey);
 
         IReadOnlyList<LeagueSeason> seasons = await api.GetSeasonsAsync(Token);
-        Assert.AreEqual(3, (seasons).Count);
-        Assert.AreEqual(3, seasons[0].SeasonNumber, "the latest first");
-        Assert.AreEqual("ladder_1v1", seasons[0].BoardTechnicalName);
-        Assert.AreEqual(1, seasons.Count(season => season.IsActive(Now)));
-        Assert.IsTrue(seasons[0].IsActive(Now));
+        Assert.AreEqual(12, (seasons).Count, "three per league");
+        LeagueSeason running = seasons.Single(season => season.Id == 9);
+        Assert.AreEqual(3, running.SeasonNumber);
+        Assert.AreEqual("ladder_1v1", running.BoardTechnicalName);
+        Assert.AreEqual(4, seasons.Count(season => season.IsActive(Now)), "one running season per league");
+        Assert.IsTrue(running.IsActive(Now));
+        seasons = [.. seasons.Where(season => season.LeagueId == leagues[0].Id)];
         Assert.AreEqual(10, seasons[0].PlacementGames);
 
         IReadOnlyList<LeagueSubdivision> subdivisions = await api.GetSubdivisionsAsync(seasons[0].Id, Token);
@@ -361,16 +364,18 @@ public class SamplePlayersApiTest
         LeagueEntry? entry = await api.GetLeagueEntryAsync(player, season.Id, Token);
         Assert.IsNotNull(entry);
         Assert.AreEqual("Silver III", entry.Subdivision?.FullName);
-        Assert.AreEqual(18, entry.Score);
+        Assert.AreEqual(15, entry.Score);
         Assert.AreEqual(41, entry.GameCount);
         Assert.IsTrue(entry.ReturningPlayer);
         Assert.IsNull(await api.GetLeagueEntryAsync(player, season.Id - 1, Token));
         Assert.IsNull(await api.GetLeagueEntryAsync(Rival, season.Id, Token));
-        Assert.AreEqual(1, (await api.GetActiveLeagueEntriesAsync(player, Token)).Count);
+        Assert.AreEqual(2, (await api.GetActiveLeagueEntriesAsync(player, Token)).Count, "the ladder season and the 2v2 placement");
 
         PlayerPage<LeagueStanding> standings = await api.GetStandingsAsync(season.Id, entry.Subdivision!.Id, 1, Token);
         Assert.AreEqual(50, (standings.Items).Count);
-        Assert.AreEqual(412, standings.TotalRecords);
+        IReadOnlyList<LeagueSubdivision> layout = await api.GetSubdivisionsAsync(season.Id, Token);
+        IReadOnlyDictionary<int, int> counts = await api.GetPlayersPerSubdivisionAsync(season.Id, layout, Token);
+        Assert.AreEqual(counts[entry.Subdivision!.Id], standings.TotalRecords, "the standings and the subdivision's card count the same players");
         LeagueStanding mine = standings.Items.Single(row => row.PlayerId == player);
         Assert.AreEqual("Ashgrove", mine.Login);
         Assert.AreEqual(17, mine.Rank);

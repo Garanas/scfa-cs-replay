@@ -1,3 +1,4 @@
+using FAForever.FileFormats.Blueprints;
 using System.Globalization;
 using FAForever.Vault.Viewer.Services.Api;
 
@@ -5,17 +6,27 @@ namespace FAForever.Vault.Viewer.Services.Players;
 
 /// <summary>
 /// The requests of <see cref="FafPlayersApi"/>, as addresses relative to the API's base address
-/// (<c>/data/...</c>). Filters are RSQL joined with <c>;</c> and percent-encoded as a whole. Names
-/// and attributes that could not be checked against the live API carry <c>// unverified</c>; there is
-/// a list in <c>docs/vault/players-plan.md</c>.
+/// (<c>/data/...</c>). Filters are RSQL joined with <c>;</c> and percent-encoded as a whole. Every
+/// request here was checked against the live API on 2026-10-16 (the list is in
+/// <c>docs/vault/players-plan.md</c>).
 /// </summary>
 public static class PlayerRequests
 {
-    /// <summary>The size of the pages of the loops over a period or a season.</summary>
-    public const int LoopPageSize = 1000;
+    /// <summary>
+    /// The size of the pages of the loops over a period or a season. The API caps every page at 100
+    /// rows (a larger <c>page[size]</c> still answers 100), so the loops ask for 100 and stop by the
+    /// page totals.
+    /// </summary>
+    public const int LoopPageSize = 100;
 
-    /// <summary>The most pages a loop reads (a safety stop).</summary>
+    /// <summary>
+    /// The most pages a loop reads (a safety stop): 30,000 rows. A loop that reaches it returns what
+    /// it has read, which only a player with more games than that sees.
+    /// </summary>
     public const int MaxLoopPages = 300;
+
+    /// <summary>The most rows the API answers in a page.</summary>
+    public const int MaxPageSize = 100;
 
     /// <summary>Players whose login contains the text.</summary>
     public static string FindPlayers(string text)
@@ -31,7 +42,7 @@ public static class PlayerRequests
 
     /// <summary>A player with names, clan and avatar.</summary>
     public static string Profile(int playerId)
-        => $"/data/player/{Number(playerId)}?include=names,clanMembership.clan,currentAvatar.avatar"; // unverified: currentAvatar.avatar
+        => $"/data/player/{Number(playerId)}?include=names,clanMembership.clan,avatarAssignments.avatar"; // the selected assignment is the current avatar
 
     /// <summary>Every leaderboard.</summary>
     public static string Leaderboards() => "/data/leaderboard?page[size]=100";
@@ -53,11 +64,10 @@ public static class PlayerRequests
             filters.Add($"gamePlayerStats.scoreTime=ge={Time(start)}");
         }
 
-        // unverified: the includes through gamePlayerStats.game.playerStats (opponents) on a page of 1,000
         return "/data/leaderboardRatingJournal"
             + "?include=gamePlayerStats,gamePlayerStats.game,gamePlayerStats.game.mapVersion.map,gamePlayerStats.game.playerStats,gamePlayerStats.game.playerStats.player"
             + "&sort=-gamePlayerStats.scoreTime"
-            + $"&page[size]={LoopPageSize}&page[number]={page}"
+            + $"&page[size]={LoopPageSize}&page[number]={page}&page[totals]"
             + $"&filter={Filter(string.Join(";", filters))}";
     }
 
@@ -65,13 +75,13 @@ public static class PlayerRequests
     public static string Matches(int playerId, MatchQuery query)
         => MatchesRequest(playerId, query, query.Page, query.PageSize, withPlayers: true);
 
-    /// <summary>One page of a player's games for the charts: no other players, pages of 1,000.</summary>
+    /// <summary>One page of a player's games for the charts: no other players, pages of 100 (<see cref="LoopPageSize"/>).</summary>
     public static string MatchesForCharts(int playerId, MatchQuery query, int page)
         => MatchesRequest(playerId, query, page, LoopPageSize, withPlayers: false);
 
     /// <summary>The lifetime counters of a player.</summary>
     public static string EventCounts(int playerId, int page)
-        => $"/data/playerEvent?include=event&page[size]=100&page[number]={page}&filter={Filter($"player.id=={Number(playerId)}")}";
+        => $"/data/playerEvent?include=event&page[size]={LoopPageSize}&page[number]={page}&page[totals]&filter={Filter($"player.id=={Number(playerId)}")}";
 
     /// <summary>Every achievement.</summary>
     public static string Achievements() => "/data/achievement?sort=order&page[size]=100";
@@ -83,7 +93,7 @@ public static class PlayerRequests
     /// <summary>One page of a ranking.</summary>
     public static string Ranking(RankingQuery query)
         => "/data/leaderboardRating?include=player,player.clanMembership.clan&sort=-rating"
-            + $"&page[size]={query.PageSize}&page[number]={Math.Max(query.Page, 1)}&page[totals]"
+            + $"&page[size]={Math.Clamp(query.PageSize, 1, MaxPageSize)}&page[number]={Math.Max(query.Page, 1)}&page[totals]"
             + $"&filter={Filter(RankingFilter(query))}";
 
     /// <summary>The number of ratings better than <paramref name="rating"/> in a ranking.</summary>
@@ -132,20 +142,25 @@ public static class PlayerRequests
     /// <summary>The league journal of a player in a season.</summary>
     public static string LeagueJourney(int playerId, int seasonId, int page)
         => "/data/leagueScoreJournal?include=leagueSeasonDivisionSubdivisionBefore.leagueSeasonDivision,leagueSeasonDivisionSubdivisionAfter.leagueSeasonDivision&sort=gameId"
-            + $"&page[size]={LoopPageSize}&page[number]={page}"
+            + $"&page[size]={LoopPageSize}&page[number]={page}&page[totals]"
             + $"&filter={Filter($"loginId=={Number(playerId)};leagueSeason.id=={Number(seasonId)}")}";
 
-    /// <summary>The games two players were in together.</summary>
-    public static string HeadToHead(int playerA, int playerB, DateTimeOffset? since)
+    /// <summary>
+    /// One page of the games two players were in together, newest first: the rows of
+    /// <paramref name="playerA"/> with the game and everybody in it (player B is in
+    /// <c>game.playerStats</c>). Two <c>playerStats.player.id</c> predicates on <c>/data/game</c> are
+    /// applied to one row and match nothing, so the request goes through the statistics of A.
+    /// </summary>
+    public static string HeadToHead(int playerA, int playerB, DateTimeOffset? since, int page)
     {
-        // unverified: that Elide treats the two playerStats predicates as two rows of the same game
-        List<string> filters = [$"playerStats.player.id=={Number(playerA)}", $"playerStats.player.id=={Number(playerB)}"];
+        List<string> filters = [$"player.id=={Number(playerA)}", $"game.playerStats.player.id=={Number(playerB)}"];
         if (since is { } start)
         {
-            filters.Add($"startTime=ge={Time(start)}");
+            filters.Add($"scoreTime=ge={Time(start)}");
         }
 
-        return "/data/game?include=playerStats,playerStats.player,mapVersion.map,featuredMod&sort=-startTime&page[size]=200"
+        return "/data/gamePlayerStats?include=game,game.playerStats.player,game.mapVersion.map,game.featuredMod&sort=-scoreTime"
+            + $"&page[size]={LoopPageSize}&page[number]={Math.Max(page, 1)}&page[totals]"
             + $"&filter={Filter(string.Join(";", filters))}";
     }
 
@@ -158,11 +173,11 @@ public static class PlayerRequests
         }
         if (BoardOfMode(query.Mode) is { } board)
         {
-            filters.Add($"ratingChanges.leaderboard.technicalName=={FafApiClient.Quote(board)}"); // unverified: one row per rating change
+            filters.Add($"ratingChanges.leaderboard.technicalName=={FafApiClient.Quote(board)}");
         }
         if (query.Faction is { } faction)
         {
-            filters.Add($"faction=={Number((int)faction)}"); // unverified: numeric faction filter
+            filters.Add($"faction=={FactionName(faction)}"); // the filter takes the enum's name; the attribute comes back as a number
         }
         if (query.Result is MatchResult.Victory)
         {
@@ -178,7 +193,7 @@ public static class PlayerRequests
         }
         if (!string.IsNullOrWhiteSpace(query.WithPlayer))
         {
-            filters.Add($"game.playerStats.player.login=={FafApiClient.Quote(query.WithPlayer.Trim())}"); // unverified: a second row of the same game
+            filters.Add($"game.playerStats.player.login=={FafApiClient.Quote(query.WithPlayer.Trim())}");
         }
 
         string sort = query.Sort switch
@@ -193,13 +208,23 @@ public static class PlayerRequests
             ? "game,game.mapVersion.map,game.featuredMod,game.playerStats,game.playerStats.player,ratingChanges.leaderboard"
             : "game,game.mapVersion.map,game.featuredMod,ratingChanges.leaderboard";
         return $"/data/gamePlayerStats?include={include}&sort={sort}"
-            + $"&page[size]={pageSize}&page[number]={Math.Max(page, 1)}&page[totals]"
+            + $"&page[size]={Math.Clamp(pageSize, 1, MaxPageSize)}&page[number]={Math.Max(page, 1)}&page[totals]"
             + $"&filter={Filter(string.Join(";", filters))}";
     }
 
+    /// <summary>The name the API's faction filter takes (<c>faction==UEF</c>); a number is refused.</summary>
+    public static string FactionName(Faction faction) => faction switch
+    {
+        Faction.Uef => "UEF",
+        Faction.Aeon => "AEON",
+        Faction.Cybran => "CYBRAN",
+        _ => "SERAPHIM",
+    };
+
     /// <summary>
     /// The board a mode filters on; null for <c>all</c>. Custom games are rated on the global board
-    /// (unverified), the other modes are board names.
+    /// (<c>ratingChanges.leaderboard.technicalName=="global"</c> matches them), the other modes are
+    /// board names.
     /// </summary>
     public static string? BoardOfMode(string? mode) => mode switch
     {

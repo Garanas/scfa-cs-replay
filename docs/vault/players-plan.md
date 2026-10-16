@@ -43,13 +43,13 @@ Rating shown anywhere is μ − 3σ, through `ReplayPlayerOptions.DisplayRating(
 
 | Need | Request |
 |---|---|
-| Profile | `GET /data/player/{id}?include=names,clanMembership.clan,currentAvatar.avatar` (the avatar through its assignment; unverified) |
+| Profile | `GET /data/player/{id}?include=names,clanMembership.clan,avatarAssignments.avatar` (the current avatar is the assignment with `selected == true`) |
 | Find a player | `GET /data/player?filter=login=="*{q}*"&include=clanMembership.clan&page[size]=10` and `GET /data/nameRecord?filter=name=="*{q}*"&include=player,player.clanMembership.clan&page[size]=10`; by exact name: `filter=login=="{name}"&page[size]=1` |
 | Leaderboards | `GET /data/leaderboard` (cached for the session) |
 | Ratings of a player | `GET /data/leaderboardRating?filter=player.id=={id}&include=leaderboard` |
-| Rating history | `GET /data/leaderboardRatingJournal?filter=gamePlayerStats.player.id=={id};leaderboard.technicalName=="{board}";gamePlayerStats.scoreTime=ge={since}&include=gamePlayerStats,gamePlayerStats.game,gamePlayerStats.game.mapVersion.map,gamePlayerStats.game.playerStats,gamePlayerStats.game.playerStats.player&sort=-gamePlayerStats.scoreTime&page[size]=1000` (loop over pages) |
-| Matches | `GET /data/gamePlayerStats?filter=player.id=={id};scoreTime=ge={since}&include=game,game.mapVersion.map,game.featuredMod,game.playerStats.player,ratingChanges.leaderboard&sort=-scoreTime&page[size]=25&page[number]={n}&page[totals]`; the mode filter goes through `ratingChanges.leaderboard.technicalName=="{board}"`; custom games are the `global` board's (`PlayerRequests.BoardOfMode`; verify live); faction as `faction=={1..4}`, result as `result==VICTORY`, with-player as `game.playerStats.player.login=="{name}"`; the chart lists use the same filter with `page[size]=1000` and without `game.playerStats` |
-| Lifetime counters | `GET /data/playerEvent?filter=player.id=={id}&include=event&page[size]=100` (paged until a short page) |
+| Rating history | `GET /data/leaderboardRatingJournal?filter=gamePlayerStats.player.id=={id};leaderboard.technicalName=="{board}";gamePlayerStats.scoreTime=ge={since}&include=gamePlayerStats,gamePlayerStats.game,gamePlayerStats.game.mapVersion.map,gamePlayerStats.game.playerStats,gamePlayerStats.game.playerStats.player&sort=-gamePlayerStats.scoreTime&page[size]=100&page[number]={n}&page[totals]` (loop over pages by `totalPages`) |
+| Matches | `GET /data/gamePlayerStats?filter=player.id=={id};scoreTime=ge={since}&include=game,game.mapVersion.map,game.featuredMod,game.playerStats.player,ratingChanges.leaderboard&sort=-scoreTime&page[size]=25&page[number]={n}&page[totals]`; the mode filter goes through `ratingChanges.leaderboard.technicalName=="{board}"`; custom games are the `global` board's (`PlayerRequests.BoardOfMode`); faction as `faction==UEF` (`AEON`, `CYBRAN`, `SERAPHIM`; a number is refused), result as `result==VICTORY`, with-player as `game.playerStats.player.login=="{name}"` (the id works too); the chart lists use the same filter with `page[size]=100` (looped by `totalPages`) and without `game.playerStats` |
+| Lifetime counters | `GET /data/playerEvent?filter=player.id=={id}&include=event&page[size]=100&page[number]={n}&page[totals]` (looped by `totalPages`) |
 | Achievements | `GET /data/achievement?sort=order&page[size]=100` (cached) and `GET /data/playerAchievement?filter=player.id=={id}&include=achievement&page[size]=100` |
 | Rankings | `GET /data/leaderboardRating?filter=leaderboard.technicalName=="{board}";totalGames=gt=0[;deviation=lt=100][;updateTime=ge={since}]&include=player,player.clanMembership.clan&sort=-rating&page[size]=50&page[number]={n}&page[totals]` |
 | Rank of a player | the same filter plus `;rating=gt={rating}` with `page[size]=1&page[totals]`: rank = totalRecords + 1 |
@@ -59,13 +59,13 @@ Rating shown anywhere is μ − 3σ, through `ReplayPlayerOptions.DisplayRating(
 | League entry of a player | `GET /data/leagueSeasonScore?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeason,leagueSeasonDivisionSubdivision.leagueSeasonDivision` (all active seasons: `leagueSeason.endDate=ge={now}` instead of the season id) |
 | Players per subdivision | one count request per subdivision (`leagueSeason.id=={season};leagueSeasonDivisionSubdivision.id=={sub}`, `page[size]=1&page[totals]`) |
 | Standings of a subdivision | `GET /data/leagueSeasonScore?filter=leagueSeason.id=={season};leagueSeasonDivisionSubdivision.id=={sub}&sort=-score,-gameCount&page[size]=50&page[totals]`; player names come from `GET /data/player?filter=id=in=(…)` (the score has only `loginId`) |
-| League journey | `GET /data/leagueScoreJournal?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeasonDivisionSubdivisionBefore.leagueSeasonDivision,leagueSeasonDivisionSubdivisionAfter.leagueSeasonDivision&sort=gameId` |
-| Head to head | `GET /data/game?filter=playerStats.player.id=={a};playerStats.player.id=={b};startTime=ge={since}&include=playerStats.player,mapVersion.map&sort=-startTime` (verify that Elide treats the two predicates as two different rows; if not, intersect both players' match lists in the browser) |
+| League journey | `GET /data/leagueScoreJournal?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeasonDivisionSubdivisionBefore.leagueSeasonDivision,leagueSeasonDivisionSubdivisionAfter.leagueSeasonDivision&sort=gameId&page[size]=100&page[number]={n}&page[totals]` (looped by `totalPages`) |
+| Head to head | `GET /data/gamePlayerStats?filter=player.id=={a};game.playerStats.player.id=={b}[;scoreTime=ge={since}]&include=game,game.playerStats.player,game.mapVersion.map,game.featuredMod&sort=-scoreTime&page[size]=100&page[number]={n}&page[totals]` (looped by `totalPages`; A is the row's player, B the other one in `game.playerStats`; two `playerStats.player.id` predicates on `/data/game` match nothing) |
 
 Entity attributes, from the API's source (`faf-java-api`, `data/domain` and `league/domain`), all
 camelCase; relationships in brackets:
 
-- `player`: `login`, `userAgent`, `createTime`, `updateTime` [`names` → `nameRecord`: `name`, `changeTime`; `clanMembership` → `clan`: `name`, `tag`, `description`, `tagColor`, `websiteUrl`, `createTime`, [`leader`, `founder`, `memberships`]; `avatarAssignments` → `avatar`: `url`, `tooltip`; `currentAvatar`]. `email`, `recentIpAddress`, `lastLogin` are readable only by the player or a moderator: never rely on them.
+- `player`: `login`, `userAgent`, `createTime`, `updateTime` [`names` → `nameRecord`: `name`, `changeTime`; `clanMembership` → `clan`: `name`, `tag`, `description`, `tagColor`, `websiteUrl`, `createTime`, [`leader`, `founder`, `memberships`]; `avatarAssignments` → `avatarAssignment`: `selected`, `expiresAt`, `createTime`, `updateTime` [`avatar`: `url`, `tooltip`, `filename`, `description`; `player`]; the API has no `currentAvatar`]. `email`, `recentIpAddress`, `lastLogin` are readable only by the player or a moderator: never rely on them.
 - `leaderboard`: `technicalName`, `nameKey`, `descriptionKey`. Display names are ours (`Leaderboards.DisplayName`): `global` "Global", `ladder_1v1` "Ladder 1v1", `tmm_2v2` "2v2", `tmm_4v4_full_share` "4v4 full share", `tmm_4v4_share_until_death` "4v4 share until death", anything else from the technical name (`tmm_3v3` → "3v3").
 - `leaderboardRating`: `mean`, `deviation`, `rating`, `totalGames`, `wonGames`, `createTime`, `updateTime` [`player`, `leaderboard`].
 - `leaderboardRatingJournal`: `meanBefore`, `deviationBefore`, `meanAfter`, `deviationAfter`, `createTime` [`leaderboard`, `gamePlayerStats`].
@@ -73,17 +73,63 @@ camelCase; relationships in brackets:
 - `game`: `name`, `startTime`, `endTime`, `replayTicks`, `victoryCondition`, `validity`, `replayUrl`, `replayAvailable` [`host`, `featuredMod`, `mapVersion` → `map`, `playerStats`].
 - `playerEvent`: `currentCount` [`player`, `event`: `name`, `imageUrl`, `type`]. The event ids are fixed GUIDs (`PlayerEvents` constants): custom games played `cfa449a6-655b-48d5-9a27-6044804fe35c`, ladder games played `4a929def-e347-45b4-b26d-4325a3115859`, lost ACUs `d6a699b7-99bc-4a7f-b128-15e1e289a7b3`, built air `3ebb0c4d-5e92-4446-bf52-d17ba9c5cd3c`, lost air `225e9b2e-ae09-4ae1-a198-eca8780b0fcd`, built land `ea123d7f-bb2e-4a71-bd31-88859f0c3c00`, lost land `a1a3fd33-abe2-4e56-800a-b72f4c925825`, built naval `b5265b42-1747-4ba1-936c-292202637ce6`, lost naval `3a7b3667-0f79-4ac7-be63-ba841fd5ef05`, seconds played `cc791f00-343c-48d4-b5b3-8900b83209c0`, built tech 1 `a8ee4f40-1e30-447b-bc2c-b03065219795`, lost tech 1 `3dd3ed78-ce78-4006-81fd-10926738fbf3`, built tech 2 `89d4f391-ed2d-4beb-a1ca-6b93db623c04`, lost tech 2 `aebd750b-770b-4869-8e37-4d4cfdc480d0`, built tech 3 `92617974-8c1f-494d-ab86-65c2a95d1486`, lost tech 3 `7f15c2be-80b7-4573-8f41-135f84773e0f`, built experimentals `ed9fd79d-5ec7-4243-9ccf-f18c4f5baef1`, lost experimentals `701ca426-0943-4931-85af-6a08d36d9aaa`, built engineers `60bb1fc0-601b-45cd-bd26-83b1a1ac979b`, lost engineers `e8e99a68-de1b-4676-860d-056ad2207119`, Aeon plays `96ccc66a-c5a0-4f48-acaa-888b00778b57`, Aeon wins `a6b51c26-64e6-4e7a-bda7-ea1cfe771ebb`, Cybran plays `ad193982-e7ca-465c-80b0-5493f9739559`, Cybran wins `56b06197-1890-42d0-8b59-25e1add8dc9a`, UEF plays `1b900d26-90d2-43d0-a64e-ed90b74c3704`, UEF wins `7be6fdc5-7867-4467-98ce-f7244a66625a`, Seraphim plays `fefcb392-848f-4836-9683-300b283bc308`, Seraphim wins `15b6c19a-6084-4e82-ada9-6c30e282191f`.
 - `achievement`: `name`, `description` (localised by the API from `Accept-Language`), `type` (`STANDARD`, `INCREMENTAL`), `totalSteps`, `revealedIconUrl`, `unlockedIconUrl`, `initialState`, `experiencePoints`, `order`, `unlockersCount`, `unlockersPercent`, `unlockersMinDuration`, `unlockersAvgDuration`, `unlockersMaxDuration`. `playerAchievement`: `currentSteps`, `state` (`REVEALED`, `UNLOCKED`, `HIDDEN`), `createTime`, `updateTime` [`player`, `achievement`].
-- `league`: `technicalName`, `enabled`, `nameKey`, `descriptionKey`, `imageUrl`, `mediumImageUrl`, `smallImageUrl`. `leagueSeason`: `placementGames`, `placementGamesReturningPlayer`, `seasonNumber`, `nameKey`, `startDate`, `endDate` [`league`, `leaderboard` → type `leagueLeaderboard`: `technicalName`]. `leagueSeasonDivision`: `divisionIndex`, `nameKey`, `descriptionKey` [`leagueSeason`]. `leagueSeasonDivisionSubdivision`: `subdivisionIndex`, `nameKey`, `descriptionKey`, `minRating`, `maxRating`, `highestScore`, `imageUrl`, `mediumImageUrl`, `smallImageUrl` [`leagueSeasonDivision`]. `leagueSeasonScore`: `loginId`, `score`, `gameCount`, `returningPlayer` [`leagueSeason`, `leagueSeasonDivisionSubdivision`]. `leagueScoreJournal`: `gameId`, `loginId`, `scoreBefore`, `scoreAfter`, `gameCount` [`leagueSeason`, `leagueSeasonDivisionSubdivisionBefore`, `leagueSeasonDivisionSubdivisionAfter`]. Division and subdivision names come from their `nameKey` (last segment, capitalised; subdivisions as roman numerals from `subdivisionIndex` when the key gives nothing better); verify the keys live and keep a mapping table for the known ones.
+- `league`: `technicalName`, `enabled`, `nameKey`, `descriptionKey`, `imageUrl`, `mediumImageUrl`, `smallImageUrl`. `leagueSeason`: `placementGames`, `placementGamesReturningPlayer`, `seasonNumber`, `nameKey`, `startDate`, `endDate` [`league`, `leaderboard` → type `leagueLeaderboard`: `technicalName`]. `leagueSeasonDivision`: `divisionIndex`, `nameKey`, `descriptionKey` [`leagueSeason`]. `leagueSeasonDivisionSubdivision`: `subdivisionIndex`, `nameKey`, `descriptionKey`, `minRating`, `maxRating`, `highestScore`, `imageUrl`, `mediumImageUrl`, `smallImageUrl` [`leagueSeasonDivision`]. `leagueSeasonScore`: `loginId`, `score` (null in placement), `gameCount`, `returningPlayer` [`leagueSeason`, `leagueSeasonDivisionSubdivision` (none in placement)]. `leagueScoreJournal`: `gameId`, `loginId`, `scoreBefore`, `scoreAfter`, `gameCount` [`leagueSeason`, `leagueSeasonDivisionSubdivisionBefore`, `leagueSeasonDivisionSubdivisionAfter`]. Division and subdivision names come from their `nameKey` (last segment, capitalised; subdivisions as roman numerals from `subdivisionIndex` when the key gives nothing better); verify the keys live and keep a mapping table for the known ones.
 
 The code lives in `Services/Players/` of the Viewer: `IPlayersApi`, the requests in `PlayerRequests`, the
 reading in `PlayerMappers`, `FafPlayersApi` (the real API), `SamplePlayersApi` (embedded fixtures) and
-`Statistics/`. Every name that could not be checked live carries an `// unverified` comment there: the
-avatar include, the `faction`, `ratingChanges` and `playerStats.player.login` filters, custom games on
-the `global` board, the opponents include on a journal page of 1,000, the head-to-head predicates,
-the translation keys of divisions (`LeagueNames`), the `rating` attribute and `page[size]` limits.
+`Statistics/`.
 
-The API's maximum page size and the exact spelling of a few fields are unverified: the first agent
-that gets a token in a browser checks them (see Tooling) and corrects this file.
+### Verified live on 2026-10-16
+
+The requests were run with a real token; nothing in the code is marked unverified any more.
+
+- **Profile.** `include=currentAvatar.avatar` is refused (400 "player does not contain the field
+  currentAvatar"); `include=names,clanMembership.clan,avatarAssignments.avatar` works. An
+  `avatarAssignment` has `selected`, `expiresAt`, `createTime`, `updateTime` and the relationships
+  `avatar` (`url`, `tooltip`, `filename`, `description`) and `player`. The current avatar is the
+  assignment with `selected == true`; none selected means no avatar.
+- **Pages are capped at 100 rows.** `page[size]=1000` and `page[size]=150` both answer 100. Every loop
+  (rating journal, the charts' match list, the league journey, events, head to head) asks for pages of
+  100 with `page[totals]` and stops by `meta.page.totalPages`, never on a short page
+  (`PlayerRequests.LoopPageSize`, `FafPlayersApi.HasMorePages`); the safety stop is
+  `PlayerRequests.MaxLoopPages` (300 pages, 30,000 rows). A page the UI asks for is clamped to 100.
+- **Faction filter.** It takes the enum's name: `faction==UEF` works, `faction==1` is a 400 "Invalid
+  value: 1". The attribute comes back as a number (1 UEF, 2 Aeon, 3 Cybran, 4 Seraphim);
+  `PlayerMappers` reads both.
+- **Head to head.** Two `playerStats.player.id` predicates on `/data/game` return 0 rows even for
+  players with games together (both apply to one row). The request goes through the statistics of A
+  (`/data/gamePlayerStats?filter=player.id=={a};game.playerStats.player.id=={b}`, 12 games for a real
+  pair).
+- **Match list.** `ratingChanges.leaderboard.technicalName=="ladder_1v1"` gives one board's games (160 of
+  a real player's) and `=="global"` the games rated on the global board (1,847), so custom games are
+  global and `BoardOfMode("custom") == "global"` is right. Unrated games have `afterMean` and
+  `afterDeviation` null (`PlayerMatch.RatingBefore` and `RatingAfter` are nullable). The with-player
+  filter works by login (`game.playerStats.player.login=="name"`) and by id.
+- **Rating journal.** The heavy include (`gamePlayerStats.game.playerStats.player`) works at 100 rows
+  (315 KB, 0.4 s); `page[totals]` works (218 ladder entries for a real player). The ratings, ranking,
+  count and bin requests work as written (`rating=gt=`, `rating=ge=;rating=lt=`, `deviation=lt=100`,
+  `updateTime=ge=`, `player.login=="*x*"`, `totalGames=gt=0`).
+- **Leagues.** `/data/league?filter=enabled==true` returns 4 leagues (`technicalName` such as
+  `1v1_league`, `nameKey` `1v1_league.name`); `/data/leagueSeason?include=league,leaderboard&sort=-startDate`
+  works (21 seasons per league so far; `nameKey` such as `3v3_season`, `seasonNumber`,
+  `placementGames` 10, `placementGamesReturningPlayer` 3); the season's `leaderboard` is the league
+  leaderboard. `leagueSeasonScore.leagueSeason.endDate=ge=` works. A player in placement has
+  `score: null`, `gameCount: 1` and no subdivision: `LeagueEntry.Score` is 0 then and
+  `LeagueEntry.InPlacement` is true.
+- **Boards, achievements, events.** `/data/leaderboard?page[size]=100` returns 6 boards (`global`,
+  `ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `tmm_4v4_share_until_death`, `tmm_3v3`; `Leaderboards.DisplayName`
+  covers them); `/data/achievement?sort=order` returns 57; `playerEvent` events have a localised `name`,
+  `type` `NUMERIC` and `imageUrl` null.
+- **Errors.** In the trimmed WebAssembly build the message of an `HttpRequestException` is a resource key
+  (`net_http_message_not_success_statuscode_reason, 400, Bad Request`). The shared GET
+  (`FafApiClient.GetAsync`, used by `FafPlayersApi`) throws an `HttpRequestException` whose message is
+  "The FAForever API answered 400 Bad Request" plus ": " and the `detail` of the first JSON:API error
+  when the body has one, and for a 429 "The FAForever API asks to wait a moment"
+  (`FafApiClient.ErrorMessage`); the pages show `exception.Message`, so the text reaches the screen.
+
+Still not checked live: the translation keys of divisions and subdivisions (`LeagueNames` reads the
+last segment of the key and falls back to roman numerals), the league technical names other than
+`1v1_league`, and the heavy journal include on a player with more than 30,000 games.
 
 ## Stories
 
@@ -166,7 +212,9 @@ reports after each wave. Agents run on Sonnet. Build and test with `--artifacts-
 
 ## Tooling
 
-- Run the app on sample data (no token, no login): from the worktree folder, build first
+- Run the app on sample data (no token, no login) with `tools/run-sample.ps1 -Port <port> -Artifacts D:\wt\art-<id>`
+  (builds the Server, runs it in the Sample environment in the foreground; `-Development` for
+  `dev/charts`, `-NoBuild` to skip the build). By hand: from the worktree folder, build first
   (`dotnet build src/FAForever.Vault.Server --artifacts-path D:\wt\art-<id>`), then
   `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:<port> dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wt\art-<id> --no-launch-profile --no-build`
   (PowerShell: set `$env:ASPNETCORE_ENVIRONMENT = 'Sample'` and `$env:ASPNETCORE_URLS` first). In

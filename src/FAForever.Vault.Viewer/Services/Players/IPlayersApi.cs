@@ -4,7 +4,7 @@ namespace FAForever.Vault.Viewer.Services.Players;
 /// What the Players pages ask of the FAForever API. <see cref="FafPlayersApi"/> calls the API,
 /// <see cref="SamplePlayersApi"/> answers from fixtures. Every method throws
 /// <see cref="Api.NotAuthenticatedException"/> without a session. Lists of a whole period or season
-/// are fetched in pages of 1,000 and report the number of rows read through <c>progress</c>.
+/// are fetched in pages of 100 (the API's most) and report the number of rows read through <c>progress</c>.
 /// </summary>
 public interface IPlayersApi
 {
@@ -25,7 +25,7 @@ public interface IPlayersApi
 
     /// <summary>
     /// The player's rated games on a board since a moment (null for all), oldest first. Loops over
-    /// pages of 1,000.
+    /// pages of 100 (the API's most).
     /// </summary>
     Task<IReadOnlyList<RatingJournalEntry>> GetRatingHistoryAsync(int playerId, string boardTechnicalName, DateTimeOffset? since, IProgress<int>? progress, CancellationToken cancellationToken);
 
@@ -34,7 +34,7 @@ public interface IPlayersApi
 
     /// <summary>
     /// Every game of the player that fits the query's filters (page, page size and sort are ignored),
-    /// newest first, without the other players. Loops over pages of 1,000.
+    /// newest first, without the other players. Loops over pages of 100 (the API's most).
     /// </summary>
     Task<IReadOnlyList<PlayerMatch>> GetAllMatchesAsync(int playerId, MatchQuery query, IProgress<int>? progress, CancellationToken cancellationToken);
 

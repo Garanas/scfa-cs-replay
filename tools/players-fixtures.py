@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Writes the JSON:API fixtures of the sample Players API (SamplePlayersApi).
 
-    python tools/players-fixtures.py
+    python -I tools/players-fixtures.py
 
 The output goes to src/FAForever.Vault.Viewer/Services/Players/Sample/ (embedded in the Viewer). Everything is
-fictional and seeded, so a run always writes the same files. The documents follow the shape api.faforever.com
+fictional and seeded (SEED below; rng draws the games, the people and the league, so a change to the order of
+its draws changes every file after it), so a run always writes the same files. The documents follow the shape api.faforever.com
 returns (data, included, meta.page, camelCase attributes, relationships with data {type, id}); the dates are
 relative to ANCHOR, and the sample API shifts them to the present when it reads them.
 """
@@ -20,7 +21,8 @@ PLAYER_ID = 2049311
 PLAYER = "Ashgrove"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "FAForever.Vault.Viewer", "Services", "Players", "Sample")
 
-rng = random.Random(20261016)
+SEED = 20261016
+rng = random.Random(SEED)
 
 
 def iso(moment):
@@ -98,7 +100,8 @@ MAPS = [
 ]
 LARGE_MAPS = [MAPS[5], MAPS[6], MAPS[11], MAPS[12], MAPS[13], MAPS[9]]
 
-BOARDS = [("global", 1), ("ladder_1v1", 2), ("tmm_2v2", 3), ("tmm_4v4_full_share", 4), ("tmm_4v4_share_until_death", 5)]
+# the six boards of the live API (2026-10-16)
+BOARDS = [("global", 1), ("ladder_1v1", 2), ("tmm_2v2", 3), ("tmm_4v4_full_share", 4), ("tmm_4v4_share_until_death", 5), ("tmm_3v3", 6)]
 BOARD_ID = dict(BOARDS)
 
 # ---------------------------------------------------------------- games
@@ -289,7 +292,7 @@ for board, _ in BOARDS:
     for game in board_games:
         build_game_resources(doc, game)
         doc.add(own_stats_with_journal(game, doc))
-    doc.page(len(doc.data), 1000)
+    doc.page(len(doc.data), 100)
     write(f"rating-journal-{board}.json", doc.dump())
 
 # ---------------------------------------------------------------- matches (the 120 latest)
@@ -319,19 +322,53 @@ PLAYER_NAMES = [
     res("nameRecord", 703, {"name": PLAYER, "changeTime": "2025-06-02T17:45:00Z"}, {"player": ("player", PLAYER_ID)}),
 ]
 
-doc = Doc()
-doc.add(res("player", PLAYER_ID, {"login": PLAYER, "createTime": "2021-05-14T21:03:00Z", "updateTime": iso(ANCHOR - timedelta(hours=3))},
-            {"names": [("nameRecord", n["id"]) for n in PLAYER_NAMES], "clanMembership": ("clanMembership", 88120), "currentAvatar": ("avatarAssignment", 5501)}))
-for record in PLAYER_NAMES:
-    doc.include(record)
-doc.include(MEMBERSHIP)
-doc.include(CLAN)
-doc.include(res("avatarAssignment", 5501, {}, {"avatar": ("avatar", 61)}))
-doc.include(res("avatar", 61, {"url": "https://content.faforever.com/faf/avatars/bronze_commander.png", "tooltip": "Veteran commander"}))
-write("player-2049311.json", doc.dump())
 
-fixture_players = [{"id": PLAYER_ID, "login": PLAYER, "tag": "IHV"}] + [{"id": o["id"], "login": o["login"], "tag": o["tag"]} for o in opponents[:7]]
-former_names = {PLAYER_ID: ["grovestomp", "Ash_Grove"], opponents[1]["id"]: ["OldHarbor"], opponents[3]["id"]: ["Anvil_Bro", "rookie_one"]}
+def avatar_resources(player_id, assignment_id, avatar_id, filename, tooltip, selected_one=True):
+    """An avatar the player owns and wears (selected) and one owned but not worn: the current avatar is the selected assignment."""
+    worn = res("avatarAssignment", assignment_id, {"selected": selected_one, "expiresAt": None, "createTime": "2022-04-01T10:00:00Z", "updateTime": "2024-01-15T18:30:00Z"},
+               {"avatar": ("avatar", avatar_id), "player": ("player", player_id)})
+    spare = res("avatarAssignment", assignment_id - 1, {"selected": False, "expiresAt": None, "createTime": "2021-09-01T10:00:00Z", "updateTime": "2022-04-01T10:00:00Z"},
+                {"avatar": ("avatar", avatar_id - 1), "player": ("player", player_id)})
+    return [
+        worn, spare,
+        res("avatar", avatar_id, {"url": f"https://content.faforever.com/faf/avatars/{filename}", "tooltip": tooltip, "filename": filename, "description": tooltip}),
+        res("avatar", avatar_id - 1, {"url": "https://content.faforever.com/faf/avatars/bronze_star.png", "tooltip": "Bronze star", "filename": "bronze_star.png", "description": "Bronze star"}),
+    ]
+
+
+def profile_document(person_id, login, created, name_records, clan, membership, avatars):
+    doc = Doc()
+    rels = {"names": [("nameRecord", n["id"]) for n in name_records], "avatarAssignments": [("avatarAssignment", avatars[0]["id"]), ("avatarAssignment", avatars[1]["id"])]}
+    if membership:
+        rels["clanMembership"] = ("clanMembership", membership["id"])
+    doc.add(res("player", person_id, {"login": login, "createTime": created, "updateTime": iso(ANCHOR - timedelta(hours=3))}, rels))
+    for record in name_records:
+        doc.include(record)
+    if membership:
+        doc.include(membership)
+        doc.include(clan)
+    for resource in avatars:
+        doc.include(resource)
+    return doc
+
+
+write("player-2049311.json", profile_document(
+    PLAYER_ID, PLAYER, "2021-05-14T21:03:00Z", PLAYER_NAMES, CLAN, MEMBERSHIP,
+    avatar_resources(PLAYER_ID, 5501, 61, "bronze_commander.png", "Veteran commander")).dump())
+
+# profiles of the two rivals (opponents of the head-to-head fixture): the compare and name search of the sample resolve them
+for rival, created, avatar_file, tooltip in ((RIVAL, "2020-02-02T09:12:00Z", "silver_sword.png", "Silver sword"), (OTHER_RIVAL, "2022-08-19T14:40:00Z", "gold_anvil.png", "Gold anvil")):
+    names = [res("nameRecord", 7000 + rival["id"] % 1000 * 2 + n, {"name": name, "changeTime": changed}, {"player": ("player", rival["id"])})
+             for n, (name, changed) in enumerate(((f"old_{rival['login'].lower()}", "2023-05-05T20:00:00Z"), (rival["login"], "2024-07-07T20:00:00Z")))]
+    clan = res("clan", 4400 + sum(map(ord, rival["tag"])), {"name": f"Clan {rival['tag']}", "tag": rival["tag"]}) if rival["tag"] else None
+    membership = res("clanMembership", 90000 + rival["id"], {}, {"clan": ("clan", clan["id"]), "player": ("player", rival["id"])}) if clan else None
+    write(f"player-{rival['id']}.json", profile_document(
+        rival["id"], rival["login"], created, names, clan, membership,
+        avatar_resources(rival["id"], 5600 + rival["id"] % 100 * 2 + 1, 80 + rival["id"] % 10 * 2 + 1, avatar_file, tooltip)).dump())
+
+fixture_players = [{"id": PLAYER_ID, "login": PLAYER, "tag": "IHV"}] + [{"id": o["id"], "login": o["login"], "tag": o["tag"]} for o in opponents[:7]] \
+    + [{"id": OTHER_RIVAL["id"], "login": OTHER_RIVAL["login"], "tag": OTHER_RIVAL["tag"]}]
+former_names = {PLAYER_ID: ["grovestomp", "Ash_Grove"], opponents[1]["id"]: ["OldHarbor"], opponents[3]["id"]: ["Anvil_Bro", "rookie_one"], OTHER_RIVAL["id"]: ["PylonRustic", "rusty_pylon_nl"]}
 
 players_doc = Doc()
 names_doc = Doc()
@@ -388,18 +425,21 @@ event_counts = {
     "ed9fd79d-5ec7-4243-9ccf-f18c4f5baef1": 1_240, "701ca426-0943-4931-85af-6a08d36d9aaa": 835,
     "60bb1fc0-601b-45cd-bd26-83b1a1ac979b": 22_600, "e8e99a68-de1b-4676-860d-056ad2207119": 15_280,
     "96ccc66a-c5a0-4f48-acaa-888b00778b57": 642, "a6b51c26-64e6-4e7a-bda7-ea1cfe771ebb": 338,
-    "ad193982-e7ca-465c-80b0-5493f9739559": 1_988, "56b06197-1890-42d0-8b59-25e1add8dc9a": 1_103,
-    "1b900d26-90d2-43d0-a64e-ed90b74c3704": 934, "7be6fdc5-7867-4467-98ce-f7244a66625a": 481,
-    "fefcb392-848f-4836-9683-300b283bc308": 586, "15b6c19a-6084-4e82-ada9-6c30e282191f": 302,
+    "ad193982-e7ca-465c-80b0-5493f9739559": 1_788, "56b06197-1890-42d0-8b59-25e1add8dc9a": 1_103,
+    "1b900d26-90d2-43d0-a64e-ed90b74c3704": 834, "7be6fdc5-7867-4467-98ce-f7244a66625a": 481,
+    "fefcb392-848f-4836-9683-300b283bc308": 486, "15b6c19a-6084-4e82-ada9-6c30e282191f": 302,
 }
 EVENT_NAMES = {
     "cfa449a6-655b-48d5-9a27-6044804fe35c": "CUSTOM_GAMES_PLAYED", "4a929def-e347-45b4-b26d-4325a3115859": "LADDER_GAMES_PLAYED",
     "d6a699b7-99bc-4a7f-b128-15e1e289a7b3": "LOST_ACUS", "cc791f00-343c-48d4-b5b3-8900b83209c0": "SECONDS_PLAYED",
 }
+FACTION_PLAYS = ["ad193982-e7ca-465c-80b0-5493f9739559", "1b900d26-90d2-43d0-a64e-ed90b74c3704", "96ccc66a-c5a0-4f48-acaa-888b00778b57", "fefcb392-848f-4836-9683-300b283bc308"]
+LIFETIME_GAMES = event_counts["cfa449a6-655b-48d5-9a27-6044804fe35c"] + event_counts["4a929def-e347-45b4-b26d-4325a3115859"]
+assert sum(event_counts[key] for key in FACTION_PLAYS) == LIFETIME_GAMES == 3750, "the overview, the army tab and the compare count the same games"
 doc = Doc()
 for index, (event_id, count) in enumerate(event_counts.items()):
     doc.add(res("playerEvent", 900000 + index, {"currentCount": count}, {"player": ("player", PLAYER_ID), "event": ("event", event_id)}))
-    doc.include(res("event", event_id, {"name": EVENT_NAMES.get(event_id, f"EVENT_{index}"), "type": "NUMERIC"}))
+    doc.include(res("event", event_id, {"name": EVENT_NAMES.get(event_id, f"EVENT_{index}"), "type": "NUMERIC", "imageUrl": None}))
 write("events.json", doc.dump())
 
 # ---------------------------------------------------------------- achievements
@@ -440,7 +480,7 @@ write("player-achievements.json", doc.dump())
 
 # ---------------------------------------------------------------- rankings
 
-TOTALS = {"global": 52_410, "ladder_1v1": 8_423, "tmm_2v2": 3_906, "tmm_4v4_full_share": 2_218, "tmm_4v4_share_until_death": 1_104}
+TOTALS = {"global": 52_410, "ladder_1v1": 8_423, "tmm_2v2": 3_906, "tmm_4v4_full_share": 2_218, "tmm_4v4_share_until_death": 1_104, "tmm_3v3": 1_650}
 top_names = []
 used_names = set(used)
 while len(top_names) < 60:
@@ -449,34 +489,13 @@ while len(top_names) < 60:
         used_names.add(name)
         top_names.append(name)
 
-for board, ident in BOARDS[:4]:
-    doc = Doc()
-    base = {"global": 2330, "ladder_1v1": 2190, "tmm_2v2": 2050, "tmm_4v4_full_share": 1980, "tmm_4v4_share_until_death": 1900}[board]
-    for index in range(50):
-        display = base - index * 6.3 - rng.uniform(0, 3)
-        deviation = rng.uniform(46, 70)
-        player_id = 300000 + ident * 100 + index
-        total = int(rng.uniform(900, 4200))
-        tag = rng.choice(CLAN_TAGS)
-        rels = {"player": ("player", player_id), "leaderboard": ("leaderboard", ident)}
-        doc.add(res("leaderboardRating", 700000 + ident * 100 + index, {
-            "mean": round(display + 3 * deviation, 2), "deviation": round(deviation, 2), "rating": round(display, 2),
-            "totalGames": total, "wonGames": int(total * rng.uniform(0.55, 0.68)), "updateTime": iso(ANCHOR - timedelta(hours=rng.uniform(1, 700))),
-        }, rels))
-        player_rels = {}
-        if tag:
-            player_rels["clanMembership"] = ("clanMembership", 90000 + player_id)
-            doc.include(res("clanMembership", 90000 + player_id, {}, {"clan": ("clan", 4400 + sum(map(ord, tag)))}))
-            doc.include(res("clan", 4400 + sum(map(ord, tag)), {"name": f"Clan {tag}", "tag": tag}))
-        doc.include(res("player", player_id, {"login": top_names[index % len(top_names)] + (str(index) if index >= len(top_names) else "")}, player_rels))
-    doc.page(TOTALS[board], 50)
-    write(f"ranking-{board}.json", doc.dump())
+# the ranking pages are made by SamplePlayersApi from the distribution below (a row per rank, so every page, board and filter shows other rows)
 
 # the distribution: counts per 100-point bin, as the count requests answer (only meta.page.totalRecords is read)
 distribution = {}
 for board, _ in BOARDS:
     total = TOTALS[board]
-    mean = {"global": 1500, "ladder_1v1": 1050, "tmm_2v2": 1000, "tmm_4v4_full_share": 950, "tmm_4v4_share_until_death": 900}[board]
+    mean = {"global": 1500, "ladder_1v1": 1050, "tmm_2v2": 1000, "tmm_4v4_full_share": 950, "tmm_4v4_share_until_death": 900, "tmm_3v3": 980}[board]
     weights = [math.exp(-((100 * i + 50 - mean) / 380) ** 2 / 2) for i in range(24)]
     scale = total / sum(weights)
     distribution[board] = [{"data": [], "meta": {"page": {"totalRecords": int(w * scale), "totalPages": int(w * scale)}}} for w in weights]
@@ -484,21 +503,26 @@ write("distribution.json", distribution)
 
 # ---------------------------------------------------------------- leagues
 
-SEASON_NUMBER, SEASON_IDS = 3, [7, 8, 9]
+SEASON_IDS = [7, 8, 9]  # the ladder 1v1 league's seasons; the sample player plays the running one (the last)
+LEAGUES = [  # (id, technicalName, boardTechnicalName, season id of the first of three seasons)
+    (1, "1v1_league", "ladder_1v1", 7), (2, "2v2_league", "tmm_2v2", 10), (3, "4v4_full_share_league", "tmm_4v4_full_share", 13), (4, "3v3_league", "tmm_3v3", 16),
+]
 doc = Doc()
-doc.add(res("league", 1, {"technicalName": "ladder_1v1", "enabled": True, "nameKey": "leagues.ladder_1v1.name", "descriptionKey": "leagues.ladder_1v1.description",
-                          "imageUrl": "https://content.faforever.com/leagues/ladder_1v1.png", "mediumImageUrl": "https://content.faforever.com/leagues/ladder_1v1_m.png", "smallImageUrl": "https://content.faforever.com/leagues/ladder_1v1_s.png"}))
+for league_id, technical, _, _ in LEAGUES:
+    doc.add(res("league", league_id, {"technicalName": technical, "enabled": True, "nameKey": f"{technical}.name", "descriptionKey": f"{technical}.description",
+                                      "imageUrl": f"https://content.faforever.com/leagues/{technical}.png", "mediumImageUrl": f"https://content.faforever.com/leagues/{technical}_m.png", "smallImageUrl": f"https://content.faforever.com/leagues/{technical}_s.png"}))
 write("leagues.json", doc.dump())
 
 doc = Doc()
 season_dates = [(ANCHOR - timedelta(days=330), ANCHOR - timedelta(days=170)), (ANCHOR - timedelta(days=170), ANCHOR - timedelta(days=75)), (ANCHOR - timedelta(days=75), ANCHOR + timedelta(days=105))]
-for index, season_id in enumerate(SEASON_IDS):
-    doc.add(res("leagueSeason", season_id, {
-        "placementGames": 10, "placementGamesReturningPlayer": 3, "seasonNumber": index + 1, "nameKey": f"seasons.ladder_1v1.{index + 1}.name",
-        "startDate": iso(season_dates[index][0]), "endDate": iso(season_dates[index][1]),
-    }, {"league": ("league", 1), "leaderboard": ("leagueLeaderboard", 2)}))
-doc.include(res("league", 1, {"technicalName": "ladder_1v1", "enabled": True}))
-doc.include(res("leagueLeaderboard", 2, {"technicalName": "ladder_1v1"}))
+for league_id, technical, board, first_season in LEAGUES:
+    for index in range(3):
+        doc.add(res("leagueSeason", first_season + index, {
+            "placementGames": 10, "placementGamesReturningPlayer": 3, "seasonNumber": index + 1, "nameKey": f"{technical.removesuffix('_league')}_season",
+            "startDate": iso(season_dates[index][0]), "endDate": iso(season_dates[index][1]),
+        }, {"league": ("league", league_id), "leaderboard": ("leagueLeaderboard", BOARD_ID[board])}))
+    doc.include(res("league", league_id, {"technicalName": technical, "enabled": True}))
+    doc.include(res("leagueLeaderboard", BOARD_ID[board], {"technicalName": board}))
 write("seasons.json", doc.dump())
 
 ACTIVE = SEASON_IDS[-1]
@@ -560,6 +584,8 @@ doc.add(res("leagueSeasonScore", 7_700_001, {"loginId": PLAYER_ID, "score": FINA
 doc.include(res("leagueSeasonDivisionSubdivision", MY_SUB, {"subdivisionIndex": 3, "nameKey": "subdivisions.silver.3.name", "minRating": 450, "maxRating": 540, "highestScore": 44},
                 {"leagueSeasonDivision": ("leagueSeasonDivision", 2001)}))
 doc.include(res("leagueSeasonDivision", 2001, {"divisionIndex": 2, "nameKey": "divisions.silver.name"}, {"leagueSeason": ("leagueSeason", ACTIVE)}))
+PLACEMENT_SEASON = 12  # the running 2v2 season
+doc.add(res("leagueSeasonScore", 7_700_002, {"loginId": PLAYER_ID, "score": None, "gameCount": 1, "returningPlayer": False}, {"leagueSeason": ("leagueSeason", PLACEMENT_SEASON)}))
 write("league-entries.json", doc.dump())
 
 counts = {}
@@ -578,7 +604,7 @@ for index in range(50):
                       {"leagueSeason": ("leagueSeason", ACTIVE), "leagueSeasonDivisionSubdivision": ("leagueSeasonDivisionSubdivision", MY_SUB)}))
     login = PLAYER if login_id == PLAYER_ID else top_names[(index + 7) % len(top_names)] + (str(index) if index >= len(top_names) else "")
     league_players.add(res("player", login_id, {"login": login}))
-standings.page(412, 50)
+standings.page(counts[str(MY_SUB)]["meta"]["page"]["totalRecords"], 50)  # the count the subdivision's card shows
 write("league-standings.json", standings.dump())
 write("league-players.json", league_players.dump())
 
@@ -586,9 +612,8 @@ write("league-players.json", league_players.dump())
 
 doc = Doc()
 for game in sorted(head_to_head_games, key=lambda g: g["time"]):
-    build_game_resources(doc, game)
-    doc.add(res("game", game["id"], {"name": game_name(game), "startTime": iso(game["time"]), "endTime": iso(game["end"]), "replayTicks": int(game["minutes"] * 600), "validity": "VALID"},
-                {"mapVersion": ("mapVersion", map_version_ids[game["map"][1]]), "featuredMod": ("featuredMod", 3),
-                 "playerStats": [("gamePlayerStats", game["own_stats"])] + [("gamePlayerStats", x["id"]) for x in game["others"]]}))
+    build_game_resources(doc, game)  # the game with everybody's statistics and players, the map and the mod as includes
+    doc.add(own_stats_resource(game))
+doc.page(len(doc.data), 100)
 write("head-to-head.json", doc.dump())
 print("rival:", RIVAL["id"], RIVAL["login"], "| other:", OTHER_RIVAL["id"], OTHER_RIVAL["login"])

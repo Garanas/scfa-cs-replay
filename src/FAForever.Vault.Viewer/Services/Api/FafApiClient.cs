@@ -410,11 +410,76 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         }
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            throw new HttpRequestException("The FAForever API is limiting requests; wait a moment and try again.", null, response.StatusCode);
+            throw new HttpRequestException(ErrorMessage(response.StatusCode, response.ReasonPhrase, null), null, response.StatusCode);
         }
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            // The exception message of EnsureSuccessStatusCode is a resource key in the trimmed WebAssembly build.
+            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(ErrorMessage(response.StatusCode, response.ReasonPhrase, body), null, response.StatusCode);
+        }
 
         return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The sentence for a failed request: "The FAForever API answered 400 Bad Request", followed by the
+    /// <c>detail</c> of the first JSON:API error in <paramref name="body"/> when it has one; for a 429
+    /// "The FAForever API asks to wait a moment".
+    /// </summary>
+    public static string ErrorMessage(HttpStatusCode status, string? reasonPhrase, string? body)
+    {
+        if (status == HttpStatusCode.TooManyRequests)
+        {
+            return "The FAForever API asks to wait a moment";
+        }
+
+        string reason = string.IsNullOrWhiteSpace(reasonPhrase) ? SplitWords(status.ToString()) : reasonPhrase.Trim();
+        string message = $"The FAForever API answered {(int)status} {reason}";
+        return FirstErrorDetail(body) is { Length: > 0 } detail ? $"{message}: {detail}" : message;
+    }
+
+    /// <summary>The <c>detail</c> of the first entry of <c>errors</c> in a JSON:API error document, or null.</summary>
+    private static string? FirstErrorDetail(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return null;
+        }
+
+        try
+        {
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                && document.RootElement.TryGetProperty("errors", out System.Text.Json.JsonElement errors)
+                && errors.ValueKind == System.Text.Json.JsonValueKind.Array
+                && errors.GetArrayLength() > 0
+                && errors[0].ValueKind == System.Text.Json.JsonValueKind.Object
+                && errors[0].TryGetProperty("detail", out System.Text.Json.JsonElement detail)
+                && detail.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                string text = detail.GetString() ?? string.Empty;
+                return text[..Math.Min(text.Length, 300)];
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+        return null;
+    }
+
+    private static string SplitWords(string name)
+    {
+        System.Text.StringBuilder text = new();
+        foreach (char letter in name)
+        {
+            if (char.IsUpper(letter) && text.Length > 0)
+            {
+                text.Append(' ');
+            }
+            text.Append(letter);
+        }
+        return text.ToString();
     }
 
     private static GameSummary MapGame(JsonApiResource game, JsonApiDocument document)

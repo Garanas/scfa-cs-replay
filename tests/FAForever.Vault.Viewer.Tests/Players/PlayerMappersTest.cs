@@ -233,7 +233,7 @@ public class PlayerRequestsTest
         });
 
         Assert.AreEqual(
-            "player.id==2049311;scoreTime=ge=2026-01-02T03:04:05Z;ratingChanges.leaderboard.technicalName==\"ladder_1v1\";faction==3;result==VICTORY;"
+            "player.id==2049311;scoreTime=ge=2026-01-02T03:04:05Z;ratingChanges.leaderboard.technicalName==\"ladder_1v1\";faction==CYBRAN;result==VICTORY;"
             + "game.mapVersion.map.displayName==\"*dual*\";game.playerStats.player.login==\"Some \\\"One\\\"\"",
             FilterOf(request));
         StringAssert.StartsWith(request, "/data/gamePlayerStats?include=game,game.mapVersion.map,game.featuredMod,game.playerStats,game.playerStats.player,ratingChanges.leaderboard");
@@ -255,7 +255,7 @@ public class PlayerRequestsTest
     {
         string request = PlayerRequests.MatchesForCharts(7, new MatchQuery { Mode = "custom" }, 2);
 
-        StringAssert.Contains(request, "page[size]=1000&page[number]=2");
+        StringAssert.Contains(request, "page[size]=100&page[number]=2");
         Assert.IsFalse(request.Contains("playerStats"));
         Assert.AreEqual("player.id==7;ratingChanges.leaderboard.technicalName==\"global\"", FilterOf(request), "custom games are the global board's");
     }
@@ -275,7 +275,7 @@ public class PlayerRequestsTest
         string request = PlayerRequests.RatingJournal(5, "tmm_2v2", Since, 2);
 
         Assert.AreEqual("gamePlayerStats.player.id==5;leaderboard.technicalName==\"tmm_2v2\";gamePlayerStats.scoreTime=ge=2026-01-02T03:04:05Z", FilterOf(request));
-        StringAssert.Contains(request, "page[size]=1000&page[number]=2");
+        StringAssert.Contains(request, "page[size]=100&page[number]=2");
         StringAssert.Contains(request, "sort=-gamePlayerStats.scoreTime");
         Assert.AreEqual("player.id==5", FilterOf(PlayerRequests.Ratings(5)));
         Assert.IsFalse(FilterOf(PlayerRequests.RatingJournal(5, "x", null, 1)).Contains("scoreTime"));
@@ -326,8 +326,14 @@ public class PlayerRequestsTest
     }
 
     [TestMethod]
-    public void HeadToHeadHasTwoPlayerPredicates()
-        => Assert.AreEqual("playerStats.player.id==1;playerStats.player.id==2;startTime=ge=2026-01-02T03:04:05Z", FilterOf(PlayerRequests.HeadToHead(1, 2, Since)));
+    public void HeadToHeadGoesThroughTheStatisticsOfTheFirstPlayer()
+    {
+        string request = PlayerRequests.HeadToHead(1, 2, Since, 3);
+
+        Assert.AreEqual("player.id==1;game.playerStats.player.id==2;scoreTime=ge=2026-01-02T03:04:05Z", FilterOf(request));
+        StringAssert.StartsWith(request, "/data/gamePlayerStats?include=game,game.playerStats.player,game.mapVersion.map,game.featuredMod&sort=-scoreTime");
+        StringAssert.Contains(request, "page[size]=100&page[number]=3&page[totals]");
+    }
 
     [TestMethod]
     public void QuoteIsTheClientsQuote()

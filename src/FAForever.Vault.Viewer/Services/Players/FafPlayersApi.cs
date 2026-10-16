@@ -8,8 +8,7 @@ namespace FAForever.Vault.Viewer.Services.Players;
 /// <see cref="IPlayersApi"/> over api.faforever.com, with the signed-in player's token. The requests
 /// are in <see cref="PlayerRequests"/>, the reading in <see cref="PlayerMappers"/>. Slow-changing lists
 /// (leaderboards, achievements, leagues, seasons) and the rating distributions are kept for the life
-/// of the app. Nothing here has been run against the live API: see the unverified list in
-/// <c>docs/vault/players-plan.md</c>.
+/// of the app. The requests were checked against the live API on 2026-10-16 (<c>docs/vault/players-plan.md</c>).
 /// </summary>
 public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfiguration configuration) : IPlayersApi
 {
@@ -83,9 +82,7 @@ public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfigurat
             page => PlayerRequests.EventCounts(playerId, page),
             document => [PlayerMappers.MapEventCounts(document)],
             null,
-            cancellationToken,
-            pageSize: 100,
-            rows: document => document.Data.Count);
+            cancellationToken);
         return new PlayerEventCounts(pages.SelectMany(page => page.Counts).ToDictionary(count => count.Key, count => count.Value));
     }
 
@@ -164,7 +161,14 @@ public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfigurat
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<HeadToHeadGame>> GetHeadToHeadAsync(int playerA, int playerB, DateTimeOffset? since, CancellationToken cancellationToken)
-        => PlayerMappers.MapHeadToHead(await GetAsync(PlayerRequests.HeadToHead(playerA, playerB, since), cancellationToken), playerA, playerB);
+    {
+        IReadOnlyList<HeadToHeadGame> games = await LoopAsync(
+            page => PlayerRequests.HeadToHead(playerA, playerB, since, page),
+            document => PlayerMappers.MapHeadToHead(document, playerA, playerB),
+            null,
+            cancellationToken);
+        return [.. games.OrderByDescending(game => game.StartTime ?? DateTimeOffset.MinValue)];
+    }
 
     private async Task<IReadOnlyList<RatingBin>> ReadDistributionAsync(RankingQuery query, CancellationToken cancellationToken)
     {
@@ -174,14 +178,16 @@ public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfigurat
         return [.. documents.Select((document, index) => new RatingBin(index * RatingBinning.Width, (index + 1) * RatingBinning.Width, PlayerMappers.MapCount(document)))];
     }
 
-    /// <summary>Reads pages of 1,000 until one comes back short, reporting the number of rows so far.</summary>
+    /// <summary>
+    /// Reads pages of <see cref="PlayerRequests.LoopPageSize"/> rows until the totals of the answer
+    /// (<c>meta.page.totalPages</c>, asked with <c>page[totals]</c>) say the last page is read, reporting the
+    /// number of rows so far. At most <see cref="PlayerRequests.MaxLoopPages"/> pages.
+    /// </summary>
     private async Task<IReadOnlyList<T>> LoopAsync<T>(
         Func<int, string> request,
         Func<JsonApiDocument, IReadOnlyList<T>> map,
         IProgress<int>? progress,
-        CancellationToken cancellationToken,
-        int pageSize = PlayerRequests.LoopPageSize,
-        Func<JsonApiDocument, int>? rows = null)
+        CancellationToken cancellationToken)
     {
         List<T> all = [];
         int total = 0;
@@ -189,16 +195,22 @@ public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfigurat
         {
             JsonApiDocument document = await GetAsync(request(page), cancellationToken);
             all.AddRange(map(document));
-            int read = rows?.Invoke(document) ?? document.Data.Count;
-            total += read;
+            total += document.Data.Count;
             progress?.Report(total);
-            if (read < pageSize)
+            if (!HasMorePages(document, page))
             {
                 break;
             }
         }
         return all;
     }
+
+    /// <summary>
+    /// Whether a page after <paramref name="page"/> exists: by <c>totalPages</c> when the answer has
+    /// the totals, else (without them) when this page was full. An empty page is always the last.
+    /// </summary>
+    public static bool HasMorePages(JsonApiDocument document, int page)
+        => document.Data.Count > 0 && (document.TotalPages is { } pages ? page < pages : document.Data.Count >= PlayerRequests.LoopPageSize);
 
     /// <summary>Starts a request whose answer is kept; a failure is forgotten so the next call tries again.</summary>
     private static async Task<IReadOnlyList<T>> Cached<T>(Func<Task<IReadOnlyList<T>>> read, Action forget)
