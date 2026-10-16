@@ -88,7 +88,7 @@
         </a>
 
         <a href="@ExampleUnitLink" class="@CardClass">
-            @* Its numbers in release 3837, as decoration: the unit page shows the current ones. *@
+            @* Its numbers in release 3837, as decoration: its history shows the current ones. *@
             <div class="-mx-4 -mt-4 flex h-64 flex-col items-center justify-center gap-5 border-b border-edge bg-raised sm:-mx-6 sm:-mt-6 sm:h-72" aria-hidden="true">
                 <span class="rounded-lg border border-edge bg-surface p-1.5 transition duration-500 group-hover:scale-110 group-hover:border-primary">
                     <UnitIcon BlueprintId="@ExampleUnitId" Size="96" Title="" />
@@ -107,11 +107,11 @@
             <h3 class="mt-1 text-2xl font-bold text-ink">Loyalist</h3>
             <p class="mt-1 font-mono text-sm text-primary">Cybran · Tech 3 · Siege Assault Bot</p>
             <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
-                Every unit of every FAF release. Look up its cost, health and weapons, put it next to
-                others, and follow how it changed over the years.
+                Every unit of every FAF release. Follow how its cost, health and weapons changed over
+                the years, release by release.
             </p>
             <p class="mt-auto pt-6 text-sm font-semibold text-primary">
-                Open the unit <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                See its history <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
             </p>
         </a>
     </div>
@@ -139,7 +139,7 @@
 
     private const string ExampleUnitId = "url0303";
 
-    private static readonly string ExampleUnitLink = $"{UnitLinks.Database}?{UnitLinks.UnitParameter}={ExampleUnitId}";
+    private static readonly string ExampleUnitLink = UnitLinks.History([ExampleUnitId]);
 
     private static readonly (string Label, string Value)[] ExampleUnitStats =
         [("Health", "3000"), ("Mass", "480"), ("Energy", "5250")];
