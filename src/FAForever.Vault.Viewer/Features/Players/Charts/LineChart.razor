@@ -145,7 +145,7 @@
                 }
                 else
                 {
-                    <p class="text-ink-muted">@point.Time.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</p>
+                    <p class="text-ink-muted">@TimeText(point.Time)</p>
                     <p class="mt-0.5 text-base font-semibold text-ink">@Format(point.Value)</p>
                     @if (NearestOther(point.Time) is { } other)
                     {
@@ -153,13 +153,13 @@
                     }
                 }
             </div>
-            <span class="sr-only" aria-live="polite">@point.Time.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture), @Format(point.Value)</span>
+            <span class="sr-only" aria-live="polite">@TimeText(point.Time), @Format(point.Value)</span>
         }
     </div>
 </div>
 
 @code {
-    private const int Ml = 44;
+    private int Ml => LeftMargin;
     private const int Mr = 16;
     private const int Mt = 16;
     private const int AxisHeight = 26;
@@ -218,6 +218,16 @@
     [Parameter] public ChartColor PanelColor { get; set; } = ChartColor.Viz7;
 
     [Parameter] public string AriaLabel { get; set; } = "Line chart";
+
+    /// <summary>
+    /// For a series whose x is a count (the game number) rather than a date: the time is that many
+    /// seconds after the Unix epoch, the axis ticks fall on round counts, and this turns a time into
+    /// its label (tooltip, ticks, screen reader text). Null draws a date axis.
+    /// </summary>
+    [Parameter] public Func<DateTimeOffset, string>? XFormat { get; set; }
+
+    /// <summary>The room left of the plot for the y labels, in pixels (wider for labels that are names).</summary>
+    [Parameter] public int LeftMargin { get; set; } = 44;
 
     private ElementReference host;
     private DotNetObjectReference<LineChart>? self;
@@ -285,6 +295,8 @@
         Recompute();
         StateHasChanged();
     }
+
+    private string TimeText(DateTimeOffset time) => XFormat?.Invoke(time) ?? time.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 
     private string Format(double value) => ValueFormat?.Invoke(value) ?? Math.Round(value).ToString("N0", CultureInfo.InvariantCulture);
 
@@ -408,6 +420,26 @@
     private List<(double X, string Label)> TimeTicks()
     {
         var ticks = new List<(double, string)>();
+        if (XFormat is not null)
+        {
+            double xSpan = (t1 - t0).TotalSeconds;
+            double xFirst = t0.ToUnixTimeSeconds();
+            if (xSpan <= 0)
+            {
+                ticks.Add((X(t0), XFormat(t0)));
+                return ticks;
+            }
+
+            double xStep = Steps.FirstOrDefault(n => plotW * n / xSpan >= 48, Steps[^1]);
+            for (double v = Math.Ceiling(xFirst / xStep) * xStep; v <= xFirst + xSpan + 0.001; v += xStep)
+            {
+                DateTimeOffset at = DateTimeOffset.FromUnixTimeSeconds((long)v);
+                ticks.Add((X(at), XFormat(at)));
+            }
+
+            return ticks;
+        }
+
         DateTimeOffset a = t0.ToLocalTime(), b = t1.ToLocalTime();
         double spanDays = (b - a).TotalDays;
         if (spanDays <= 0)

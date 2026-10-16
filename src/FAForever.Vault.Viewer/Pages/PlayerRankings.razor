@@ -1,7 +1,14 @@
 @page "/players/rankings"
-@inherits UrlStateComponent
+@inherits PlayerUrlComponent
+@using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Rankings
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inject IPlayersApi Api
+@inject AuthService Auth
 
-@* The leaderboards: a board at a time, its table in pages of 50, the rating histogram. A shell. *@
+@* The leaderboards: a board at a time, its table in pages of 50 with the signed in player's row
+   pinned, the player's position and the histogram of every rating on the board. *@
 
 <PageTitle>Rankings · Vault of FAForever</PageTitle>
 
@@ -23,31 +30,398 @@
         <PlayersLoginGate What="the rankings" />
     </NotAuthorized>
     <Authorized>
-        <div class="card mt-6 grid grid-cols-1 gap-4">
-            <ChoiceChips Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="ladder_1v1" />
-            <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-end">
-                <ChoiceSelect Label="Played in" Query="active" Options="PlayerFilters.Activity" Default="90d" />
-                <TextFilter Label="Find in the ranking" Query="q" Placeholder="Part of a name" />
-                <label class="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-muted">
-                    <input type="checkbox" class="h-4 w-4 accent-primary" checked="@settledOnly" @onchange="ToggleSettled" />
-                    Settled ratings only (σ below 100)
-                </label>
+        @if (notAuthenticated)
+        {
+            <PlayersLoginGate What="the rankings" />
+        }
+        else
+        {
+            <div class="card mt-6 grid grid-cols-1 gap-4">
+                <ChoiceChips Label="Leaderboard" Query="board" Options="BoardOptions" Default="@PlayerFilters.DefaultBoard" />
+                <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-end">
+                    <ChoiceSelect Label="Played in" Query="active" Options="PlayerFilters.Activity" Default="@RankingView.DefaultActivity" />
+                    <TextFilter Label="Find in the ranking" Query="q" Placeholder="Part of a name" />
+                    <label class="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-muted">
+                        <input type="checkbox" class="h-4 w-4 accent-primary" checked="@settledOnly" @onchange="ToggleSettled" />
+                        Settled ratings only (σ below 100)
+                    </label>
+                </div>
             </div>
-        </div>
-        <NextStepNote Text="The ranking table and the rating histogram arrive in the next step." />
+
+            @if (error is not null)
+            {
+                <div class="card mt-6 border-l-4 border-l-bad" role="alert">
+                    <p class="font-semibold">The ranking could not be loaded</p>
+                    <p class="mt-1 text-sm text-ink-muted">@error</p>
+                </div>
+            }
+            else if (result is null)
+            {
+                <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                    <div class="card h-96 animate-pulse" aria-busy="true"></div>
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="card h-40 animate-pulse"></div>
+                        <div class="card h-56 animate-pulse"></div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mt-6 grid grid-cols-1 gap-6 transition-opacity lg:grid-cols-[minmax(0,1fr)_20rem] @(isLoading ? "opacity-50" : "")" aria-busy="@(isLoading ? "true" : "false")">
+                    <section class="card min-w-0 p-0" aria-label="Rankings">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[34rem] text-left text-sm">
+                                <thead class="bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Rank</th>
+                                        <th scope="col" class="px-4 py-3 font-semibold">Player</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Rating</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold" title="The rating's uncertainty">σ</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Games</th>
+                                        <th scope="col" class="px-4 py-3 font-semibold">Won</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (RankingRow row in result.Items)
+                                    {
+                                        bool isMe = row.PlayerId == userId;
+                                        <tr class="border-t border-edge/60 @(isMe ? "bg-primary/10" : "hover:bg-raised/50")">
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@Number(row.Rank)</td>
+                                            <td class="px-4 py-2">
+                                                <a href="@PlayerLinks.Profile(row.PlayerId)" class="font-medium transition hover:text-primary">@row.Login</a>
+                                                @if (row.ClanTag is { Length: > 0 })
+                                                {
+                                                    <span class="ml-1 text-xs text-ink-faint">[@row.ClanTag]</span>
+                                                }
+                                            </td>
+                                            <td class="px-4 py-2 text-right font-semibold tabular-nums">@Number(row.Rating)</td>
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@Number((int)Math.Round(row.Deviation))</td>
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@Number(row.TotalGames)</td>
+                                            <td class="px-4 py-2"><WonBar Share="row.WinShare" /></td>
+                                        </tr>
+                                    }
+                                    @if (result.Items.Count == 0)
+                                    {
+                                        <tr class="border-t border-edge/60"><td colspan="6" class="px-4 py-6 text-center text-ink-muted">No player matches these filters.</td></tr>
+                                    }
+                                    @if (aside is { Rating: not null } me && result.Items.All(row => row.PlayerId != userId))
+                                    {
+                                        <tr class="border-t-2 border-edge bg-primary/10">
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@(me.Rank is { } rank ? Number(rank) : "")</td>
+                                            <td class="px-4 py-2">
+                                                <a href="@PlayerLinks.Profile(userId)" class="font-medium transition hover:text-primary">@(me.Login ?? "You")</a>
+                                                @if (me.ClanTag is { Length: > 0 })
+                                                {
+                                                    <span class="ml-1 text-xs text-ink-faint">[@me.ClanTag]</span>
+                                                }
+                                                <span class="ml-1 text-xs text-ink-muted">(you)</span>
+                                            </td>
+                                            <td class="px-4 py-2 text-right font-semibold tabular-nums">@Number(me.Rating!.Value)</td>
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@Number((int)Math.Round(me.Deviation ?? 0))</td>
+                                            <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@Number(me.Games)</td>
+                                            <td class="px-4 py-2"><WonBar Share="me.WinShare" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-edge px-4 py-3 text-sm text-ink-muted">
+                            <span>@RangeText</span>
+                            <div class="flex flex-wrap gap-2">
+                                @if (aside?.Rank is not null)
+                                {
+                                    <button type="button" class="btn-secondary min-h-11 px-3" @onclick="JumpToMyRank">Jump to my rank</button>
+                                }
+                                <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(query.Page <= 1)" @onclick="() => GoTo(query.Page - 1)">Previous</button>
+                                <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(!HasNext)" @onclick="() => GoTo(query.Page + 1)">Next</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="grid min-w-0 grid-cols-1 content-start gap-6">
+                        <section class="card" aria-label="Your position">
+                            <h2 class="text-base font-semibold text-ink">Your position</h2>
+                            @if (aside is { Rating: not null, Rank: not null } mine)
+                            {
+                                <p class="mt-3 flex flex-wrap items-baseline gap-x-2">
+                                    <span class="text-3xl font-bold">@Number(mine.Rank!.Value)</span>
+                                    <span class="text-sm text-ink-muted">of @Number(mine.Total)@TopText(mine)</span>
+                                </p>
+                                <dl class="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+                                    <dt class="text-ink-muted">Rating</dt>
+                                    <dd class="text-right font-semibold">@Number(mine.Rating!.Value)</dd>
+                                    <dt class="text-ink-muted">To the top 100</dt>
+                                    <dd class="text-right font-semibold">@ToTop(mine)</dd>
+                                </dl>
+                                <a href="@PlayerLinks.Profile(userId)" class="mt-4 inline-block text-sm text-primary hover:underline">Your profile</a>
+                            }
+                            else
+                            {
+                                <p class="mt-2 text-sm text-ink-muted">You have no rating on this board yet, so there is no position to show.</p>
+                            }
+                        </section>
+
+                        <section class="card" aria-label="Rating distribution">
+                            <h2 class="text-base font-semibold text-ink">Where you sit</h2>
+                            <p class="mt-1 text-sm text-ink-muted">Players per 100 rating points.</p>
+                            @if (aside is { Bins.Count: > 0 } shown)
+                            {
+                                <div class="mt-4">
+                                    <ColumnChart Items="@RankingView.Columns(shown.Bins, shown.Rating)" Height="140" AriaLabel="@DistributionLabel(shown)" />
+                                </div>
+                                <div class="mt-1.5 flex justify-between text-xs tabular-nums text-ink-faint" aria-hidden="true">
+                                    @foreach (int mark in AxisMarks)
+                                    {
+                                        <span>@Number(mark)</span>
+                                    }
+                                </div>
+                                @if (shown.Rating is not null)
+                                {
+                                    <div class="mt-3">
+                                        <Legend Items="DistributionLegend" />
+                                    </div>
+                                }
+                                <dl class="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+                                    <dt class="text-ink-muted">Median rating</dt>
+                                    <dd class="text-right font-semibold">@(RankingView.Median(shown.Bins) is { } median ? Number(median) : "none")</dd>
+                                    <dt class="text-ink-muted">Above 1,500</dt>
+                                    <dd class="text-right font-semibold">@Number(RankingView.CountAtLeast(shown.Bins, 1500)) players</dd>
+                                    <dt class="text-ink-muted">Above 2,000</dt>
+                                    <dd class="text-right font-semibold">@Number(RankingView.CountAtLeast(shown.Bins, 2000)) players</dd>
+                                </dl>
+                            }
+                            else
+                            {
+                                <p class="mt-2 text-sm text-ink-muted">No ratings to count on this board.</p>
+                            }
+                        </section>
+                    </aside>
+                </div>
+            }
+        }
     </Authorized>
 </AuthorizeView>
 
 @code {
+    private sealed record Aside(
+        int? Rating,
+        double? Deviation,
+        int Games,
+        double? WinShare,
+        int? Rank,
+        int Total,
+        int? RatingForTop,
+        IReadOnlyList<RatingBin> Bins,
+        string? Login,
+        string? ClanTag);
+
+    private static readonly int[] AxisMarks = [0, 600, 1200, 1800, 2400];
+
+    private static readonly IReadOnlyList<LegendItem> DistributionLegend =
+    [
+        new LegendItem("Your bin", ChartColor.Primary),
+        new LegendItem("Other players", ChartColor.Faint),
+    ];
+
+    private RankingQuery query = new();
+    private bool queryRead;
     private bool settledOnly = true;
+    private int userId;
+
+    private PlayerPage<RankingRow>? result;
+    private Aside? aside;
+    private RankingQuery? asideQuery;
+    private IReadOnlyList<Leaderboard>? boards;
+    private bool isLoading;
+    private bool notAuthenticated;
+    private string? error;
+    private CancellationTokenSource? loadCancellation;
 
     private string ShareTitle => "Rankings on Vault of FAForever";
 
-    protected override void OnParametersSet() => settledOnly = UrlQuery.Get(Navigation, "settled") != "0";
+    private IReadOnlyList<ChoiceOption> BoardOptions => boards is { Count: > 0 }
+        ? [.. boards.OrderBy(board => KnownOrder(board.TechnicalName)).Select(board => new ChoiceOption(board.TechnicalName, board.DisplayName))]
+        : PlayerFilters.Boards;
 
-    private void ToggleSettled()
+    private bool HasNext => result is not null && (result.TotalPages is { } pages ? query.Page < pages : result.Items.Count >= RankingView.PageSize);
+
+    private string RangeText
     {
-        var parameters = new Dictionary<string, object?> { ["settled"] = settledOnly ? "0" : null, ["page"] = null };
-        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), replace: true);
+        get
+        {
+            if (result is null || result.Items.Count == 0)
+            {
+                return "No ranks to show";
+            }
+
+            string range = $"Ranks {Number(result.Items[0].Rank)} to {Number(result.Items[^1].Rank)}";
+            return result.TotalRecords is { } total ? $"{range} of {Number(total)}" : range;
+        }
+    }
+
+    private static int KnownOrder(string technicalName)
+    {
+        for (int i = 0; i < PlayerFilters.Boards.Count; i++)
+        {
+            if (PlayerFilters.Boards[i].Token == technicalName)
+            {
+                return i;
+            }
+        }
+
+        return PlayerFilters.Boards.Count;
+    }
+
+    private static string Number(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
+
+    protected override void OnParametersSet()
+    {
+        // LocationChanged also fires when navigating away; only react to our own address.
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/').Equals(PlayerLinks.Rankings, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        RankingQuery next = RankingView.ToQuery(Read("board"), Read("settled"), Read("active"), Read("q"), Read("page"), DateTimeOffset.UtcNow);
+        settledOnly = next.SettledOnly;
+        if (!Auth.IsAuthenticated)
+        {
+            return;
+        }
+
+        userId = int.TryParse(Auth.Session?.UserId, NumberStyles.None, CultureInfo.InvariantCulture, out int id) ? id : 0;
+        if (queryRead && next.Equals(query))
+        {
+            return;
+        }
+
+        query = next;
+        queryRead = true;
+        _ = LoadAsync(next);
+    }
+
+    private void ToggleSettled() => Write("settled", settledOnly ? "0" : null);
+
+    private void GoTo(int page) => Write("page", page > 1 ? page.ToString(CultureInfo.InvariantCulture) : null, resetPage: false);
+
+    private void JumpToMyRank()
+    {
+        if (aside?.Rank is not { } rank)
+        {
+            return;
+        }
+
+        int page = RankingView.PageOfRank(rank);
+        Write(new Dictionary<string, string?> { ["page"] = page > 1 ? page.ToString(CultureInfo.InvariantCulture) : null, ["q"] = null }, resetPage: false);
+    }
+
+    private string TopText(Aside mine)
+        => RankStatistics.TopShare(mine.Rank!.Value, mine.Total) is { } share
+            ? $", top {(share * 100).ToString(share < 0.1 ? "0.#" : "0", CultureInfo.InvariantCulture)} percent"
+            : "";
+
+    private static string ToTop(Aside mine)
+    {
+        if (mine.Rating is not { } rating || mine.RatingForTop is not { } needed)
+        {
+            return "not known";
+        }
+
+        return RankingView.PointsToReach(needed, rating) is { } points ? $"+{Number(points)} to {Number(needed)}" : "you are there";
+    }
+
+    private string DistributionLabel(Aside shown)
+        => $"Histogram of the ratings on {BoardName} in bins of 100 points{(shown.Rating is { } rating ? $", your rating of {Number(rating)} marked" : "")}";
+
+    private string BoardName => Leaderboards.DisplayName(query.Board);
+
+    private async Task LoadAsync(RankingQuery next)
+    {
+        loadCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        CancellationToken token = cancellation.Token;
+
+        isLoading = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            boards ??= await LoadBoardsAsync(token);
+
+            // The histogram and the player's position do not depend on the name or the page.
+            RankingQuery shared = next with { Name = null, Page = 1 };
+            Task<PlayerPage<RankingRow>> table = Api.GetRankingAsync(next, token);
+            Task<Aside?> side = asideQuery == shared && aside is not null ? Task.FromResult<Aside?>(aside) : LoadAsideAsync(shared, token);
+            await Task.WhenAll(table, side);
+            result = table.Result;
+            aside = side.Result;
+            asideQuery = shared;
+            notAuthenticated = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer query or a navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            notAuthenticated = true;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(loadCancellation, cancellation))
+            {
+                loadCancellation = null;
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task<IReadOnlyList<Leaderboard>?> LoadBoardsAsync(CancellationToken token)
+    {
+        try
+        {
+            return await Api.GetLeaderboardsAsync(token);
+        }
+        catch (HttpRequestException)
+        {
+            return null; // the well known boards stand in
+        }
+    }
+
+    private async Task<Aside?> LoadAsideAsync(RankingQuery shared, CancellationToken token)
+    {
+        Task<IReadOnlyList<RatingBin>> bins = Api.GetRatingDistributionAsync(shared, token);
+        Task<PlayerPage<RankingRow>> secondPage = Api.GetRankingAsync(shared with { Page = 2 }, token);
+        Task<IReadOnlyList<PlayerRating>> ratings = userId > 0 ? Api.GetRatingsAsync(userId, token) : Task.FromResult<IReadOnlyList<PlayerRating>>([]);
+        Task<PlayerProfile?> profile = userId > 0 ? Api.GetProfileAsync(userId, token) : Task.FromResult<PlayerProfile?>(null);
+        await Task.WhenAll(bins, secondPage, ratings, profile);
+
+        PlayerRating? mine = ratings.Result.FirstOrDefault(rating => rating.Board.TechnicalName == shared.Board);
+        int? rank = mine is null ? null : await Api.GetRankOfRatingAsync(shared, mine.Rating, token);
+        int total = secondPage.Result.TotalRecords ?? bins.Result.Sum(bin => bin.Count);
+        int? topRating = secondPage.Result.Items.FirstOrDefault(row => row.Rank == 100)?.Rating;
+        return new Aside(
+            mine?.Rating,
+            mine?.Deviation,
+            mine?.TotalGames ?? 0,
+            mine?.WinShare,
+            rank,
+            total,
+            topRating,
+            bins.Result,
+            profile.Result?.Login,
+            profile.Result?.Clan?.Tag);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        loadCancellation?.Cancel();
     }
 }
