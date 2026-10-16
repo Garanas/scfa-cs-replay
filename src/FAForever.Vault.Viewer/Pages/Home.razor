@@ -2,59 +2,149 @@
 @implements IDisposable
 @inject NavigationManager Navigation
 @inject LocalReplayLoader Opener
+@using FAForever.Vault.Viewer.Features.Units
 @inject IJSRuntime JS
 
 <PageTitle>Vault of FAForever</PageTitle>
 
-<section class="py-14 text-center sm:py-20">
-    <h1 class="mx-auto max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl">
-        Explore <span class="text-primary">FAForever</span> replays
+@* The front door: open a replay first, then a map and a unit to look at, then what the site is.
+   Same writing style as the About pages: simple English, short sentences, no hyphens, underscores
+   or dashes in the visible text. The map and the unit are fixed examples, nothing is fetched for
+   them but the map's preview and the unit's icon. *@
+
+<section class="py-10 text-center sm:py-14">
+    <h1 class="mx-auto max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Explore the content of <span class="text-primary">FAForever</span>
     </h1>
-    <p class="mx-auto mt-4 max-w-xl text-lg text-ink-muted">
-        Search the vault, replay the build orders and analyse every command, straight from your browser.
+    <p class="mx-auto mt-4 max-w-2xl text-lg text-ink-muted">
+        Replay a game, study a map or look up any unit, straight from your browser.
     </p>
 </section>
 
-<section class="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
-    <div class="card">
-        <h2 class="text-lg font-bold">From the vault</h2>
-        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g.
-            <button type="button" class="cursor-pointer font-mono text-primary hover:underline disabled:cursor-default disabled:text-ink disabled:no-underline"
-                    title="Open this replay" @onclick="OpenExampleReplay" disabled="@IsLoading">@ExampleReplayId</button>.</p>
-        <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
-            <input @ref="vaultReplayInput" class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
-                   @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
-            <button type="submit" class="btn-primary" disabled="@(!CanOpenVaultReplay)">Open</button>
-        </form>
+<section class="mx-auto max-w-4xl" aria-labelledby="home-replays">
+    <h2 id="home-replays" class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Open a replay</h2>
+    <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div class="card">
+            <h3 class="text-lg font-bold">From the vault</h3>
+            <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g.
+                <button type="button" class="cursor-pointer font-mono text-primary hover:underline disabled:cursor-default disabled:text-ink disabled:no-underline"
+                        title="Open this replay" @onclick="OpenExampleReplay" disabled="@IsLoading">@ExampleReplayId</button>.</p>
+            <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
+                <input @ref="vaultReplayInput" class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
+                       @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
+                <button type="submit" class="btn-primary" disabled="@(!CanOpenVaultReplay)">Open</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3 class="text-lg font-bold">From a file</h3>
+            <p class="mt-1 text-sm text-ink-muted">A <span class="font-mono text-ink">.fafreplay</span> or <span class="font-mono text-ink">.scfareplay</span> file.</p>
+            <div class="relative mt-4 flex min-h-20 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-edge px-4 text-sm text-ink-muted transition hover:border-primary hover:text-ink">
+                <InputFile OnChange="OnFileSelected" accept=".fafreplay,.scfareplay" disabled="@IsLoading"
+                           class="absolute inset-0 cursor-pointer opacity-0" title="" />
+                <span>Choose a replay file, or drop one here</span>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2 class="text-lg font-bold">From a file</h2>
-        <p class="mt-1 text-sm text-ink-muted">A <span class="font-mono text-ink">.fafreplay</span> or <span class="font-mono text-ink">.scfareplay</span> file.</p>
-        <div class="relative mt-4 flex min-h-20 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-edge px-4 text-sm text-ink-muted transition hover:border-primary hover:text-ink">
-            <InputFile OnChange="OnFileSelected" accept=".fafreplay,.scfareplay" disabled="@IsLoading"
-                       class="absolute inset-0 cursor-pointer opacity-0" title="" />
-            <span>Choose a replay file, or drop one here</span>
-        </div>
+    <div class="mt-6 empty:hidden" aria-live="polite">
+        @if (IsLoading)
+        {
+            <LoadProgress Progress="progress" OnCancel="CancelLoad" />
+        }
+        @if (error is not null)
+        {
+            <div class="card border-primary/50" role="alert">
+                <p class="font-semibold">Could not load the replay</p>
+                <p class="mt-1 text-sm text-ink-muted">@error</p>
+            </div>
+        }
     </div>
 </section>
 
-<section class="mx-auto mt-6 max-w-3xl" aria-live="polite">
-    @if (IsLoading)
-    {
-        <LoadProgress Progress="progress" OnCancel="CancelLoad" />
-    }
-    @if (error is not null)
-    {
-        <div class="card border-primary/50" role="alert">
-            <p class="font-semibold">Could not load the replay</p>
-            <p class="mt-1 text-sm text-ink-muted">@error</p>
-        </div>
-    }
+<section class="mx-auto mt-14 max-w-4xl" aria-labelledby="home-explore">
+    <h2 id="home-explore" class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Look around</h2>
+    <div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <a href="@MapLinks.Map(ExampleMapFolder)" class="@CardClass">
+            @* The preview fills the panel twice: blurred behind, whole in front. The vault's previews
+               have a thin black frame, which the slight zoom of the front one cuts off. *@
+            <div class="relative -mx-4 -mt-4 flex h-64 items-center justify-center overflow-hidden border-b border-edge bg-raised sm:-mx-6 sm:-mt-6 sm:h-72" aria-hidden="true">
+                <img src="@MapPreviews.Url(ExampleMapFolder)" alt="" loading="lazy"
+                     class="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-2xl" />
+                <span class="relative aspect-square h-[85%] overflow-hidden rounded-lg shadow-xl ring-1 ring-black/20 transition duration-500 group-hover:scale-105">
+                    <img src="@MapPreviews.Url(ExampleMapFolder)" alt="" loading="lazy" class="h-full w-full scale-[1.04] object-cover" />
+                </span>
+            </div>
+            <p class="mt-6 font-display text-sm font-bold tracking-[0.2em] text-primary">MAPS</p>
+            <h3 class="mt-1 text-2xl font-bold text-ink">Gateway and Rose</h3>
+            <p class="mt-1 font-mono text-sm text-primary">@MapSizes.Kilometres(1024) · 8 players · by biass</p>
+            <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+                Every map in the vault has a page of its own. See its terrain, where the mass is, how units can
+                move across it and how much there is to reclaim.
+            </p>
+            <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+                Open the map <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+            </p>
+        </a>
+
+        <a href="@ExampleUnitLink" class="@CardClass">
+            @* Its numbers in release 3837, as decoration: the unit page shows the current ones. *@
+            <div class="-mx-4 -mt-4 flex h-64 flex-col items-center justify-center gap-5 border-b border-edge bg-raised sm:-mx-6 sm:-mt-6 sm:h-72" aria-hidden="true">
+                <span class="rounded-lg border border-edge bg-surface p-1.5 transition duration-500 group-hover:scale-110 group-hover:border-primary">
+                    <UnitIcon BlueprintId="@ExampleUnitId" Size="96" Title="" />
+                </span>
+                <span class="flex gap-2 font-mono text-sm">
+                    @foreach ((string label, string value) in ExampleUnitStats)
+                    {
+                        <span class="flex flex-col items-center rounded-md border border-edge bg-surface px-3 py-1.5">
+                            <span class="text-xs text-ink-muted">@label</span>
+                            <span class="font-semibold text-primary">@value</span>
+                        </span>
+                    }
+                </span>
+            </div>
+            <p class="mt-6 font-display text-sm font-bold tracking-[0.2em] text-primary">UNITS</p>
+            <h3 class="mt-1 text-2xl font-bold text-ink">Loyalist</h3>
+            <p class="mt-1 font-mono text-sm text-primary">Cybran · Tech 3 · Siege Assault Bot</p>
+            <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+                Every unit of every FAF release. Look up its cost, health and weapons, put it next to
+                others, and follow how it changed over the years.
+            </p>
+            <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+                Open the unit <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+            </p>
+        </a>
+    </div>
+</section>
+
+<section class="mx-auto mt-14 max-w-4xl" aria-labelledby="home-about">
+    <h2 id="home-about" class="text-xs font-semibold uppercase tracking-wide text-ink-faint">About</h2>
+    <a href="about" class="@CardClass mt-4">
+        <h3 class="text-2xl font-bold text-ink">How Vault of FAForever reads your games</h3>
+        <p class="mt-1 font-mono text-sm text-primary">.fafreplay · .scfareplay · .bp</p>
+        <p class="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-muted">
+            Everything happens in your own browser. Read what is inside a replay and a blueprint, explained
+            for players, and find the places where the FAF community meets.
+        </p>
+        <p class="mt-6 text-sm font-semibold text-primary">
+            Read about it <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
 </section>
 
 @code {
     private const int ExampleReplayId = 25692731;
+
+    private const string ExampleMapFolder = "gateway_and_rose.v0002";
+
+    private const string ExampleUnitId = "url0303";
+
+    private static readonly string ExampleUnitLink = $"{UnitLinks.Database}?{UnitLinks.UnitParameter}={ExampleUnitId}";
+
+    private static readonly (string Label, string Value)[] ExampleUnitStats =
+        [("Health", "3000"), ("Mass", "480"), ("Energy", "5250")];
+
+    private const string CardClass = "card group relative flex flex-col overflow-hidden transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]";
 
     private string vaultReplayId = string.Empty;
     private ElementReference vaultReplayInput;

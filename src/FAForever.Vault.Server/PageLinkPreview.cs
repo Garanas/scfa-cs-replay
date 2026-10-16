@@ -33,7 +33,7 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     private static readonly IReadOnlyDictionary<string, LinkPreviewCard> FixedCards = new Dictionary<string, LinkPreviewCard>(StringComparer.OrdinalIgnoreCase)
     {
         ["/"] = new("Vault of FAForever",
-            "Explore FAForever replays: search the vault, replay the build orders and analyse every command, straight from your browser."),
+            "Explore the content of FAForever: replay a game, study a map or look up any unit, straight from your browser."),
         ["/replays"] = new("Watch any game again",
             "Every game on FAF is saved as a replay. Search the vault, browse the replays on your own computer, or open a single file."),
         ["/replays/search"] = new("Search the vault",
