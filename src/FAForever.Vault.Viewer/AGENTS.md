@@ -565,9 +565,9 @@ filter components inherit `PlayerUrlComponent`, which writes with `replace: true
 | `page` | lists | Page number | 1 | wave 32 |
 | `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32) |
 | `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32) |
-| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31) |
-| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31) |
-| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the latest season | wave 32 |
+| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31), the data (wave 32) |
+| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31), the data (wave 32) |
+| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one | the controls and the data (wave 32) |
 | `a`, `b` | compare | Player ids | none | wave 32 |
 
 Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`), `ChoiceSelect`

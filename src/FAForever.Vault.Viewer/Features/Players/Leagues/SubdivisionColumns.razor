@@ -1,0 +1,68 @@
+@using System.Globalization
+@using FAForever.Vault.Viewer.Services.Players
+
+@* Players per subdivision: one group of columns per division (five subdivisions each), lowest division
+   first. The divisions are an ordered scale, so they share one hue and differ in opacity (the lower
+   the paler); the player's subdivision is in the accent colour. A column is a button: pressing it
+   chooses the subdivision whose standings are listed, the chosen one is outlined. Selective labels:
+   only the largest column and the player's own carry a number. The groups wrap at narrow widths. *@
+<div class="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-x-6 gap-y-6" role="group" aria-label="Players per subdivision">
+    @for (int g = 0; g < Groups.Count; g++)
+    {
+        DivisionGroup group = Groups[g];
+        double opacity = Groups.Count <= 1 ? 1 : 0.35 + 0.65 * g / (Groups.Count - 1);
+        <div class="min-w-0">
+            <div class="flex items-end gap-1 border-b border-edge" style="height:@(PlotHeight)px">
+                @foreach (SubdivisionCount item in group.Subdivisions)
+                {
+                    bool mine = item.Subdivision.Id == MineId;
+                    bool selected = item.Subdivision.Id == SelectedId;
+                    <button type="button" class="flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            aria-pressed="@(selected ? "true" : "false")" aria-label="@Label(item, mine)" title="@Label(item, mine)"
+                            @onclick="() => OnSelect.InvokeAsync(item.Subdivision.Id)">
+                        @if (mine || item.Players == largest)
+                        {
+                            <span class="mb-1 whitespace-nowrap text-xs text-ink-muted">@item.Players.ToString("N0", CultureInfo.InvariantCulture)</span>
+                        }
+                        <span class="block w-full rounded-t-[4px] @(mine ? "bg-primary" : "bg-viz-1") @(selected ? "outline outline-2 outline-offset-1 outline-ink" : "")"
+                              style="height:@Height(item.Players)px;@(mine ? "" : $"opacity:{opacity.ToString("0.##", CultureInfo.InvariantCulture)}")"></span>
+                    </button>
+                }
+            </div>
+            <div class="mt-1.5 flex gap-1 text-xs text-ink-muted" aria-hidden="true">
+                @foreach (SubdivisionCount item in group.Subdivisions)
+                {
+                    <span class="min-w-0 flex-1 truncate text-center">@item.Subdivision.Name</span>
+                }
+            </div>
+            <p class="mt-2 text-sm font-semibold">@group.Division.Name</p>
+            <p class="text-xs text-ink-muted">@group.Total.ToString("N0", CultureInfo.InvariantCulture) players</p>
+        </div>
+    }
+</div>
+
+@code {
+    private const int PlotHeight = 150;
+    private const int TopRoom = 20;
+
+    [Parameter, EditorRequired] public required IReadOnlyList<DivisionGroup> Groups { get; set; }
+
+    /// <summary>The subdivision whose standings are shown.</summary>
+    [Parameter] public int? SelectedId { get; set; }
+
+    /// <summary>The signed in player's subdivision.</summary>
+    [Parameter] public int? MineId { get; set; }
+
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+
+    private int largest;
+
+    protected override void OnParametersSet()
+        => largest = Groups.SelectMany(group => group.Subdivisions).Select(item => item.Players).DefaultIfEmpty(0).Max();
+
+    private string Height(int players)
+        => (largest <= 0 ? 0 : Math.Max(players > 0 ? 3 : 0, (double)players / largest * (PlotHeight - TopRoom))).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private static string Label(SubdivisionCount item, bool mine)
+        => $"{item.Players.ToString("N0", CultureInfo.InvariantCulture)} players in {item.Subdivision.FullName}{(mine ? ", your subdivision" : "")}";
+}

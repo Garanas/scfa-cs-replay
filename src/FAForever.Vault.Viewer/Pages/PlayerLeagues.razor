@@ -1,8 +1,15 @@
 @page "/players/leagues"
-@inherits UrlStateComponent
+@inherits PlayerUrlComponent
+@using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Leagues
+@using FAForever.Vault.Viewer.Features.Players.Rankings
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inject IPlayersApi Api
+@inject AuthService Auth
 
-@* The leagues: a league and a season, the players per subdivision, the standings of one subdivision.
-   A shell: the league, season and subdivision lists come from the API. *@
+@* The leagues: a league and a season, the signed in player's entry, the players per subdivision, the
+   player's season game by game and the standings of one subdivision. *@
 
 <PageTitle>Leagues · Vault of FAForever</PageTitle>
 
@@ -24,20 +31,413 @@
         <PlayersLoginGate What="the leagues" />
     </NotAuthorized>
     <Authorized>
-        <div class="card mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="block min-w-0 text-sm">
-                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">League</span>
-                <select class="input-field min-h-11" disabled>
-                    <option>Ladder 1v1</option>
-                </select>
-            </label>
-            <label class="block min-w-0 text-sm">
-                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Season</span>
-                <select class="input-field min-h-11" disabled>
-                    <option>Latest season</option>
-                </select>
-            </label>
-        </div>
-        <NextStepNote Text="The leagues, seasons and standings arrive in the next step." />
+        @if (notAuthenticated)
+        {
+            <PlayersLoginGate What="the leagues" />
+        }
+        else if (error is not null)
+        {
+            <div class="card mt-6 border-l-4 border-l-bad" role="alert">
+                <p class="font-semibold">The leagues could not be loaded</p>
+                <p class="mt-1 text-sm text-ink-muted">@error</p>
+            </div>
+        }
+        else if (leagues is null || (data is null && isLoading))
+        {
+            <div class="card mt-6 h-32 animate-pulse" aria-busy="true"></div>
+            <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+                <div class="card h-64 animate-pulse"></div>
+                <div class="card h-64 animate-pulse"></div>
+            </div>
+            <div class="card mt-6 h-72 animate-pulse"></div>
+        }
+        else
+        {
+            <div class="card mt-6 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-end">
+                <ChoiceChips Label="League" Query="league" Options="LeagueOptions" Default="@DefaultLeagueToken" />
+                <ChoiceSelect Label="Season" Query="season" Options="SeasonOptions" Default="@DefaultSeasonToken" />
+            </div>
+
+            @if (data is null)
+            {
+                <p class="mt-6 rounded-md border-l-4 border-edge bg-raised px-4 py-3 text-sm text-ink-muted">This league has no season yet.</p>
+            }
+            else
+            {
+                <div class="transition-opacity @(isLoading ? "opacity-50" : "")" aria-busy="@(isLoading ? "true" : "false")">
+                    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+                        <section class="card min-w-0" aria-label="Your entry">
+                            <h2 class="text-base font-semibold text-ink">Your entry</h2>
+                            @if (data.Entry is { } entry)
+                            {
+                                @if (entry.Subdivision is { } own)
+                                {
+                                    int max = Math.Max(own.HighestScore ?? 0, entry.Score);
+                                    <div class="mt-4 flex items-center gap-3">
+                                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border-2 border-primary bg-primary/15 text-lg font-bold" aria-hidden="true">@own.Name</span>
+                                        <div class="min-w-0">
+                                            <p class="font-semibold">@own.FullName</p>
+                                            <p class="text-sm text-ink-muted">@own.Division.Name division</p>
+                                        </div>
+                                    </div>
+                                    @if (max > 0)
+                                    {
+                                        <div class="mt-4">
+                                            <ScoreMeter Value="entry.Score" Max="max" Label="@($"{entry.Score} of {max}")" />
+                                        </div>
+                                    }
+                                    <dl class="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+                                        <dt class="text-ink-muted">Games this season</dt>
+                                        <dd class="text-right font-semibold">@entry.GameCount.ToString("N0", CultureInfo.InvariantCulture)</dd>
+                                        @if (MyStanding is { } standing)
+                                        {
+                                            <dt class="text-ink-muted">Rank in @own.FullName</dt>
+                                            <dd class="text-right font-semibold">@standing.Rank.ToString("N0", CultureInfo.InvariantCulture) of @CountOf(own).ToString("N0", CultureInfo.InvariantCulture)</dd>
+                                        }
+                                        <dt class="text-ink-muted">Promotions</dt>
+                                        <dd class="text-right font-semibold">@data.Promotions</dd>
+                                        <dt class="text-ink-muted">Demotions</dt>
+                                        <dd class="text-right font-semibold">@data.Demotions</dd>
+                                    </dl>
+                                }
+                                else
+                                {
+                                    int needed = Math.Max(LeagueView.PlacementGames(data.Season, entry.ReturningPlayer), 1);
+                                    <p class="mt-3 text-sm text-ink-muted">You are still in placement. The league puts you in a subdivision after @needed games.</p>
+                                    <div class="mt-4">
+                                        <ScoreMeter Value="Math.Min(entry.GameCount, needed)" Max="needed" Label="@($"{Math.Min(entry.GameCount, needed)} of {needed} games")" />
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="mt-2 text-sm text-ink-muted">You have no place in this season. Play a rated game of the league's board to get one.</p>
+                            }
+                        </section>
+
+                        <section class="card min-w-0" aria-label="Players per subdivision">
+                            <h2 class="text-base font-semibold text-ink">Players per subdivision</h2>
+                            <p class="mt-1 text-sm text-ink-muted">Press a column to list that subdivision below. The outlined column is the one listed.</p>
+                            <div class="mt-4">
+                                <SubdivisionColumns Groups="groups" SelectedId="selected?.Id" MineId="data.Entry?.Subdivision?.Id" OnSelect="SelectSubdivision" />
+                            </div>
+                            <div class="mt-4">
+                                <Legend Items="ColumnLegend" />
+                            </div>
+                        </section>
+                    </div>
+
+                    @if (data.Entry is not null)
+                    {
+                        <section class="card mt-6" aria-label="Your season, game by game">
+                            <h2 class="text-base font-semibold text-ink">Your season, game by game</h2>
+                            @if (data.Journey.Count >= 2)
+                            {
+                                <p class="mt-1 text-sm text-ink-muted">The subdivision you stood in after every game@(PromotionTimes.Count > 0 ? ". Dashed lines mark promotions" : "").</p>
+                                <div class="mt-4">
+                                    <LineChart Points="JourneyLine" Step="true" ShowEndLabel="true" Height="@JourneyHeight" LeftMargin="84"
+                                               YStep="@JourneyStep" ValueFormat="SubdivisionName" XFormat="GameLabel"
+                                               VerticalMarks="PromotionTimes" Name="Subdivision"
+                                               AriaLabel="@($"Subdivision after each game of the season, {data.Promotions} promotions and {data.Demotions} demotions")">
+                                        <Tooltip Context="point">
+                                            @if (point.Data is JourneyPoint step)
+                                            {
+                                                <p class="text-ink-muted">Game @step.Game</p>
+                                                <p class="mt-0.5 text-base font-semibold text-ink">@step.Subdivision.FullName</p>
+                                                <p class="mt-0.5 text-ink-muted">Score @step.Score@(step.Promoted ? ", promoted" : "")</p>
+                                            }
+                                        </Tooltip>
+                                    </LineChart>
+                                </div>
+                                <p class="mt-1 text-center text-xs text-ink-faint">Games played this season</p>
+                            }
+                            else
+                            {
+                                <p class="mt-2 text-sm text-ink-muted">The staircase appears once the league has placed you and you have played another game.</p>
+                            }
+                        </section>
+                    }
+
+                    @if (selected is not null)
+                    {
+                        <section class="card mt-6 min-w-0 p-0" aria-label="@($"{selected.FullName} standings")">
+                            <div class="px-4 pt-4">
+                                <h2 class="text-base font-semibold text-ink">@selected.FullName standings</h2>
+                                <p class="mt-1 text-sm text-ink-muted">Best score first. @CountOf(selected).ToString("N0", CultureInfo.InvariantCulture) players in @selected.FullName.</p>
+                            </div>
+                            <div class="mt-3 overflow-x-auto">
+                                <table class="w-full min-w-[22rem] text-left text-sm">
+                                    <thead class="bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-3 text-right font-semibold">Rank</th>
+                                            <th scope="col" class="px-4 py-3 font-semibold">Player</th>
+                                            <th scope="col" class="px-4 py-3 text-right font-semibold">Score</th>
+                                            <th scope="col" class="px-4 py-3 text-right font-semibold">Games</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (LeagueStanding row in standings?.Items ?? [])
+                                        {
+                                            bool isMe = row.PlayerId == userId;
+                                            <tr class="border-t border-edge/60 @(isMe ? "bg-primary/10" : "hover:bg-raised/50")">
+                                                <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@row.Rank.ToString("N0", CultureInfo.InvariantCulture)</td>
+                                                <td class="px-4 py-2">
+                                                    <a href="@PlayerLinks.Profile(row.PlayerId)" class="font-medium transition hover:text-primary">@row.Login</a>
+                                                    @if (isMe)
+                                                    {
+                                                        <span class="ml-1 text-xs text-ink-muted">(you)</span>
+                                                    }
+                                                </td>
+                                                <td class="px-4 py-2 text-right font-semibold tabular-nums">@row.Score.ToString("N0", CultureInfo.InvariantCulture)</td>
+                                                <td class="px-4 py-2 text-right tabular-nums text-ink-muted">@row.GameCount.ToString("N0", CultureInfo.InvariantCulture)</td>
+                                            </tr>
+                                        }
+                                        @if (standings is null || standings.Items.Count == 0)
+                                        {
+                                            <tr class="border-t border-edge/60"><td colspan="4" class="px-4 py-6 text-center text-ink-muted">Nobody stands in this subdivision yet.</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-edge px-4 py-3 text-sm text-ink-muted">
+                                <span>@StandingsRange</span>
+                                <div class="flex gap-2">
+                                    <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(page <= 1)" @onclick="() => GoTo(page - 1)">Previous</button>
+                                    <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(!HasNext)" @onclick="() => GoTo(page + 1)">Next</button>
+                                </div>
+                            </div>
+                        </section>
+                    }
+                </div>
+            }
+        }
     </Authorized>
 </AuthorizeView>
+
+@code {
+    private sealed record SeasonData(
+        League League,
+        LeagueSeason Season,
+        IReadOnlyList<LeagueSubdivision> Subdivisions,
+        IReadOnlyDictionary<int, int> Counts,
+        LeagueEntry? Entry,
+        IReadOnlyList<JourneyPoint> Journey,
+        int Promotions,
+        int Demotions);
+
+    private static readonly IReadOnlyList<LegendItem> ColumnLegend =
+    [
+        new LegendItem("Lowest division", ChartColor.Viz1, Opacity: 0.35),
+        new LegendItem("Highest division", ChartColor.Viz1),
+        new LegendItem("Your subdivision", ChartColor.Primary),
+    ];
+
+    private IReadOnlyList<League>? leagues;
+    private IReadOnlyList<LeagueSeason>? seasons;
+    private SeasonData? data;
+    private IReadOnlyList<DivisionGroup> groups = [];
+    private LeagueSubdivision? selected;
+    private PlayerPage<LeagueStanding>? standings;
+
+    private string? leagueToken;
+    private string? seasonToken;
+    private string? subdivisionToken;
+    private int page = 1;
+    private int userId;
+    private bool started;
+    private (string? League, string? Season) seasonKey;
+    private (string? Subdivision, int Page) standingsKey;
+
+    private bool isLoading;
+    private bool notAuthenticated;
+    private string? error;
+    private CancellationTokenSource? loadCancellation;
+
+    private IReadOnlyList<LinePoint> journeyLine = [];
+    private IReadOnlyList<DateTimeOffset> promotionTimes = [];
+
+    private IReadOnlyList<ChoiceOption> LeagueOptions
+        => [.. (leagues ?? []).Select(league => new ChoiceOption(league.TechnicalName, LeagueNames.FromKey(league.NameKey) ?? Leaderboards.DisplayName(league.TechnicalName)))];
+
+    private IReadOnlyList<ChoiceOption> SeasonOptions
+    {
+        get
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            return data is null || seasons is null
+                ? []
+                : [.. LeagueView.SeasonsOf(seasons, data.League.Id).Select(season => new ChoiceOption(
+                    season.Id.ToString(CultureInfo.InvariantCulture),
+                    $"Season {season.SeasonNumber}{(season.IsActive(now) ? " (running)" : "")}"))];
+        }
+    }
+
+    private string DefaultLeagueToken => leagues is null ? "" : LeagueView.DefaultLeague(leagues)?.TechnicalName ?? "";
+
+    private string DefaultSeasonToken
+        => data is null || seasons is null ? "" : LeagueView.DefaultSeason(seasons, data.League.Id, DateTimeOffset.UtcNow)?.Id.ToString(CultureInfo.InvariantCulture) ?? "";
+
+    private IReadOnlyList<LinePoint> JourneyLine => journeyLine;
+
+    private IReadOnlyList<DateTimeOffset> PromotionTimes => promotionTimes;
+
+    private int JourneyHeight => 260;
+
+    private double? JourneyStep => data is { Journey.Count: > 0 } && data.Journey.Max(point => point.Position) - data.Journey.Min(point => point.Position) <= 5 ? 1 : null;
+
+    private LeagueStanding? MyStanding => standings?.Items.FirstOrDefault(row => row.PlayerId == userId);
+
+    private bool HasNext => standings is not null && (standings.TotalPages is { } pages ? page < pages : standings.Items.Count >= 50);
+
+    private string StandingsRange
+    {
+        get
+        {
+            if (standings is null || standings.Items.Count == 0)
+            {
+                return "No ranks to show";
+            }
+
+            string range = $"Ranks {standings.Items[0].Rank.ToString("N0", CultureInfo.InvariantCulture)} to {standings.Items[^1].Rank.ToString("N0", CultureInfo.InvariantCulture)}";
+            return standings.TotalRecords is { } total ? $"{range} of {total.ToString("N0", CultureInfo.InvariantCulture)}" : range;
+        }
+    }
+
+    private int CountOf(LeagueSubdivision subdivision)
+        => data is not null && data.Counts.TryGetValue(subdivision.Id, out int players) ? players : standings?.TotalRecords ?? 0;
+
+    private string SubdivisionName(double value)
+    {
+        if (data is null || data.Subdivisions.Count == 0)
+        {
+            return "";
+        }
+
+        return data.Subdivisions[Math.Clamp((int)Math.Round(value), 0, data.Subdivisions.Count - 1)].FullName;
+    }
+
+    private static string GameLabel(DateTimeOffset time) => time.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+
+    protected override void OnParametersSet()
+    {
+        // LocationChanged also fires when navigating away; only react to our own address.
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/').Equals(PlayerLinks.Leagues, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        leagueToken = Read("league");
+        seasonToken = Read("season");
+        subdivisionToken = Read("subdivision");
+        page = RankingView.PageNumber(Read("page"));
+        if (!Auth.IsAuthenticated)
+        {
+            return;
+        }
+
+        userId = int.TryParse(Auth.Session?.UserId, NumberStyles.None, CultureInfo.InvariantCulture, out int id) ? id : 0;
+        (string?, string?) nextSeason = (leagueToken, seasonToken);
+        (string?, int) nextStandings = (subdivisionToken, page);
+        if (started && nextSeason == seasonKey && nextStandings == standingsKey)
+        {
+            return;
+        }
+
+        bool reloadSeason = !started || nextSeason != seasonKey;
+        started = true;
+        seasonKey = nextSeason;
+        standingsKey = nextStandings;
+        _ = LoadAsync(reloadSeason);
+    }
+
+    private void SelectSubdivision(int id)
+    {
+        string? fallback = data is null ? null : LeagueView.DefaultSubdivision(data.Subdivisions, data.Entry?.Subdivision)?.Id.ToString(CultureInfo.InvariantCulture);
+        Write("subdivision", id.ToString(CultureInfo.InvariantCulture), fallback);
+    }
+
+    private void GoTo(int next) => Write("page", next > 1 ? next.ToString(CultureInfo.InvariantCulture) : null, resetPage: false);
+
+    private async Task LoadAsync(bool reloadSeason)
+    {
+        loadCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        CancellationToken token = cancellation.Token;
+
+        isLoading = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            if (leagues is null || seasons is null)
+            {
+                Task<IReadOnlyList<League>> leagueTask = Api.GetLeaguesAsync(token);
+                Task<IReadOnlyList<LeagueSeason>> seasonTask = Api.GetSeasonsAsync(token);
+                await Task.WhenAll(leagueTask, seasonTask);
+                leagues = leagueTask.Result;
+                seasons = seasonTask.Result;
+            }
+
+            League? league = LeagueView.ChooseLeague(leagues, leagueToken);
+            LeagueSeason? season = league is null ? null : LeagueView.ChooseSeason(seasons, league.Id, seasonToken, DateTimeOffset.UtcNow);
+            if (league is null || season is null)
+            {
+                data = null;
+                selected = null;
+                standings = null;
+                return;
+            }
+
+            SeasonData current = reloadSeason || data is null ? await LoadSeasonAsync(league, season, token) : data;
+            LeagueSubdivision? chosen = LeagueView.ChooseSubdivision(current.Subdivisions, subdivisionToken, current.Entry?.Subdivision);
+            PlayerPage<LeagueStanding>? list = chosen is null ? null : await Api.GetStandingsAsync(season.Id, chosen.Id, page, token);
+
+            data = current;
+            groups = LeagueView.Groups(current.Subdivisions, current.Counts);
+            selected = chosen;
+            standings = list;
+            journeyLine = [.. current.Journey.Select(point => new LinePoint(DateTimeOffset.UnixEpoch.AddSeconds(point.Game), point.Position, point))];
+            promotionTimes = [.. current.Journey.Where(point => point.Promoted).Select(point => DateTimeOffset.UnixEpoch.AddSeconds(point.Game))];
+            notAuthenticated = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer choice or a navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            notAuthenticated = true;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(loadCancellation, cancellation))
+            {
+                loadCancellation = null;
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task<SeasonData> LoadSeasonAsync(League league, LeagueSeason season, CancellationToken token)
+    {
+        IReadOnlyList<LeagueSubdivision> subdivisions = await Api.GetSubdivisionsAsync(season.Id, token);
+        Task<IReadOnlyDictionary<int, int>> counts = Api.GetPlayersPerSubdivisionAsync(season.Id, subdivisions, token);
+        Task<LeagueEntry?> entry = userId > 0 ? Api.GetLeagueEntryAsync(userId, season.Id, token) : Task.FromResult<LeagueEntry?>(null);
+        Task<IReadOnlyList<LeagueJournalEntry>> journal = userId > 0 ? Api.GetLeagueJourneyAsync(userId, season.Id, token) : Task.FromResult<IReadOnlyList<LeagueJournalEntry>>([]);
+        await Task.WhenAll(counts, entry, journal);
+        (int promotions, int demotions) = LeagueStatistics.Moves(journal.Result);
+        return new SeasonData(league, season, subdivisions, counts.Result, entry.Result, LeagueView.Journey(journal.Result, subdivisions), promotions, demotions);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        loadCancellation?.Cancel();
+    }
+}
