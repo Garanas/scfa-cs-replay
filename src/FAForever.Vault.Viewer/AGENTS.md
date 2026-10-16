@@ -540,7 +540,7 @@ the filter rows are in `Features/Players/PlayerFilters.cs`.
 | Page | Path | What |
 |---|---|---|
 | `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
-| `Pages/PlayerPage.razor` | `players/{id}` | A profile: `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). |
+| `Pages/PlayerPage.razor` | `players/{id}` | A profile: loads the profile, `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). Their shaping, formatting and CSV logic is in `Features/Players/Profile/` (`ProfileFormat`, `ProfileSummaries`, `RatingChartData`, `RatingTooltip`, `Loadable`). |
 | `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time. |
 | `Pages/PlayerLeagues.razor` | `players/leagues` | A league season: players per subdivision, the standings. |
 | `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
@@ -560,9 +560,9 @@ filter components inherit `PlayerUrlComponent`, which writes with `replace: true
 |---|---|---|---|---|
 | `q` | landing, rankings | Search text; on rankings, part of a name in the table | none | the field (wave 31), the landing results (wave 32D; rankings with its page) |
 | `tab` | profile | `rating`, `matches`, `army` | Overview | wave 31 |
-| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31), the data (wave 32) |
-| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31), the data (wave 32) |
-| `page` | lists | Page number | 1 | wave 32 |
+| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31); profile Overview and Rating history (wave 32A) |
+| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31); profile Overview and Rating history (wave 32A) |
+| `page` | lists | Page number | 1 | Rating history journal (wave 32A) |
 | `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32, Matches tab done) |
 | `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32, Army tab done) |
 | `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31), the data (wave 32) |

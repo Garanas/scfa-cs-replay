@@ -18,6 +18,9 @@
 
     [Parameter] public string ZeroLabel { get; set; } = "No change";
 
+    /// <summary>False leaves the zero entry out of the legend (a histogram without a zero bin).</summary>
+    [Parameter] public bool ShowZeroInLegend { get; set; } = true;
+
     [Parameter] public string AriaLabel { get; set; } = "Histogram";
 
     private IReadOnlyList<ColumnItem> items = [];
@@ -36,7 +39,7 @@
         [
             new LegendItem(NegativeLabel, ChartColor.Viz2),
             new LegendItem(PositiveLabel, ChartColor.Viz1),
-            new LegendItem(ZeroLabel, ChartColor.Faint),
+            .. ShowZeroInLegend ? new[] { new LegendItem(ZeroLabel, ChartColor.Faint) } : Array.Empty<LegendItem>(),
         ];
     }
 }
