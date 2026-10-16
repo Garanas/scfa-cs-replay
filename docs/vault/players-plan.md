@@ -167,8 +167,8 @@ reports after each wave. Agents run on Sonnet. Build and test with `--artifacts-
 ## Tooling
 
 - Run the app on sample data (no token, no login): from the worktree folder, build first
-  (`dotnet build src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id>`), then
-  `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:<port> dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id> --no-launch-profile --no-build`
+  (`dotnet build src/FAForever.Vault.Server --artifacts-path D:\wt\art-<id>`), then
+  `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:<port> dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wt\art-<id> --no-launch-profile --no-build`
   (PowerShell: set `$env:ASPNETCORE_ENVIRONMENT = 'Sample'` and `$env:ASPNETCORE_URLS` first). In
   that environment the Server serves the Viewer's files (`UseStaticWebAssets`) and answers
   `/appsettings.json` with `wwwroot/appsettings.Sample.json` (the .NET 10 runtime asks for no
