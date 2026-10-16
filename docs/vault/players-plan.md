@@ -43,20 +43,20 @@ Rating shown anywhere is μ − 3σ, through `ReplayPlayerOptions.DisplayRating(
 
 | Need | Request |
 |---|---|
-| Profile | `GET /data/player/{id}?include=names,clanMembership.clan,currentAvatar` |
-| Find a player | `GET /data/player?filter=login=="*{q}*"&page[size]=10` and `GET /data/nameRecord?filter=name=="*{q}*"&include=player&page[size]=10` |
+| Profile | `GET /data/player/{id}?include=names,clanMembership.clan,currentAvatar.avatar` (the avatar through its assignment; unverified) |
+| Find a player | `GET /data/player?filter=login=="*{q}*"&include=clanMembership.clan&page[size]=10` and `GET /data/nameRecord?filter=name=="*{q}*"&include=player,player.clanMembership.clan&page[size]=10`; by exact name: `filter=login=="{name}"&page[size]=1` |
 | Leaderboards | `GET /data/leaderboard` (cached for the session) |
 | Ratings of a player | `GET /data/leaderboardRating?filter=player.id=={id}&include=leaderboard` |
-| Rating history | `GET /data/leaderboardRatingJournal?filter=gamePlayerStats.player.id=={id};leaderboard.technicalName=="{board}";gamePlayerStats.scoreTime=ge={since}&include=gamePlayerStats,gamePlayerStats.game,gamePlayerStats.game.mapVersion.map&sort=-gamePlayerStats.scoreTime&page[size]=1000` (loop over pages) |
-| Matches | `GET /data/gamePlayerStats?filter=player.id=={id};scoreTime=ge={since}&include=game,game.mapVersion.map,game.featuredMod,game.playerStats.player,ratingChanges.leaderboard&sort=-scoreTime&page[size]=25&page[number]={n}&page[totals]`; the mode filter goes through `ratingChanges.leaderboard.technicalName=="{board}"` (custom = games without rating changes on a matchmaker board; verify live) |
-| Lifetime counters | `GET /data/playerEvent?filter=player.id=={id}&include=event&page[size]=100` |
+| Rating history | `GET /data/leaderboardRatingJournal?filter=gamePlayerStats.player.id=={id};leaderboard.technicalName=="{board}";gamePlayerStats.scoreTime=ge={since}&include=gamePlayerStats,gamePlayerStats.game,gamePlayerStats.game.mapVersion.map,gamePlayerStats.game.playerStats,gamePlayerStats.game.playerStats.player&sort=-gamePlayerStats.scoreTime&page[size]=1000` (loop over pages) |
+| Matches | `GET /data/gamePlayerStats?filter=player.id=={id};scoreTime=ge={since}&include=game,game.mapVersion.map,game.featuredMod,game.playerStats.player,ratingChanges.leaderboard&sort=-scoreTime&page[size]=25&page[number]={n}&page[totals]`; the mode filter goes through `ratingChanges.leaderboard.technicalName=="{board}"`; custom games are the `global` board's (`PlayerRequests.BoardOfMode`; verify live); faction as `faction=={1..4}`, result as `result==VICTORY`, with-player as `game.playerStats.player.login=="{name}"`; the chart lists use the same filter with `page[size]=1000` and without `game.playerStats` |
+| Lifetime counters | `GET /data/playerEvent?filter=player.id=={id}&include=event&page[size]=100` (paged until a short page) |
 | Achievements | `GET /data/achievement?sort=order&page[size]=100` (cached) and `GET /data/playerAchievement?filter=player.id=={id}&include=achievement&page[size]=100` |
-| Rankings | `GET /data/leaderboardRating?filter=leaderboard.technicalName=="{board}";totalGames=gt=0[;deviation=lt=100][;updateTime=ge={since}]&include=player&sort=-rating&page[size]=50&page[number]={n}&page[totals]` |
+| Rankings | `GET /data/leaderboardRating?filter=leaderboard.technicalName=="{board}";totalGames=gt=0[;deviation=lt=100][;updateTime=ge={since}]&include=player,player.clanMembership.clan&sort=-rating&page[size]=50&page[number]={n}&page[totals]` |
 | Rank of a player | the same filter plus `;rating=gt={rating}` with `page[size]=1&page[totals]`: rank = totalRecords + 1 |
 | Rating distribution | one count request per 100-point bin (`rating=ge=X;rating=lt=Y`, `page[size]=1&page[totals]`), 24 bins in parallel, cached per board for the session |
 | Leagues and seasons | `GET /data/league?filter=enabled==true`, `GET /data/leagueSeason?include=league,leaderboard&sort=-startDate` (cached) |
 | Division layout | `GET /data/leagueSeasonDivisionSubdivision?filter=leagueSeasonDivision.leagueSeason.id=={season}&include=leagueSeasonDivision&sort=leagueSeasonDivision.divisionIndex,subdivisionIndex` |
-| League entry of a player | `GET /data/leagueSeasonScore?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeasonDivisionSubdivision.leagueSeasonDivision` (all active seasons: `leagueSeason.endDate=ge={now}` instead of the season id) |
+| League entry of a player | `GET /data/leagueSeasonScore?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeason,leagueSeasonDivisionSubdivision.leagueSeasonDivision` (all active seasons: `leagueSeason.endDate=ge={now}` instead of the season id) |
 | Players per subdivision | one count request per subdivision (`leagueSeason.id=={season};leagueSeasonDivisionSubdivision.id=={sub}`, `page[size]=1&page[totals]`) |
 | Standings of a subdivision | `GET /data/leagueSeasonScore?filter=leagueSeason.id=={season};leagueSeasonDivisionSubdivision.id=={sub}&sort=-score,-gameCount&page[size]=50&page[totals]`; player names come from `GET /data/player?filter=id=in=(…)` (the score has only `loginId`) |
 | League journey | `GET /data/leagueScoreJournal?filter=loginId=={id};leagueSeason.id=={season}&include=leagueSeasonDivisionSubdivisionBefore.leagueSeasonDivision,leagueSeasonDivisionSubdivisionAfter.leagueSeasonDivision&sort=gameId` |
@@ -74,6 +74,13 @@ camelCase; relationships in brackets:
 - `playerEvent`: `currentCount` [`player`, `event`: `name`, `imageUrl`, `type`]. The event ids are fixed GUIDs (`PlayerEvents` constants): custom games played `cfa449a6-655b-48d5-9a27-6044804fe35c`, ladder games played `4a929def-e347-45b4-b26d-4325a3115859`, lost ACUs `d6a699b7-99bc-4a7f-b128-15e1e289a7b3`, built air `3ebb0c4d-5e92-4446-bf52-d17ba9c5cd3c`, lost air `225e9b2e-ae09-4ae1-a198-eca8780b0fcd`, built land `ea123d7f-bb2e-4a71-bd31-88859f0c3c00`, lost land `a1a3fd33-abe2-4e56-800a-b72f4c925825`, built naval `b5265b42-1747-4ba1-936c-292202637ce6`, lost naval `3a7b3667-0f79-4ac7-be63-ba841fd5ef05`, seconds played `cc791f00-343c-48d4-b5b3-8900b83209c0`, built tech 1 `a8ee4f40-1e30-447b-bc2c-b03065219795`, lost tech 1 `3dd3ed78-ce78-4006-81fd-10926738fbf3`, built tech 2 `89d4f391-ed2d-4beb-a1ca-6b93db623c04`, lost tech 2 `aebd750b-770b-4869-8e37-4d4cfdc480d0`, built tech 3 `92617974-8c1f-494d-ab86-65c2a95d1486`, lost tech 3 `7f15c2be-80b7-4573-8f41-135f84773e0f`, built experimentals `ed9fd79d-5ec7-4243-9ccf-f18c4f5baef1`, lost experimentals `701ca426-0943-4931-85af-6a08d36d9aaa`, built engineers `60bb1fc0-601b-45cd-bd26-83b1a1ac979b`, lost engineers `e8e99a68-de1b-4676-860d-056ad2207119`, Aeon plays `96ccc66a-c5a0-4f48-acaa-888b00778b57`, Aeon wins `a6b51c26-64e6-4e7a-bda7-ea1cfe771ebb`, Cybran plays `ad193982-e7ca-465c-80b0-5493f9739559`, Cybran wins `56b06197-1890-42d0-8b59-25e1add8dc9a`, UEF plays `1b900d26-90d2-43d0-a64e-ed90b74c3704`, UEF wins `7be6fdc5-7867-4467-98ce-f7244a66625a`, Seraphim plays `fefcb392-848f-4836-9683-300b283bc308`, Seraphim wins `15b6c19a-6084-4e82-ada9-6c30e282191f`.
 - `achievement`: `name`, `description` (localised by the API from `Accept-Language`), `type` (`STANDARD`, `INCREMENTAL`), `totalSteps`, `revealedIconUrl`, `unlockedIconUrl`, `initialState`, `experiencePoints`, `order`, `unlockersCount`, `unlockersPercent`, `unlockersMinDuration`, `unlockersAvgDuration`, `unlockersMaxDuration`. `playerAchievement`: `currentSteps`, `state` (`REVEALED`, `UNLOCKED`, `HIDDEN`), `createTime`, `updateTime` [`player`, `achievement`].
 - `league`: `technicalName`, `enabled`, `nameKey`, `descriptionKey`, `imageUrl`, `mediumImageUrl`, `smallImageUrl`. `leagueSeason`: `placementGames`, `placementGamesReturningPlayer`, `seasonNumber`, `nameKey`, `startDate`, `endDate` [`league`, `leaderboard` → type `leagueLeaderboard`: `technicalName`]. `leagueSeasonDivision`: `divisionIndex`, `nameKey`, `descriptionKey` [`leagueSeason`]. `leagueSeasonDivisionSubdivision`: `subdivisionIndex`, `nameKey`, `descriptionKey`, `minRating`, `maxRating`, `highestScore`, `imageUrl`, `mediumImageUrl`, `smallImageUrl` [`leagueSeasonDivision`]. `leagueSeasonScore`: `loginId`, `score`, `gameCount`, `returningPlayer` [`leagueSeason`, `leagueSeasonDivisionSubdivision`]. `leagueScoreJournal`: `gameId`, `loginId`, `scoreBefore`, `scoreAfter`, `gameCount` [`leagueSeason`, `leagueSeasonDivisionSubdivisionBefore`, `leagueSeasonDivisionSubdivisionAfter`]. Division and subdivision names come from their `nameKey` (last segment, capitalised; subdivisions as roman numerals from `subdivisionIndex` when the key gives nothing better); verify the keys live and keep a mapping table for the known ones.
+
+The code lives in `Services/Players/` of the Viewer: `IPlayersApi`, the requests in `PlayerRequests`, the
+reading in `PlayerMappers`, `FafPlayersApi` (the real API), `SamplePlayersApi` (embedded fixtures) and
+`Statistics/`. Every name that could not be checked live carries an `// unverified` comment there: the
+avatar include, the `faction`, `ratingChanges` and `playerStats.player.login` filters, custom games on
+the `global` board, the opponents include on a journal page of 1,000, the head-to-head predicates,
+the translation keys of divisions (`LeagueNames`), the `rating` attribute and `page[size]` limits.
 
 The API's maximum page size and the exact spelling of a few fields are unverified: the first agent
 that gets a token in a browser checks them (see Tooling) and corrects this file.
@@ -159,6 +166,13 @@ reports after each wave. Agents run on Sonnet. Build and test with `--artifacts-
 
 ## Tooling
 
+- Run the app on sample data (no token, no login): from the repository folder,
+  `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:5390 dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id> --no-launch-profile`
+  (PowerShell: set `$env:ASPNETCORE_ENVIRONMENT = 'Sample'` and `$env:ASPNETCORE_URLS` first). The
+  Server serves the Viewer's files in that environment (`UseStaticWebAssets`), Blazor loads
+  `wwwroot/appsettings.Sample.json` (the response header `Blazor-Environment: Sample`), and the app is
+  signed in as the sample player 2049311 "Ashgrove" (`AuthService.InitializeAsync`). Rebuild and restart
+  after a change; stop the server before building to the same artifacts path.
 - Agents cannot sign in: the development OAuth client only redirects to `127.0.0.1:5080`, which is
   the owner's server. Pages are checked with the sample API (decision 7) on the agent's own port.
   The owner can give one Playwright profile a real session (`--user-data-dir=.playwright-mcp/profile`

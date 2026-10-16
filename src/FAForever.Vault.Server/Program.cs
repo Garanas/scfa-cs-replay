@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+// The Sample environment (the Players pages on recorded data, see docs/vault/players-plan.md) is not
+// Development, which is the only one that serves the Viewer's static files from the build output.
+if (builder.Environment.IsEnvironment("Sample"))
+{
+    builder.WebHost.UseStaticWebAssets();
+}
+
 string tokenEndpoint = builder.Configuration["OAuth:TokenEndpoint"] ?? "https://hydra.faforever.com/oauth2/token";
 
 builder.Services.AddHttpClient("Hydra", client =>

@@ -12,6 +12,7 @@ guide is [`../AGENTS.md`](../AGENTS.md); what the replay tests pin down is expla
 | `FAForever.FileFormats.Mesh.Tests` | `ScmParser`, `ScmWriter`, `GlbWriter`, `GlbReader`, `MeshPreview` | meshes of the game (`forged-alliance/`, which write back to the same bytes), of the Blender and 3ds Max exporters and of FAF (`faf/`, a mesh whose vertex section is named `VRTX`) |
 | `FAForever.MapEditor.Project.Tests` | `MapImporter`, `MapExporter`, `MapProjectStore`, `EditedMap`, `MapFolderName`, `TiledBuffer`, `EditSession`, `HeightBrush`, `Workspace`, `AssetConverter`, `AssetCatalog`, `AssetPreview`, `GameTextures` | the map library's test maps, linked from its `assets/`; small archives in place of the game's, made by `GameFiles` |
 | `FAForever.MapEditor.App.Tests` | `MainViewModel` (the editor's operations without a window), `EditorCamera`, `SmoothGround`, `MainWindow` (the real window without a screen, Avalonia.Headless: mouse, keys, frames), the UI rules (`StyleRulesTest`), Fluent's brushes per theme variant (`ThemeTest`) and snapshots of the screens (`SnapshotTest`, `UPDATE_SNAPSHOTS=1` to accept a new look) | the map library's test maps, linked; `snapshots/*.png` |
+| `FAForever.Vault.Viewer.Tests` | The Players data layer of the Viewer: `PlayerMappers` and `SamplePlayersApi` over the embedded JSON:API fixtures, `PlayerRequests` (the RSQL of every request), the statistics in `Services/Players/Statistics` | none: the fixtures are embedded in the Viewer (`Services/Players/Sample`, written by `tools/players-fixtures.py`) |
 | `FAForever.FileFormats.Replay.Tests` | loader, header, inputs, semantics, fingerprints | `.fafreplay` / `.scfareplay` files |
 
 ## Running
@@ -46,6 +47,17 @@ path must match the file name exactly (`balthazar-01.SCFAReplay`, not `.scfarepl
 - New asset: drop the file under `assets/` (it is copied automatically), keep it small, and say in
   the commit where it came from (vault replay id, or FA repo path for blueprints). The benchmarks
   keep their own copies; they do not read these.
+
+## The Viewer tests
+
+`FAForever.Vault.Viewer.Tests` references the Blazor WebAssembly project directly (it builds and runs
+on the desktop runtime; the Viewer shows its internals through `InternalsVisibleTo`). It has no
+component tests (no bUnit): pages are checked in a browser against the sample data. The sample API
+reads the fixtures through the same mappers as the real API, so the counts and exact values in
+`SamplePlayersApiTest` pin both; change the fixtures by editing `tools/players-fixtures.py`, running it
+and updating those numbers. The tests give the sample API a `FixedTimeProvider` at
+`SamplePlayersApi.FixtureAnchor`, so dates are the same on every run. MSTest here is 3.1: no
+`Assert.HasCount` or `Assert.IsEmpty`.
 
 ## The fingerprint test
 

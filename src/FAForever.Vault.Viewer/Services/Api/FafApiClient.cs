@@ -387,7 +387,15 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         };
     }
 
-    private async Task<string> GetAsync(string url, CancellationToken cancellationToken)
+    private Task<string> GetAsync(string url, CancellationToken cancellationToken)
+        => GetAsync(http, auth, url, cancellationToken);
+
+    /// <summary>
+    /// A GET with the signed-in player's Bearer token and the JSON:API media type, shared with the
+    /// other FAF API clients. A 401 throws <see cref="NotAuthenticatedException"/>, a 429 an
+    /// <see cref="HttpRequestException"/> that says to wait.
+    /// </summary>
+    internal static async Task<string> GetAsync(HttpClient http, AuthService auth, string url, CancellationToken cancellationToken)
     {
         string accessToken = await auth.GetValidAccessTokenAsync() ?? throw new NotAuthenticatedException();
 
@@ -399,6 +407,10 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             throw new NotAuthenticatedException();
+        }
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            throw new HttpRequestException("The FAForever API is limiting requests; wait a moment and try again.", null, response.StatusCode);
         }
         response.EnsureSuccessStatusCode();
 
@@ -460,6 +472,6 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
     /// Quotes a value for RSQL: wrapped in double quotes with inner quotes escaped.
     /// A '*' acts as wildcard.
     /// </summary>
-    private static string Quote(string value)
+    internal static string Quote(string value)
         => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

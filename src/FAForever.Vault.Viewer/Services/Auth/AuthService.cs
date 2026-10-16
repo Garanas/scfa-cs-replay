@@ -55,6 +55,20 @@ public sealed class AuthService(HttpClient http, IJSRuntime js, NavigationManage
         }
 
         await CompleteLoginFromUrlAsync();
+
+        // Sample data (appsettings.Sample.json only): signed in as the sample player, so the Players
+        // pages show. The token is a dummy: the sample API never sends it anywhere.
+        if (Session is null && configuration["Players:SampleData"] == "true")
+        {
+            Session = new AuthSession
+            {
+                AccessToken = "sample-token",
+                ExpiresAt = DateTimeOffset.UtcNow.AddYears(10).ToUnixTimeSeconds(),
+                UserId = "2049311",
+                UserName = "Ashgrove",
+            };
+        }
+
         Changed?.Invoke();
     }
 

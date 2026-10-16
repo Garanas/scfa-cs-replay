@@ -21,6 +21,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="FAForever.Vault.Viewer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Recorded JSON:API documents of the sample Players API (SamplePlayersApi; tools/players-fixtures.py writes them). -->
+    <EmbeddedResource Include="Services\Players\Sample\*.json" LogicalName="players-sample/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FAForever.FileFormats.Replay\FAForever.FileFormats.Replay.csproj" />
     <ProjectReference Include="..\FAForever.FileFormats.Map\FAForever.FileFormats.Map.csproj" />
   </ItemGroup>
