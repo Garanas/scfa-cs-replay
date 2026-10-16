@@ -101,6 +101,56 @@ public static class LeagueView
                 return new DivisionGroup(group.First().Division, items.Sum(item => item.Players), items);
             })];
 
+    /// <summary>The address parameters that name a league, season or subdivision that does not exist (or that equal the default), to drop.</summary>
+    public static IReadOnlyList<string> StaleParameters(
+        IReadOnlyList<League> leagues,
+        IReadOnlyList<LeagueSeason> seasons,
+        League league,
+        IReadOnlyList<LeagueSubdivision> subdivisions,
+        string? leagueToken,
+        string? seasonToken,
+        string? subdivisionToken,
+        string? pageToken)
+    {
+        List<string> stale = [];
+        if (leagueToken is not null && leagues.All(item => item.TechnicalName != leagueToken))
+        {
+            stale.Add("league");
+        }
+
+        if (seasonToken is not null && !(int.TryParse(seasonToken, NumberStyles.None, CultureInfo.InvariantCulture, out int seasonId) && SeasonsOf(seasons, league.Id).Any(season => season.Id == seasonId)))
+        {
+            stale.Add("season");
+        }
+
+        if (subdivisionToken is not null && !(int.TryParse(subdivisionToken, NumberStyles.None, CultureInfo.InvariantCulture, out int subdivisionId) && subdivisions.Any(subdivision => subdivision.Id == subdivisionId)))
+        {
+            stale.Add("subdivision");
+        }
+
+        if (pageToken is not null && Rankings.RankingView.PageNumber(pageToken) <= 1)
+        {
+            stale.Add("page");
+        }
+
+        return stale;
+    }
+
+    /// <summary>
+    /// The players per subdivision with one source for the listed subdivision: its standings total,
+    /// which the table below shows too, replaces the separate count.
+    /// </summary>
+    public static IReadOnlyDictionary<int, int> CountsWithStandings(IReadOnlyDictionary<int, int> counts, int? subdivisionId, int? standingsTotal)
+    {
+        if (subdivisionId is not { } id || standingsTotal is not { } total)
+        {
+            return counts;
+        }
+
+        Dictionary<int, int> merged = new(counts) { [id] = total };
+        return merged;
+    }
+
     /// <summary>The games a player must play before the league places them.</summary>
     public static int PlacementGames(LeagueSeason season, bool returningPlayer)
         => returningPlayer ? season.PlacementGamesReturningPlayer : season.PlacementGames;

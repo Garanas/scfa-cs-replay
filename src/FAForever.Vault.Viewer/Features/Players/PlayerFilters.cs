@@ -24,9 +24,10 @@ public static class PlayerFilters
 
     public static readonly IReadOnlyList<ChoiceOption> Boards =
     [
-        new("ladder_1v1", "Ladder 1v1"),
         new("global", "Global"),
+        new("ladder_1v1", "Ladder 1v1"),
         new("tmm_2v2", "2v2"),
+        new("tmm_3v3", "3v3"),
         new("tmm_4v4_full_share", "4v4 full share"),
         new("tmm_4v4_share_until_death", "4v4 share until death"),
     ];

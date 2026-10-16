@@ -28,7 +28,7 @@
         <LineChart Points="rating" Area="true" Marked="peak" MarkedLabel="@($"Peak {Math.Round(peak.Value):N0}")" AriaLabel="Demo rating over one year">
             <Tooltip Context="p">
                 <p class="text-ink-muted">@p.Time.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</p>
-                <p class="mt-0.5 text-base font-semibold text-ink">@Math.Round(p.Value).ToString("N0", CultureInfo.InvariantCulture)</p>
+                <p class="mt-0.5 text-[1rem] font-semibold text-ink">@Math.Round(p.Value).ToString("N0", CultureInfo.InvariantCulture)</p>
                 <p class="mt-0.5 text-ink-muted">Won against Kestrel on Osiris</p>
             </Tooltip>
         </LineChart>
@@ -115,9 +115,9 @@
         <h2 id="g-tiles" class="mb-3 text-lg font-semibold">StatTile</h2>
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile Label="Current rating" Value="1,588" Delta="+42 in 30 days" Tone="DeltaTone.Good" Up="true" Sub="Ladder 1v1" />
-            <StatTile Label="Average change" Value="-0.8" Delta="-1.2 against last year" Tone="DeltaTone.Bad" Up="false" />
+            <StatTile Label="Average change" Value="−0.8" Delta="−1.2 against last year" Tone="DeltaTone.Bad" Up="false" />
             <StatTile Label="Games" Value="1,314" Sub="58% won" />
-            <StatTile Label="Fewer losses" Value="31%" Delta="-4 points" Tone="DeltaTone.Good" Up="false" />
+            <StatTile Label="Fewer losses" Value="31%" Delta="−4 points" Tone="DeltaTone.Good" Up="false" />
         </div>
     </section>
 
@@ -226,7 +226,7 @@
 
         int[] counts = [4, 9, 22, 60, 130, 240, 310, 120, 8, 150, 260, 190, 90, 40, 18, 7];
         bins = counts.Select((count, i) => new HistogramBin(
-            i % 5 == 0 ? (i - 8 >= 0 ? "+" : "") + ((i - 8) * 3).ToString(CultureInfo.InvariantCulture) : "",
+            i % 5 == 0 ? AxisMark((i - 8) * 3) : "",
             count,
             i < 8 ? -1 : i == 8 ? 0 : 1,
             count > 250 ? count.ToString(CultureInfo.InvariantCulture) : null,
@@ -238,6 +238,10 @@
                 .ToList())
             .ToList();
     }
+
+    /// <summary>A signed axis mark: a plus for a gain and the minus sign U+2212 for a loss.</summary>
+    private static string AxisMark(int value)
+        => value < 0 ? "−" + (-value).ToString(CultureInfo.InvariantCulture) : (value > 0 ? "+" : "") + value.ToString(CultureInfo.InvariantCulture);
 
     private static List<LinePoint> Walk(Random random, int days, double start, double drift, double noise)
     {

@@ -114,11 +114,25 @@
             @if (Points.Count > 0 && ShowEndLabel)
             {
                 LinePoint last = Points[^1];
-                <span class="absolute whitespace-nowrap text-right text-xs font-semibold text-ink" style="right:@F(Math.Max(0, W - X(last.Time)))px;top:@F(Y(last.Value) - 26)px">@Format(last.Value)</span>
+                @if (Step)
+                {
+                    <span class="absolute whitespace-nowrap text-xs font-semibold text-ink" style="left:@F(X(last.Time) + 9)px;top:@F(Y(last.Value) - 6)px">@Format(last.Value)</span>
+                }
+                else
+                {
+                    <span class="absolute whitespace-nowrap text-right text-xs font-semibold text-ink" style="right:@F(Math.Max(0, W - X(last.Time)))px;top:@F(Y(last.Value) - 26)px">@Format(last.Value)</span>
+                }
             }
             @if (Marked is not null && MarkedLabel is { Length: > 0 })
             {
-                <span class="absolute w-20 whitespace-nowrap text-center text-ink-muted" style="left:@F(Math.Clamp(X(Marked.Time), Ml + 40, W - Mr - 40) - 40)px;top:@F(Y(Marked.Value) - 22)px">@MarkedLabel</span>
+                @if (MarkedBesideEnd)
+                {
+                    <span class="absolute whitespace-nowrap text-right text-ink-muted" style="right:@F(Math.Max(0, W - X(Marked.Time) + 10))px;top:@F(Y(Marked.Value) - 6)px">@MarkedLabel</span>
+                }
+                else
+                {
+                    <span class="absolute w-20 whitespace-nowrap text-center text-ink-muted" style="left:@F(Math.Clamp(X(Marked.Time), Ml + 40, W - Mr - 40) - 40)px;top:@F(Y(Marked.Value) - 22)px">@MarkedLabel</span>
+                }
             }
         </div>
 
@@ -146,7 +160,7 @@
                 else
                 {
                     <p class="text-ink-muted">@TimeText(point.Time)</p>
-                    <p class="mt-0.5 text-base font-semibold text-ink">@Format(point.Value)</p>
+                    <p class="mt-0.5 text-[1rem] font-semibold text-ink">@Format(point.Value)</p>
                     @if (NearestOther(point.Time) is { } other)
                     {
                         <p class="mt-0.5 text-ink-muted">@OtherName @Format(other.Value)</p>
@@ -160,7 +174,7 @@
 
 @code {
     private int Ml => LeftMargin;
-    private const int Mr = 16;
+    private int Mr => Step && ShowEndLabel ? 40 : 16;
     private const int Mt = 16;
     private const int AxisHeight = 26;
     private const int PanelGap = 30;
@@ -258,6 +272,26 @@
     private IReadOnlyList<LegendItem> legend = [];
 
     private double W => w;
+
+    /// <summary>True when the peak label above its point would run into the end label: it then goes left of the point.</summary>
+    private bool MarkedBesideEnd
+    {
+        get
+        {
+            if (Marked is null || MarkedLabel is not { Length: > 0 } || Points.Count == 0 || !ShowEndLabel || Step)
+            {
+                return false;
+            }
+
+            LinePoint last = Points[^1];
+            string end = Format(last.Value);
+            double markedWidth = LabelLayout.Width(MarkedLabel, 6.2);
+            double endWidth = LabelLayout.Width(end, 7.2);
+            return LabelLayout.Overlap(
+                new LabelBox(Math.Clamp(X(Marked.Time), Ml + 40, W - Mr - 40) - markedWidth / 2, Y(Marked.Value) - 22, markedWidth, 12),
+                new LabelBox(X(last.Time) - endWidth, Y(last.Value) - 26, endWidth, 14));
+        }
+    }
 
     protected override void OnParametersSet()
     {

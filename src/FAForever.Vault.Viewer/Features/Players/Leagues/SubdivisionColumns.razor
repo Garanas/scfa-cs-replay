@@ -5,14 +5,15 @@
    first. The divisions are an ordered scale, so they share one hue and differ in opacity (the lower
    the paler); the player's subdivision is in the accent colour. A column is a button: pressing it
    chooses the subdivision whose standings are listed, the chosen one is outlined. Selective labels:
-   only the largest column and the player's own carry a number. The groups wrap at narrow widths. *@
-<div class="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-x-6 gap-y-6" role="group" aria-label="Players per subdivision">
+   only the largest column and the player's own carry a number. Below sm each division is a row of its own,
+   so a column is wide enough to press. *@
+<div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]" role="group" aria-label="Players per subdivision">
     @for (int g = 0; g < Groups.Count; g++)
     {
         DivisionGroup group = Groups[g];
         double opacity = Groups.Count <= 1 ? 1 : 0.35 + 0.65 * g / (Groups.Count - 1);
         <div class="min-w-0">
-            <div class="flex items-end gap-1 border-b border-edge" style="height:@(PlotHeight)px">
+            <div class="flex h-24 items-end gap-1 border-b border-edge sm:h-[150px]">
                 @foreach (SubdivisionCount item in group.Subdivisions)
                 {
                     bool mine = item.Subdivision.Id == MineId;
@@ -24,8 +25,8 @@
                         {
                             <span class="mb-1 whitespace-nowrap text-xs text-ink-muted">@item.Players.ToString("N0", CultureInfo.InvariantCulture)</span>
                         }
-                        <span class="block w-full rounded-t-[4px] @(mine ? "bg-primary" : "bg-viz-1") @(selected ? "outline outline-2 outline-offset-1 outline-ink" : "")"
-                              style="height:@Height(item.Players)px;@(mine ? "" : $"opacity:{opacity.ToString("0.##", CultureInfo.InvariantCulture)}")"></span>
+                        <span class="block min-h-[3px] w-full rounded-t-[4px] @(mine ? "bg-primary" : "bg-viz-1") @(selected ? "outline outline-2 outline-offset-1 outline-ink" : "")"
+                              style="height:@Height(item.Players)%;@(mine ? "" : $"opacity:{opacity.ToString("0.##", CultureInfo.InvariantCulture)}")"></span>
                     </button>
                 }
             </div>
@@ -42,9 +43,6 @@
 </div>
 
 @code {
-    private const int PlotHeight = 150;
-    private const int TopRoom = 20;
-
     [Parameter, EditorRequired] public required IReadOnlyList<DivisionGroup> Groups { get; set; }
 
     /// <summary>The subdivision whose standings are shown.</summary>
@@ -60,8 +58,9 @@
     protected override void OnParametersSet()
         => largest = Groups.SelectMany(group => group.Subdivisions).Select(item => item.Players).DefaultIfEmpty(0).Max();
 
+    /// <summary>The share of the plot a column fills: the largest takes 80 percent, the rest is room for its label.</summary>
     private string Height(int players)
-        => (largest <= 0 ? 0 : Math.Max(players > 0 ? 3 : 0, (double)players / largest * (PlotHeight - TopRoom))).ToString("0.#", CultureInfo.InvariantCulture);
+        => (largest <= 0 ? 0 : (double)players / largest * 80).ToString("0.#", CultureInfo.InvariantCulture);
 
     private static string Label(SubdivisionCount item, bool mine)
         => $"{item.Players.ToString("N0", CultureInfo.InvariantCulture)} players in {item.Subdivision.FullName}{(mine ? ", your subdivision" : "")}";

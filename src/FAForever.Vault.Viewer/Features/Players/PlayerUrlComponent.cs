@@ -36,6 +36,21 @@ public abstract class PlayerUrlComponent : UrlStateComponent
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(next), replace: true);
     }
 
+    /// <summary>
+    /// Removes parameters from the address (replacing the entry) that hold a value the page does not
+    /// read as given; true when it navigated, so the caller waits for the new address.
+    /// </summary>
+    protected bool DropFromAddress(IReadOnlyList<string> names)
+    {
+        if (names.Count == 0)
+        {
+            return false;
+        }
+
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(names.ToDictionary(name => name, _ => (object?)null)), replace: true);
+        return true;
+    }
+
     /// <summary>The CSS of a chip: a choice among a few, pressed when chosen. 44 px high for fingers.</summary>
     protected static string ChipClass(bool chosen) => chosen
         ? "inline-flex min-h-11 cursor-pointer items-center rounded-full border border-primary bg-primary/15 px-3.5 text-sm font-semibold text-primary transition"

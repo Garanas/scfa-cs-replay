@@ -535,14 +535,15 @@ The Players tab is built like the Maps tab: `Pages/Players.razor` (`/players`) i
 search and a card per page below it, and each page links back ("← Players"). The plan is
 [`docs/vault/players-plan.md`](../../docs/vault/players-plan.md) (data, stories, decisions). Paths, the
 `tab` values and the helpers that build a link are in `Features/Players/PlayerLinks.cs`; the choices of
-the filter rows are in `Features/Players/PlayerFilters.cs`.
+the filter rows are in `Features/Players/PlayerFilters.cs`. The Home page has a Players card, and the
+header's Players link sits beside About.
 
 | Page | Path | What |
 |---|---|---|
 | `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
 | `Pages/PlayerPage.razor` | `players/{id}` | A profile: loads the profile, `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). Their shaping, formatting and CSV logic is in `Features/Players/Profile/` (`ProfileFormat`, `ProfileSummaries`, `RatingChartData`, `RatingTooltip`, `Loadable`). |
-| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time. |
-| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season: players per subdivision, the standings. |
+| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time (six chips: global, ladder 1v1, 2v2, 3v3 and the two 4v4 boards), the table in pages of 50 with the signed in player's row pinned, "your position" and the histogram of every rating. The name filter runs on the server (`RankingQuery.Name`), so its line says how many players match. Pure parts in `Features/Players/Rankings/RankingView.cs`. |
+| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision. The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
 | `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
 
 A profile is addressed by the numeric id, never by name. The pages below `players/` other than a profile
@@ -551,31 +552,72 @@ share `PlayersSectionTabs` (Rankings, Leagues, Compare).
 **Every Players page needs a signed in user** (the API refuses anonymous calls): signed out, a page shows
 `PlayersLoginGate` in place of its content (the landing page only in place of the search). Nothing is
 fetched anonymously, and the server never calls the API (its link preview cards are fixed; a profile gets
-one generic card).
+one generic card). A page starts its load only when `Auth.IsAuthenticated`.
 
-The URL parameters (defaults stay out of the URL; every page with state inherits `UrlStateComponent`, the
-filter components inherit `PlayerUrlComponent`, which writes with `replace: true` and drops `page`):
+The URL parameters (defaults stay out of the URL; every page with state inherits `PlayerUrlComponent`, which
+writes with `replace: true` and drops `page`):
 
-| Parameter | Page | Meaning | Default when absent | Implemented |
-|---|---|---|---|---|
-| `q` | landing, rankings | Search text; on rankings, part of a name in the table | none | the field (wave 31), the landing results (wave 32D; rankings with its page) |
-| `tab` | profile | `rating`, `matches`, `army` | Overview | wave 31 |
-| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31); profile Overview and Rating history (wave 32A) |
-| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31); profile Overview and Rating history (wave 32A) |
-| `page` | lists | Page number | 1 | Rating history journal (wave 32A) |
-| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32, Matches tab done) |
-| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32, Army tab done) |
-| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31), the data (wave 32) |
-| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31), the data (wave 32) |
-| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one | the controls and the data (wave 32) |
-| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | none | wave 32D |
+| Parameter | Page | Meaning | Default when absent |
+|---|---|---|---|
+| `q` | landing, rankings | Search text; on rankings, part of a name (the server filters) | none |
+| `tab` | profile | `rating`, `matches`, `army` | Overview |
+| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games) |
+| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` |
+| `page` | lists | Page number | 1 |
+| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter |
+| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all |
+| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only |
+| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` |
+| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one |
+| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | none |
 
-Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`), `ChoiceSelect`
-(a select) and `TextFilter` (a search field written on change), each bound to one query parameter by its
-`Query` parameter. Chips and fields are 44 px high. `NextStepNote` is the one quiet line of a page whose
-data is not there yet.
+A value a page does not read as given is dropped from the address (`PlayerUrlComponent.DropFromAddress`,
+decided by `RankingView.StaleParameters` and `LeagueView.StaleParameters`): an unknown `board`, `league`,
+`season` or `subdivision`, a `settled` other than 0, an unknown `active`, a `page` that is not a number
+above 1. A `page` past the last page opens the last page with a note (`role="status"`) and the address
+follows.
 
-The Matches tab (`MatchesTab`, helpers in `Features/Players/Matches/`: `MatchUrl` reads the address into `MatchFilters`, `MatchFormat` words the numbers and builds the chart rows, `MatchPlayers` lists the other players of a game) loads twice: every game of the filtered period for the tiles and charts (keyed on the filters without `sort` and `page`, so a page turn loads only the table) and one page of 25 for the table. The Army tab (`ArmyTab`, `Features/Players/Army/`: `ArmyFormat`, `AchievementFilter`, `StackedBar`, `BuiltLostPanel`) loads the counters and achievements once per player; `show` only filters the grid. A table inside an `overflow-x-auto` box needs `relative` on the box, or its `sr-only` cells (absolute) widen the page.
+Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`, a `role="group"`
+named by its label), `ChoiceSelect` (a select) and `TextFilter` (a search field written on change or Enter; its
+placeholder ends with "then Enter"), each bound to one query parameter by its `Query` parameter. Chips and
+fields are 44 px high. `NextStepNote` is the one quiet line of a page whose data is not there yet.
+
+The Matches tab (`MatchesTab`, helpers in `Features/Players/Matches/`: `MatchUrl` reads the address into `MatchFilters`, `MatchFormat` words the numbers and builds the chart rows, `MatchPlayers` lists the other players of a game) loads twice: every game of the filtered period for the tiles and charts (keyed on the filters without `sort` and `page`, so a page turn loads only the table) and one page of 25 for the table. The Army tab (`ArmyTab`, `Features/Players/Army/`: `ArmyFormat`, `AchievementFilter`, `BuiltLostPanel`) loads the counters and achievements once per player; `show` only filters the grid.
+
+### Pitfalls of this theme
+
+- **`text-base` is a colour, not a size.** In this theme `base` is the page background colour, so
+  `text-base` paints text in the background and the heading vanishes (the Games heading of the Matches tab
+  did, in both modes). For 1rem text write `text-[1rem]`, and give every heading and value an ink class
+  (`text-ink`, `text-ink-muted`). `tools/players-walk.cjs` reports headings whose colour equals the background.
+- **`relative` on every `overflow-x-auto` box that holds a table.** A table's `sr-only` cells are
+  absolutely positioned; without a positioned ancestor inside the scroll box they sit against the page and
+  widen it, which makes the whole page scroll sideways at 390 px.
+- **Wide tables become lists below `sm`** (`.list-table`, see "Narrow screens"): the rankings and the
+  standings do, and each cell then carries the short word the hidden header would have given (`#`, `σ`,
+  `games`). Links in those rows are 44 px high below `sm` (`max-sm:min-h-11`).
+- Write the minus sign U+2212 in visible text, never a hyphen; the CSV keeps `-`.
+- A grid or flex item that holds a chart needs `min-w-0`, a single column `grid-cols-1`.
+
+### Checking the pages
+
+Without a token the pages run on sample data (fixtures embedded in `Services/Players/Sample/`, one
+fictional player, "Ashgrove", id 2049311): build, then start the server with the Sample environment, which
+loads `wwwroot/appsettings.Sample.json` (`Players:SampleData`) and signs a sample user in:
+
+```powershell
+dotnet build src/FAForever.Vault.Server --artifacts-path D:\wt\art-x
+$env:ASPNETCORE_ENVIRONMENT='Sample'; $env:ASPNETCORE_URLS='http://127.0.0.1:5400'
+dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wt\art-x --no-launch-profile --no-build
+```
+
+`tools/players-walk.cjs` walks every Players page at 1440 and 390 px in both colour modes
+(`node tools/players-walk.cjs <base url> <screenshot folder>`; the header says what it needs: `playwright-core`
+from the npx cache and a chromium). Per page and mode it prints the scroll width against the viewport, the
+widest element, console errors, `role="alert"` cards, visible text with `undefined`, `NaN` or `[object`,
+headings in the colour of the background and touch targets under 44 px, and saves a screenshot. Read its
+output and look at the pictures; run it after any change to a Players page. The chart gallery needs the
+Development environment (`dev/charts`, a second server on another port).
 
 ### Chart components and the gallery
 
@@ -586,13 +628,18 @@ sign or a word (never colour alone), text never wears a series colour, a legend 
 selective labels (never a number on every point), `tabular-nums` only in tables and axes, no borders
 around marks, 2 px between bars. Tailwind only sees class names that appear literally in a `.razor` or
 `.cs` file: pick colours through `ChartColor` and `ChartColors`, never build a class from a number.
+Labels never overlap or leave the chart: `LabelLayout` estimates the room a label takes; `LineChart` moves
+the peak label beside its point when it would meet the end label and, as a step line, reserves a right
+margin for the end label; `ColumnChart` moves the marker's label to the other end (or under the line) when
+a value label is in the way and writes axis marks in full (`OverflowLabels`); `Dumbbell` puts the values
+above the track when its container is narrower than 28rem (a container query; `@@md:` in Razor).
 
 | Component | What |
 |---|---|
 | `LineChart` | Over time; measures its width (`fafReplay.observeWidth`, a ResizeObserver) and draws at pixel size; optional wash, step line, marked point, second line, vertical marks, second panel on the same time axis; crosshair and tooltip (`RenderFragment<LinePoint>`) on pointer or arrow keys |
 | `BarRows`, `ColumnChart`, `Histogram`, `Heatmap`, `Dumbbell` | HTML and CSS (no measuring) |
 | `Sparkline`, `ScoreMeter`, `StatTile`, `Legend` | Small parts |
-| `StackedBar` (`Features/Players/Compare/`) | One 100 % bar per player split by faction swatch; the pure parts of the compare page (facts, head to head record, faction shares) are in `CompareStatistics` |
+| `StackedBar` | One 100 % bar per player split by faction swatch |
 
 `Pages/ChartGallery.razor` (`/dev/charts`) is the visual test bench: every component in every variant with
 fixed demo data. It renders only when `IWebAssemblyHostEnvironment.IsDevelopment()` (the 404 page

@@ -22,20 +22,34 @@
             <div class="pointer-events-none absolute inset-x-0 border-t border-ink-faint" style="bottom:@(BarHeightOf(marker))px">
                 @if (MarkerLabel is { Length: > 0 })
                 {
-                    <span class="absolute right-0 -top-4 text-xs text-ink-faint">@MarkerLabel</span>
+                    <span class="absolute @MarkerLabelClass whitespace-nowrap text-xs text-ink-faint" style="@MarkerLabelStyle">@MarkerLabel</span>
                 }
             </div>
         }
     </div>
     <div class="mt-1.5 flex gap-0.5 text-xs text-ink-muted" aria-hidden="true">
-        @foreach (ColumnItem item in Items)
+        @for (int i = 0; i < Items.Count; i++)
         {
-            <div class="min-w-0 flex-1 text-center">
-                @foreach (string line in item.Label.Split('\n'))
-                {
-                    <div class="truncate">@line</div>
-                }
-            </div>
+            ColumnItem item = Items[i];
+            @if (OverflowLabels)
+            {
+                // Short axis marks: written in full, spilling toward the free side at the ends.
+                <div class="flex min-w-0 flex-1 flex-col @(i == 0 ? "items-start" : i == Items.Count - 1 ? "items-end" : "items-center")">
+                    @foreach (string line in item.Label.Split('\n'))
+                    {
+                        <div class="whitespace-nowrap">@line</div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="min-w-0 flex-1 text-center">
+                    @foreach (string line in item.Label.Split('\n'))
+                    {
+                        <div class="truncate">@line</div>
+                    }
+                </div>
+            }
         }
     </div>
 </div>
@@ -55,12 +69,54 @@
 
     [Parameter] public string AriaLabel { get; set; } = "Columns";
 
+    /// <summary>True for axis marks (a few characters each): they are not cut short, and the first and last lean inward.</summary>
+    [Parameter] public bool OverflowLabels { get; set; }
+
     private const int TopRoom = 20;
+    private const double LabelHeight = 16;
 
     private double max;
+    private string MarkerLabelClass = "right-0 -top-4";
+    private string MarkerLabelStyle = "";
 
     protected override void OnParametersSet()
-        => max = Max ?? (Items.Count == 0 ? 0 : Items.Max(item => item.Value));
+    {
+        max = Max ?? (Items.Count == 0 ? 0 : Items.Max(item => item.Value));
+        MarkerLabelClass = Marker is { } marker && max > 0 ? MarkerPlacement(marker) : "right-0 -top-4";
+    }
+
+    /// <summary>
+    /// Where the marker's label goes: above the line at the right end, or at the left end when the
+    /// last column's value label would be in the way, or under the line when both ends are taken.
+    /// </summary>
+    private string MarkerPlacement(double marker)
+    {
+        MarkerLabelStyle = "";
+        double line = BarHeightOf(marker);
+        bool Collides(ColumnItem item) => item.TopLabel is { Length: > 0 }
+            && BarHeightOf(item.Value) + 4 < line + LabelHeight && BarHeightOf(item.Value) + 4 + LabelHeight > line;
+        if (Items.Count == 0 || !Collides(Items[^1]))
+        {
+            return "right-0 -top-4";
+        }
+
+        if (!Collides(Items[0]))
+        {
+            return "left-0 -top-4";
+        }
+
+        // Both ends are taken: centre it over the nearest free column from the right.
+        for (int i = Items.Count - 2; i > 0; i--)
+        {
+            if (BarHeightOf(Items[i].Value) <= line && Items[i].TopLabel is not { Length: > 0 })
+            {
+                MarkerLabelStyle = $"left:{((i + 0.5) / Items.Count * 100).ToString("0.##", CultureInfo.InvariantCulture)}%";
+                return "-translate-x-1/2 -top-4";
+            }
+        }
+
+        return "right-0 top-0.5";
+    }
 
     private double BarHeightOf(double value) => max <= 0 ? 0 : Math.Clamp(value / max, 0, 1) * (Height - TopRoom);
 
