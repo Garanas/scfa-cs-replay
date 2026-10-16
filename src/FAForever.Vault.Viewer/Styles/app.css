@@ -295,6 +295,27 @@
         @apply max-sm:basis-full;
     }
 
+    /* A box that scrolls sideways shows a shadow on the edge that has more behind it (the shadow
+       scrolls away, a cover in the box's own colour hides it at the ends). Put it on the element
+       with overflow-x-auto; --hint-bg is the colour behind it (surface by default, base on the page). */
+    .scroll-hint {
+        --hint-bg: var(--th-surface);
+        --hint-shadow: color-mix(in srgb, var(--th-ink) 22%, transparent);
+        background-image:
+            linear-gradient(to right, var(--hint-bg), transparent),
+            linear-gradient(to left, var(--hint-bg), transparent),
+            linear-gradient(to right, var(--hint-shadow), transparent),
+            linear-gradient(to left, var(--hint-shadow), transparent);
+        background-position: left center, right center, left center, right center;
+        background-size: 1.5rem 100%, 1.5rem 100%, 0.625rem 100%, 0.625rem 100%;
+        background-repeat: no-repeat;
+        background-attachment: local, local, scroll, scroll;
+    }
+
+    .scroll-hint-base {
+        --hint-bg: var(--th-base);
+    }
+
     .input-field {
         @apply w-full rounded-md border border-edge bg-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none;
     }

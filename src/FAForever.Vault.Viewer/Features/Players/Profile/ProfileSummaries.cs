@@ -74,9 +74,11 @@ public static class ProfileSummaries
                 continue;
             }
 
-            if (entry.Subdivision is { } subdivision)
+            // A player in placement has no score yet (the score may be absent), so no points are shown.
+            int? score = entry.Score;
+            if (entry.Subdivision is { } subdivision && score is { } points)
             {
-                return new LeagueLine(subdivision.FullName, $"{entry.Score} points");
+                return new LeagueLine(subdivision.FullName, $"{ProfileFormat.Number(points)} points");
             }
 
             int placement = entry.ReturningPlayer ? season.PlacementGamesReturningPlayer : season.PlacementGames;

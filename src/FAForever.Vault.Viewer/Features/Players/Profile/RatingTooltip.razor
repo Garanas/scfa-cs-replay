@@ -7,7 +7,7 @@
 {
     DeltaTone tone = ProfileFormat.Tone(entry.Change);
     <p class="text-ink-muted">@ProfileFormat.Date(entry.Date)</p>
-    <p class="mt-0.5 flex items-center gap-1.5 text-base font-semibold text-ink">
+    <p class="mt-0.5 flex items-center gap-1.5 text-[1rem] font-semibold text-ink">
         @ProfileFormat.Number(entry.RatingAfter)
         <span class="flex items-center gap-1 text-xs font-normal text-ink-muted">
             @if (tone != DeltaTone.Neutral)

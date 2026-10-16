@@ -71,21 +71,21 @@
                 <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
                     @if (change30 is { } thirty)
                     {
-                        <StatTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Delta="@($"{ProfileFormat.Signed(thirty)} in 30 days")" Tone="ProfileFormat.Tone(thirty)" Up="@(thirty >= 0)" />
+                        <InfoTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Delta="@($"{ProfileFormat.Signed(thirty)} in 30 days")" Tone="ProfileFormat.Tone(thirty)" Up="@(thirty >= 0)" />
                     }
                     else
                     {
-                        <StatTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Sub="No games in 30 days" />
+                        <InfoTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Sub="No games in 30 days" />
                     }
-                    <StatTile Label="Peak" Value="@ProfileFormat.Number(stats.Peak ?? 0)" Sub="@ProfileFormat.Date(stats.PeakDate)" />
-                    <StatTile Label="Games" Value="@ProfileFormat.Number(stats.Games)" Sub="@($"{ProfileFormat.Number(stats.Wins)} won, {ProfileFormat.Number(stats.Losses)} lost")" />
-                    <StatTile Label="Average change" Value="@(stats.AverageChange is { } average ? ProfileFormat.SignedOneDecimal(average) : "0.0")" Sub="per game" />
-                    <StatTile Label="Biggest gain" Value="@(bestGain is null ? "None" : ProfileFormat.Signed(bestGain.Change))" Sub="@GameSub(bestGain)" />
-                    <StatTile Label="Biggest loss" Value="@(bestLoss is null ? "None" : ProfileFormat.Signed(bestLoss.Change))" Sub="@GameSub(bestLoss)" />
+                    <InfoTile Label="Peak" Value="@ProfileFormat.Number(stats.Peak ?? 0)" Sub="@ProfileFormat.Date(stats.PeakDate)" />
+                    <InfoTile Label="Games" Value="@ProfileFormat.Number(stats.Games)" Sub="@($"{ProfileFormat.Number(stats.Wins)} won, {ProfileFormat.Number(stats.Losses)} lost")" />
+                    <InfoTile Label="Average change" Value="@(stats.AverageChange is { } average ? ProfileFormat.SignedOneDecimal(average) : "0.0")" Sub="per game" />
+                    <InfoTile Label="Biggest gain" Value="@(bestGain is null ? "None" : ProfileFormat.Signed(bestGain.Change))" Sub="@GameSub(bestGain)" />
+                    <InfoTile Label="Biggest loss" Value="@(bestLoss is null ? "None" : ProfileFormat.Signed(bestLoss.Change))" Sub="@GameSub(bestLoss)" />
                 </div>
 
                 <section class="card min-w-0" aria-labelledby="rh-line-title">
-                    <h2 id="rh-line-title" class="text-lg font-semibold">Rating, one point per rated game</h2>
+                    <h2 id="rh-line-title" class="text-lg font-semibold text-ink">Rating, one point per rated game</h2>
                     <p class="mb-3 mt-1 text-sm text-ink-muted">Rating is μ − 3σ. Hover or tap for a game; the arrow keys move along the line.</p>
                     <div class="mb-2">
                         <Legend Items="lineLegend" />
@@ -101,7 +101,7 @@
                 </section>
 
                 <section class="card min-w-0" aria-labelledby="rh-hist-title">
-                    <h2 id="rh-hist-title" class="text-lg font-semibold">Rating change per game</h2>
+                    <h2 id="rh-hist-title" class="text-lg font-semibold text-ink">Rating change per game</h2>
                     <p class="mb-4 mt-1 text-sm text-ink-muted">How much a win gives and a loss takes. Narrow bars mean a settled rating.</p>
                     <Histogram Bins="bins" ShowZeroInLegend="false" NegativeLabel="@LossLabel" PositiveLabel="@WinLabel"
                                AriaLabel="@($"Rating change per game on {Leaderboards.DisplayName(activeBoard ?? "")}")" />
@@ -109,7 +109,7 @@
             }
 
             <section aria-labelledby="rh-boards-title">
-                <h2 id="rh-boards-title" class="text-lg font-semibold">Every leaderboard, @ProfileFormat.SamePeriod(period)</h2>
+                <h2 id="rh-boards-title" class="text-lg font-semibold text-ink">Every leaderboard, @ProfileFormat.SamePeriod(period)</h2>
                 <p class="mb-3 mt-1 text-sm text-ink-muted">One small chart each, so the scales stay honest. Pick one to show it above.</p>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     @foreach (BoardCard card in boardCards)
@@ -133,7 +133,7 @@
                             {
                                 <span class="mt-2 flex items-end justify-between gap-3">
                                     <span class="block min-w-0">
-                                        <span class="block text-2xl font-semibold leading-tight">@ProfileFormat.Number(card.Current ?? 0)</span>
+                                        <span class="block text-2xl font-semibold leading-tight text-ink">@ProfileFormat.Number(card.Current ?? 0)</span>
                                         <span class="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
                                             @if (card.Change is { } change)
                                             {
@@ -169,13 +169,13 @@
                 <section class="card min-w-0" aria-labelledby="rh-journal-title">
                     <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                         <div class="min-w-0">
-                            <h2 id="rh-journal-title" class="text-lg font-semibold">Rating journal</h2>
+                            <h2 id="rh-journal-title" class="text-lg font-semibold text-ink">Rating journal</h2>
                             <p class="mt-1 text-sm text-ink-muted">The table behind the charts: every rated game with the rating before and after it.</p>
                         </div>
                         <a class="btn-secondary min-h-11" href="@csvUrl" download="@csvName">Download CSV</a>
                     </div>
-                    <div class="relative mt-4 overflow-x-auto">
-                        <table class="w-full min-w-[46rem] text-left text-sm">
+                    <div class="scroll-hint relative mt-4 overflow-x-auto">
+                        <table class="list-table w-full text-left text-sm sm:min-w-[46rem]">
                             <thead class="text-xs text-ink-muted">
                                 <tr>
                                     <th scope="col" class="py-2 pr-4 font-medium">Date</th>
@@ -194,20 +194,20 @@
                                 {
                                     DeltaTone rowTone = ProfileFormat.Tone(row.Change);
                                     <tr class="border-t border-edge">
-                                        <td class="whitespace-nowrap py-2 pr-4 tabular-nums">@ProfileFormat.Date(row.Date)</td>
-                                        <td class="max-w-[12rem] truncate py-2 pr-4" title="@row.MapName">@(row.MapName ?? "Unknown map")</td>
-                                        <td class="max-w-[14rem] truncate py-2 pr-4">
+                                        <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(row.Date)</td>
+                                        <td class="list-table-wide max-w-[12rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0" title="@row.MapName">@(row.MapName ?? "Unknown map")</td>
+                                        <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-7 max-sm:max-w-none max-sm:p-0">
                                             @for (int i = 0; i < row.Opponents.Count && i < 2; i++)
                                             {
                                                 PlayerReference opponent = row.Opponents[i];
-                                                <span>@(i > 0 ? ", " : "")<a class="hover:text-primary hover:underline" href="@PlayerLinks.Profile(opponent.Id)">@opponent.Login</a></span>
+                                                <span>@(i > 0 ? ", " : "")<a class="hover:text-primary hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:items-center" href="@PlayerLinks.Profile(opponent.Id)">@opponent.Login</a></span>
                                             }
                                             @if (row.Opponents.Count > 2)
                                             {
                                                 <span class="text-ink-muted"> and @(row.Opponents.Count - 2) more</span>
                                             }
                                         </td>
-                                        <td class="whitespace-nowrap py-2 pr-4">
+                                        <td class="whitespace-nowrap py-2 pr-4 max-sm:order-2 max-sm:p-0">
                                             <span class="inline-flex items-center gap-1.5">
                                                 @if (rowTone != DeltaTone.Neutral)
                                                 {
@@ -216,11 +216,11 @@
                                                 @ProfileFormat.ResultWord(row.Change)
                                             </span>
                                         </td>
-                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums">@ProfileFormat.Number(row.RatingBefore)</td>
-                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums">@ProfileFormat.Number(row.RatingAfter)</td>
-                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums">@ProfileFormat.Signed(row.Change)</td>
-                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums text-ink-muted">@ProfileFormat.Number(row.DeviationAfter)</td>
-                                        <td class="whitespace-nowrap py-2 text-right"><a class="text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(row.GameId)">Replay</a></td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:hidden">@ProfileFormat.Number(row.RatingBefore)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:order-3 max-sm:p-0">@ProfileFormat.Number(row.RatingAfter)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:order-4 max-sm:p-0">@ProfileFormat.Signed(row.Change)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums text-ink-muted max-sm:hidden">@ProfileFormat.Number(row.DeviationAfter)</td>
+                                        <td class="whitespace-nowrap py-2 text-right max-sm:order-5 max-sm:ml-auto max-sm:p-0"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(row.GameId)">Replay</a></td>
                                     </tr>
                                 }
                             </tbody>

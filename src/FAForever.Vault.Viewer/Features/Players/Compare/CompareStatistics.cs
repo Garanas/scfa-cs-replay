@@ -179,7 +179,7 @@ public static class CompareStatistics
 
     private static string Count(double value) => Math.Round(value).ToString("N0", CultureInfo.InvariantCulture);
 
-    private static string Percent(double value) => (value * 100).ToString("0", CultureInfo.InvariantCulture) + " %";
+    private static string Percent(double value) => (value * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
 
     private static FactRow Row(string label, double? a, double? b, Func<double, string> format, bool lowerIsBetter = false)
         => new(label, a is { } x ? format(x) : "None", b is { } y ? format(y) : "None", Decide(a, b, lowerIsBetter));
