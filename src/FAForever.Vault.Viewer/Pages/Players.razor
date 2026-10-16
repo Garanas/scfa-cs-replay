@@ -1,0 +1,115 @@
+@page "/players"
+@inherits UrlStateComponent
+@inject AuthService Auth
+
+@* The entry to the Players pages (the Players tab in the header), like the Maps tab: a search for a
+   player and a card for the rankings, the leagues and the comparison. The cards draw no data; the
+   search needs a login, since the FAF API answers signed in players only. Same writing style as the
+   About pages: simple English, short sentences, no hyphens, underscores or dashes in the visible text. *@
+
+<PageTitle>Players · Vault of FAForever</PageTitle>
+
+<section class="py-10 sm:py-14">
+    <div class="flex items-center justify-between gap-4">
+        <p class="font-display text-sm font-bold tracking-[0.2em] text-primary">PLAYERS</p>
+        <ShareButton Title="Players on Vault of FAForever" Class="btn-secondary min-h-11 gap-1.5 px-3" />
+    </div>
+    <h1 class="mt-2 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">Every player on FAF</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-muted">
+        Look up a player to see their ratings, their games and the factions they play. Or see who is
+        on top, how the leagues stand, and how two players compare.
+    </p>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <PlayersLoginGate What="players" />
+        </NotAuthorized>
+        <Authorized>
+            <form class="mt-8 max-w-2xl" role="search" @onsubmit="Submit" @onsubmit:preventDefault>
+                <label for="player-search" class="mb-1 block text-sm font-medium text-ink-muted">Find a player</label>
+                <div class="flex gap-2">
+                    <input id="player-search" type="search" class="input-field min-h-11 flex-1" placeholder="A name, now or in the past"
+                           autocomplete="off" @bind="text" @bind:event="oninput" />
+                    <button type="submit" class="btn-primary min-h-11">Search</button>
+                </div>
+            </form>
+            @if (Searched is { Length: > 0 } searched)
+            {
+                <NextStepNote Text="@($"The results for “{searched}” arrive in the next step. The search will look at current names and at former names.")" />
+            }
+            else
+            {
+                <p class="mt-3 max-w-2xl text-sm text-ink-faint">The search looks at current names and at names a player had before.</p>
+            }
+        </Authorized>
+    </AuthorizeView>
+</section>
+
+<div class="grid gap-6 lg:grid-cols-3">
+    <a href="@PlayerLinks.Rankings" class="@CardClass">
+        <div class="flex h-14 items-end gap-1.5" aria-hidden="true">
+            @foreach (int height in new[] { 24, 36, 48, 32, 20 })
+            {
+                <span class="w-3 rounded-t-[4px] bg-primary/70 transition group-hover:bg-primary" style="height:@(height)px"></span>
+            }
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Rankings</h2>
+        <p class="mt-1 font-mono text-sm text-primary">every leaderboard</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            The best players of each leaderboard, with their rating, games and wins, and where a rating puts you among everyone.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            See the rankings <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+
+    <a href="@PlayerLinks.Leagues" class="@CardClass">
+        <div class="flex h-14 flex-wrap items-center gap-1.5 font-mono text-sm" aria-hidden="true">
+            @foreach (string numeral in new[] { "V", "IV", "III", "II", "I" })
+            {
+                <span class="rounded-md border border-edge bg-raised px-2 py-1 text-ink-muted transition group-hover:border-primary group-hover:text-primary">@numeral</span>
+            }
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Leagues</h2>
+        <p class="mt-1 font-mono text-sm text-primary">season by season</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            The divisions of each season, how many players sit in each, and the standings of every subdivision.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            See the leagues <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+
+    <a href="@PlayerLinks.Compare" class="@CardClass">
+        <div class="flex h-14 items-center gap-2" aria-hidden="true">
+            <span class="h-3 w-3 rounded-full bg-viz-1"></span>
+            <span class="h-[3px] w-14 rounded-full bg-ink-faint transition group-hover:bg-primary"></span>
+            <span class="h-3 w-3 rounded-full bg-viz-2"></span>
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Compare</h2>
+        <p class="mt-1 font-mono text-sm text-primary">two players side by side</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            Put two players next to each other: ratings per leaderboard, the factions they play, and the games they played against each other.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            Compare two players <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+</div>
+
+@code {
+    private const string CardClass = "card group relative flex flex-col overflow-hidden transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]";
+
+    private string text = "";
+
+    /// <summary>The search text in the address; the result list is shown from it.</summary>
+    private string? Searched => UrlQuery.Get(Navigation, "q") is { Length: > 0 } q ? q : null;
+
+    protected override void OnParametersSet() => text = Searched ?? "";
+
+    private void Submit()
+    {
+        string trimmed = text.Trim();
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("q", trimmed.Length == 0 ? null : trimmed), replace: true);
+    }
+}

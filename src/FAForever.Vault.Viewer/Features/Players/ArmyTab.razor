@@ -1,0 +1,18 @@
+@* The Army and factions tab: lifetime counters (no period), games and wins per faction, custom
+   against matchmaker, time in game, units built and lost, and the achievements with a state
+   filter. A shell. *@
+<section aria-label="Army and factions">
+    <p class="max-w-3xl text-sm text-ink-muted">
+        Lifetime counters the game reports after every match: games and wins per faction, units built
+        and lost by category and tech level, time played. They cover every mode and cannot be filtered
+        by period.
+    </p>
+    <div class="mt-4">
+        <ChoiceChips Label="Achievements" Query="show" Options="PlayerFilters.AchievementStates" Default="all" />
+    </div>
+    <NextStepNote Text="The army statistics and achievements of this player arrive in the next step." />
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+}

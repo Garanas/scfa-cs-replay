@@ -1,0 +1,33 @@
+@inherits PlayerUrlComponent
+
+@* One choice among several as a select, kept in one query parameter (the default stays out of the
+   URL): the leaderboard, and the filters of the match list. *@
+<label class="block min-w-0 text-sm">
+    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">@Label</span>
+    <select class="input-field min-h-11" value="@current" @onchange="Changed">
+        @foreach (ChoiceOption option in Options)
+        {
+            <option value="@option.Token">@option.Label</option>
+        }
+    </select>
+</label>
+
+@code {
+    [Parameter, EditorRequired] public required string Label { get; set; }
+
+    [Parameter, EditorRequired] public required string Query { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<ChoiceOption> Options { get; set; }
+
+    [Parameter, EditorRequired] public required string Default { get; set; }
+
+    private string current = "";
+
+    protected override void OnParametersSet()
+    {
+        string? value = Read(Query);
+        current = value is not null && Options.Any(option => option.Token == value) ? value : Default;
+    }
+
+    private void Changed(ChangeEventArgs e) => Write(Query, e.Value?.ToString(), Default);
+}

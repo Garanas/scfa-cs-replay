@@ -1,0 +1,35 @@
+@inherits PlayerUrlComponent
+
+@* One choice among a few as chips, kept in one query parameter (the default stays out of the URL).
+   Period presets, boards and the achievement filter all use it. *@
+<fieldset class="min-w-0">
+    <legend class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">@Label</legend>
+    <div class="flex flex-wrap gap-1.5">
+        @foreach (ChoiceOption option in Options)
+        {
+            bool chosen = option.Token == current;
+            <button type="button" aria-pressed="@(chosen ? "true" : "false")" class="@ChipClass(chosen)"
+                    @onclick="() => Write(Query, option.Token, Default)">@option.Label</button>
+        }
+    </div>
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public required string Label { get; set; }
+
+    /// <summary>The query parameter the choice is kept in.</summary>
+    [Parameter, EditorRequired] public required string Query { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<ChoiceOption> Options { get; set; }
+
+    /// <summary>The token that is chosen while the parameter is absent.</summary>
+    [Parameter, EditorRequired] public required string Default { get; set; }
+
+    private string current = "";
+
+    protected override void OnParametersSet()
+    {
+        string? value = Read(Query);
+        current = value is not null && Options.Any(option => option.Token == value) ? value : Default;
+    }
+}

@@ -213,7 +213,7 @@
 
     /* Wide screens show everything in the header itself, so a menu left open there disappears. */
     .menu-popover:popover-open {
-        @apply flex sm:hidden;
+        @apply flex lg:hidden;
     }
 
     .btn-primary {

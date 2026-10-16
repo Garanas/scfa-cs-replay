@@ -1,0 +1,23 @@
+@* n of m cells, filled from the left (the league score: 7 of 10). *@
+<div class="flex items-center gap-3">
+    <div class="flex flex-1 gap-0.5" role="img" aria-label="@AriaText">
+        @for (int i = 0; i < Max; i++)
+        {
+            <span class="h-2 min-w-0 flex-1 rounded-[2px] @(i < Value ? "bg-primary" : "bg-edge")"></span>
+        }
+    </div>
+    @if (Label is { Length: > 0 })
+    {
+        <span class="shrink-0 text-xs text-ink-muted">@Label</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Value { get; set; }
+
+    [Parameter, EditorRequired] public int Max { get; set; }
+
+    [Parameter] public string? Label { get; set; }
+
+    private string AriaText => Label is null ? $"{Value} of {Max}" : $"{Value} of {Max} {Label}";
+}

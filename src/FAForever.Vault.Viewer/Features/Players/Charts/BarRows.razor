@@ -1,0 +1,71 @@
+@using System.Globalization
+@* Horizontal bars, one row each: the label, the bar (at most 18 px thick, its data end rounded by
+   4 px, a 2 px gap between a value and its paler second part) and the value as text at the end.
+   Bars start at a common baseline. Marker draws a thin line at one value (50 % of games won). *@
+<div class="grid grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto]" role="list" aria-label="@AriaLabel">
+    @foreach (BarRow row in Rows)
+    {
+        double total = row.Value + row.Extra;
+        <div class="contents" role="listitem">
+            <div class="min-w-0 text-sm">
+                @if (row.Href is not null)
+                {
+                    <a href="@row.Href" class="block truncate text-ink transition hover:text-primary">@row.Label</a>
+                }
+                else
+                {
+                    <span class="block truncate text-ink">@row.Label</span>
+                }
+                @if (row.Sub is { Length: > 0 })
+                {
+                    <span class="block truncate text-xs text-ink-faint">@row.Sub</span>
+                }
+            </div>
+            <div class="relative h-[18px] border-l border-edge">
+                @if (total > 0)
+                {
+                    <div class="flex h-full gap-0.5" style="width:@Percent(total)%">
+                        @if (row.Value > 0)
+                        {
+                            <div class="h-full min-w-px @(row.Extra > 0 ? "rounded-none" : "rounded-r-[4px]") @(row.CssColor is null ? ChartColors.Bg(row.Color) : "")"
+                                 style="width:@Share(row.Value, total)%;@(row.CssColor is null ? "" : $"background:{row.CssColor}")"></div>
+                        }
+                        @if (row.Extra > 0)
+                        {
+                            <div class="h-full min-w-px flex-1 rounded-r-[4px] opacity-35 @(row.CssColor is null ? ChartColors.Bg(row.Color) : "")"
+                                 style="@(row.CssColor is null ? "" : $"background:{row.CssColor}")"></div>
+                        }
+                    </div>
+                }
+                @if (Marker is { } marker && max > 0)
+                {
+                    <span class="pointer-events-none absolute -top-1 -bottom-1 w-0.5 bg-ink-muted" style="left:@Percent(marker)%" aria-hidden="true"></span>
+                }
+            </div>
+            <div class="text-right text-sm text-ink-muted">@row.ValueText</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<BarRow> Rows { get; set; }
+
+    /// <summary>The value a full bar stands for; default the largest row.</summary>
+    [Parameter] public double? Max { get; set; }
+
+    /// <summary>A reference value drawn as a thin line across every row, in the same units as the rows.</summary>
+    [Parameter] public double? Marker { get; set; }
+
+    [Parameter] public string AriaLabel { get; set; } = "Bars";
+
+    private double max;
+
+    protected override void OnParametersSet()
+        => max = Max ?? (Rows.Count == 0 ? 0 : Rows.Max(row => row.Value + row.Extra));
+
+    private string Percent(double value)
+        => (max <= 0 ? 0 : Math.Clamp(value / max * 100, 0, 100)).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string Share(double part, double total)
+        => (total <= 0 ? 0 : part / total * 100).ToString("0.##", CultureInfo.InvariantCulture);
+}

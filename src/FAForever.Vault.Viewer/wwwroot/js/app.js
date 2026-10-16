@@ -72,6 +72,26 @@ window.fafReplay = {
     scrollIntoView: function (id) {
         document.getElementById(id)?.scrollIntoView({ block: "nearest" });
     },
+    /* A chart's width (Features/Players/Charts/LineChart.razor): the element's width now, and again
+       through dotNetRef.OnWidth(width) on every resize, so the chart draws at its real pixel size and
+       its text keeps its size. */
+    observeWidth: function (element, dotNetRef) {
+        if (!element || typeof ResizeObserver === "undefined") {
+            return element ? element.getBoundingClientRect().width : 0;
+        }
+        const observer = new ResizeObserver(function (entries) {
+            dotNetRef.invokeMethodAsync("OnWidth", entries[0].contentRect.width).catch(function () { });
+        });
+        observer.observe(element);
+        element.fafWidthObserver = observer;
+        return element.getBoundingClientRect().width;
+    },
+    unobserveWidth: function (element) {
+        if (element && element.fafWidthObserver) {
+            element.fafWidthObserver.disconnect();
+            element.fafWidthObserver = null;
+        }
+    },
     /*
      * Scrolls a sideways strip (the fact cards on the Units page) by most of its width, back for a
      * negative direction. Smooth unless the user asked for reduced motion.

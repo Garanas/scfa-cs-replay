@@ -1,0 +1,45 @@
+@page "/players/compare"
+@inherits UrlStateComponent
+
+@* Two players side by side: their ids in a and b, a leaderboard and a period. A shell: finding a
+   player by name arrives with the data. *@
+
+<PageTitle>Compare players · Vault of FAForever</PageTitle>
+
+<a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
+<div class="mt-2 flex items-start justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold">Compare players</h1>
+        <p class="mt-1 text-sm text-ink-muted">Two players next to each other, on the same scales.</p>
+    </div>
+    <ShareButton Title="Compare players on Vault of FAForever" Class="btn-secondary min-h-11 shrink-0 gap-1.5 px-3" />
+</div>
+
+<div class="mt-6">
+    <PlayersSectionTabs Active="Compare" />
+</div>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <PlayersLoginGate What="the comparison" />
+    </NotAuthorized>
+    <Authorized>
+        <div class="card mt-6 grid grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="block min-w-0 text-sm">
+                    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">First player</span>
+                    <input type="search" class="input-field min-h-11" placeholder="A player name" disabled />
+                </label>
+                <label class="block min-w-0 text-sm">
+                    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Second player</span>
+                    <input type="search" class="input-field min-h-11" placeholder="A player name" disabled />
+                </label>
+            </div>
+            <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <ChoiceSelect Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="@PlayerFilters.DefaultBoard" />
+                <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+            </div>
+        </div>
+        <NextStepNote Text="Choosing two players and the comparison itself arrive in the next step." />
+    </Authorized>
+</AuthorizeView>

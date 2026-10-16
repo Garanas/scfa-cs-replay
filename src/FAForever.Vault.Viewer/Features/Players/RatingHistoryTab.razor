@@ -1,0 +1,13 @@
+@* The Rating history tab: the period and the board, then tiles, the rating line with its sigma panel,
+   the histogram of change per game, a small chart per board and the journal table. A shell. *@
+<section aria-label="Rating history">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <ChoiceSelect Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="@PlayerFilters.DefaultBoard" />
+        <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+    </div>
+    <NextStepNote Text="The rating history of this player arrives in the next step." />
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+}
