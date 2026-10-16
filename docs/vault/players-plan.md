@@ -166,17 +166,22 @@ reports after each wave. Agents run on Sonnet. Build and test with `--artifacts-
 
 ## Tooling
 
-- Run the app on sample data (no token, no login): from the repository folder,
-  `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:5390 dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id> --no-launch-profile`
-  (PowerShell: set `$env:ASPNETCORE_ENVIRONMENT = 'Sample'` and `$env:ASPNETCORE_URLS` first). The
-  Server serves the Viewer's files in that environment (`UseStaticWebAssets`), Blazor loads
-  `wwwroot/appsettings.Sample.json` (the response header `Blazor-Environment: Sample`), and the app is
-  signed in as the sample player 2049311 "Ashgrove" (`AuthService.InitializeAsync`). Rebuild and restart
-  after a change; stop the server before building to the same artifacts path.
-- Agents cannot sign in: the development OAuth client only redirects to `127.0.0.1:5080`, which is
-  the owner's server. Pages are checked with the sample API (decision 7) on the agent's own port.
-  The owner can give one Playwright profile a real session (`--user-data-dir=.playwright-mcp/profile`
-  and a login on 5080 once); the QA wave uses it when it exists.
+- Run the app on sample data (no token, no login): from the worktree folder, build first
+  (`dotnet build src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id>`), then
+  `ASPNETCORE_ENVIRONMENT=Sample ASPNETCORE_URLS=http://127.0.0.1:<port> dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wtrt-<id> --no-launch-profile --no-build`
+  (PowerShell: set `$env:ASPNETCORE_ENVIRONMENT = 'Sample'` and `$env:ASPNETCORE_URLS` first). In
+  that environment the Server serves the Viewer's files (`UseStaticWebAssets`) and answers
+  `/appsettings.json` with `wwwroot/appsettings.Sample.json` (the .NET 10 runtime asks for no
+  environment file, whatever the `Blazor-Environment` header says), so `Players:SampleData` is true,
+  `SamplePlayersApi` is registered and the app is signed in as the sample player 2049311 "Ashgrove"
+  (`AuthService.InitializeAsync`). Stop the server, rebuild and start it again after a change.
+- Agents cannot sign in: the development OAuth client only redirects to `127.0.0.1:5080`, the port
+  of the owner's server (which serves `feature/players` from `D:\wt\players` during this work).
+  Pages are checked with the sample API (decision 7) on the agent's own port. For checks with real
+  data the owner signs in once in the Chromium that `login.cjs` opens (a persistent profile in
+  `D:\wtefrowser-profile`, CDP on `127.0.0.1:9333`); the session lives in that tab's
+  sessionStorage, so the tab stays open and an agent drives that same tab through
+  `chromium.connectOverCDP('http://127.0.0.1:9333')` instead of opening a new one.
 - Every agent reports a "Tooling" section: whether it could test its work (tests, the sample API,
   Playwright) and what to add. The wave reports collect them.
 - A worktree has no `tools/tailwindcss.exe`; the main session copies it in. The committed
