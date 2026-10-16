@@ -1,0 +1,40 @@
+<!-- A question over the window (unsaved changes, confirmations): its title, message and buttons. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.QuestionDialog"
+             x:DataType="vm:QuestionViewModel">
+  <Border Classes="scrim">
+    <Border x:Name="Dialog" Classes="dialog question" KeyboardNavigation.TabNavigation="Cycle"
+            AutomationProperties.Name="{Binding Title}">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="{Binding Title}" />
+            <TextBlock Classes="lead" Text="{Binding Message}" TextWrapping="Wrap" />
+            <StackPanel Classes="stack" IsVisible="{Binding HasField}">
+              <TextBlock Classes="label" Text="{Binding FieldLabel}" />
+              <TextBox x:Name="Field" Text="{Binding FieldText}" AutomationProperties.Name="{Binding FieldLabel}"
+                       AutomationProperties.HelpText="Enter presses the question's first button; Escape cancels" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart pickerfoot">
+          <ItemsControl x:Name="Buttons" ItemsSource="{Binding Choices}" HorizontalAlignment="Right">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Classes="inline" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:QuestionChoice">
+                <Button Content="{Binding Text}" Classes.accent="{Binding IsAccent}"
+                        Command="{Binding $parent[ItemsControl].((vm:QuestionViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

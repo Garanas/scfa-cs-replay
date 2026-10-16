@@ -1,0 +1,445 @@
+using System.Collections.Immutable;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using FAForever.FileFormats.Lua;
+using FAForever.FileFormats.Map;
+using FAForever.MapEditor.Project.Files;
+using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
+
+namespace FAForever.MapEditor.Project
+{
+    /// <summary>
+    /// Makes a <see cref="MapDocument"/> from the files of a map: the folder the game and the vault
+    /// hold (<c>maps/theta_passage.v0004/</c>), or the parsed files themselves. The reverse is
+    /// <see cref="MapExporter"/>.
+    /// </summary>
+    public static partial class MapImporter
+    {
+        /// <summary>
+        /// Lua files are read as Latin-1, which keeps every byte: map files are not always UTF-8.
+        /// </summary>
+        internal static readonly Encoding LuaEncoding = Encoding.Latin1;
+
+        /// <summary>
+        /// Reads a map folder. The scenario names the save and the script; the folder's name gives
+        /// the map's name, and its version when the scenario has none.
+        /// </summary>
+        /// <exception cref="MapProjectException">The folder is not a map, or one of its files cannot be read.</exception>
+        public static MapDocument ImportFolder(string folder)
+        {
+            if (!Directory.Exists(folder))
+            {
+                throw new MapProjectException($"The map folder {folder} does not exist");
+            }
+
+            string scmapPath = Single(folder, "*.scmap");
+            string scenarioPath = Single(folder, "*_scenario.lua");
+            MapScenario scenario = Parse(scenarioPath, MapScenarioParser.Parse);
+
+            string fileName = Path.GetFileNameWithoutExtension(scmapPath);
+            string savePath = FindNamed(folder, scenario.Save, $"{fileName}_save.lua")
+                ?? throw new MapProjectException($"{folder} has no save file ({Path.GetFileName(scenario.Save) ?? $"{fileName}_save.lua"})");
+            string? scriptPath = FindNamed(folder, scenario.Script, $"{fileName}_script.lua");
+
+            Scmap scmap;
+            try
+            {
+                scmap = ScmapParser.Parse(File.ReadAllBytes(scmapPath));
+            }
+            catch (ScmapFormatException exception)
+            {
+                throw new MapProjectException($"{scmapPath}: {exception.Message}", exception);
+            }
+            MapSave save = Parse(savePath, MapSaveParser.Parse);
+
+            string[] known = [scmapPath, scenarioPath, savePath, scriptPath ?? ""];
+            Dictionary<string, byte[]> files = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                .Where(file => !known.Contains(file))
+                .ToDictionary(file => Path.GetRelativePath(folder, file).Replace('\\', '/'), File.ReadAllBytes);
+
+            MapFolderName folderName = MapFolderName.Parse(Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder))));
+            MapDocument document = Import(scmap, save, scenario, folderName.Name, fileName, scriptPath is null ? null : File.ReadAllBytes(scriptPath), files);
+            return document.Version is null ? document with { Version = folderName.Version } : document;
+        }
+
+        /// <summary>
+        /// Makes a document from the parsed files of a map.
+        /// </summary>
+        /// <param name="name">The name of the map's folder without its version.</param>
+        /// <param name="fileName">The name the map's files start with.</param>
+        /// <param name="script">The <c>_script.lua</c>, if the map has one.</param>
+        /// <param name="files">The other files of the folder, by their path in it.</param>
+        public static MapDocument Import(
+            Scmap scmap,
+            MapSave save,
+            MapScenario scenario,
+            string name,
+            string fileName,
+            byte[]? script = null,
+            IReadOnlyDictionary<string, byte[]>? files = null)
+        {
+            MapDocument document = new MapDocument
+            {
+                Name = name,
+                FileName = fileName,
+                Version = scenario.MapVersion,
+                Scenario = ToScenario(scenario),
+                Terrain = ToTerrain(scmap),
+                Lighting = ToLighting(scmap.Lighting),
+                Water = ToWater(scmap),
+                Sky = new Sky
+                {
+                    Background = scmap.BackgroundTexture,
+                    Cubemap = scmap.SkyCubemap,
+                    EnvironmentCubemaps = [.. scmap.EnvironmentCubemaps.Select(c => new Cubemap { Name = c.Name, Texture = c.Texture })],
+                    Skybox = scmap.Skybox is ScmapSkybox skybox ? ToSkybox(skybox) : null,
+                },
+                Minimap = scmap.Minimap is ScmapMinimap m
+                    ? new Minimap
+                    {
+                        ContourInterval = m.ContourInterval,
+                        DeepWaterColor = Color32.FromArgb(m.DeepWaterColor),
+                        ContourColor = Color32.FromArgb(m.ContourColor),
+                        ShoreColor = Color32.FromArgb(m.ShoreColor),
+                        LandStartColor = Color32.FromArgb(m.LandStartColor),
+                        LandEndColor = Color32.FromArgb(m.LandEndColor),
+                        ImagerElevationOffset = m.ImagerElevationOffset,
+                    }
+                    : null,
+                Decals = [.. scmap.Decals.Select(d => new Decal
+                {
+                    Id = d.Id,
+                    Type = (DecalType)d.Type,
+                    Textures = [.. d.Textures],
+                    Scale = d.Scale,
+                    Position = d.Position,
+                    Rotation = d.Rotation,
+                    CutOffLod = d.CutOffLod,
+                    NearCutOffLod = d.NearCutOffLod,
+                    OwnerArmy = d.OwnerArmy,
+                })],
+                DecalGroups = [.. scmap.DecalGroups.Select(g => new DecalGroup { Id = g.Id, Name = g.Name, DecalIds = [.. g.DecalIds] })],
+                Props = [.. scmap.Props.Select((p, index) => new Prop
+                {
+                    Id = index + 1,
+                    Blueprint = p.Blueprint,
+                    Position = p.Position,
+                    RotationX = p.RotationX,
+                    RotationY = p.RotationY,
+                    RotationZ = p.RotationZ,
+                    Scale = p.Scale,
+                })],
+                Markers = MarkerTranslation.ToMarkerSet(save.Markers, save.Areas, save.Chains, NoRushOffsets(scenario)),
+                Armies = [.. save.Armies.Select(ToArmy)],
+                Script = script is null ? null : ImmutableCollectionsMarshal.AsImmutableArray(script),
+                Files = (files ?? new Dictionary<string, byte[]>()).ToImmutableSortedDictionary(
+                    entry => entry.Key,
+                    entry => ImmutableCollectionsMarshal.AsImmutableArray(entry.Value),
+                    StringComparer.Ordinal),
+            };
+            return WithPlayableArea(document);
+        }
+
+        /// <summary>
+        /// The playable area the script sets at the start (<see cref="MapScript.PlayableAreaOf"/>), in
+        /// the scenario when it is an area of the map other than the first: the first is the
+        /// playable area by convention, so a map whose script names the first area keeps none.
+        /// </summary>
+        private static MapDocument WithPlayableArea(MapDocument document)
+        {
+            if (document.Script is not { } script
+                || MapScript.PlayableAreaOf(LuaEncoding.GetString(ImmutableCollectionsMarshal.AsArray(script)!)) is not string name
+                || document.Markers.Areas.IsEmpty
+                || document.Markers.Areas[0].Name == name
+                || !document.Markers.Areas.Any(area => area.Name == name))
+            {
+                return document;
+            }
+            return document with { Scenario = document.Scenario with { PlayableArea = name } };
+        }
+
+        /// <summary>
+        /// The scenario in the editor's terms: the armies of its configuration (every map of the
+        /// vault has one, <c>standard</c>, with one team) as playable and extra armies. The first
+        /// team, <c>FFA</c>, holds the playable armies, and the teams after it are the map maker's
+        /// (<see cref="Team"/>); a configuration whose first team is no <c>FFA</c> has its teams'
+        /// armies as the playable ones, and those teams as the map maker's.
+        /// </summary>
+        private static ScenarioInfo ToScenario(MapScenario scenario)
+        {
+            MapConfiguration? configuration = scenario.Configurations.FirstOrDefault(c => c.Name == "standard") ?? scenario.Configurations.FirstOrDefault();
+            IReadOnlyList<MapTeam> configured = configuration?.Teams ?? [];
+            bool ffa = configured.Count > 0 && configured[0].Name == "FFA";
+            ImmutableArray<string> playable = ffa
+                ? [.. configured[0].Armies]
+                : [.. configured.SelectMany(team => team.Armies).Distinct(StringComparer.Ordinal)];
+            HashSet<string> teamed = new HashSet<string>(StringComparer.Ordinal);
+            ImmutableArray<Team> teams = [.. configured.Skip(ffa ? 1 : 0)
+                .Select(team => new Team { Name = team.Name, Armies = [.. team.Armies.Where(army => playable.Contains(army) && teamed.Add(army))] })
+                .Where(team => !team.Armies.IsEmpty)];
+
+            // the factions are listed per playable army, in order
+            ImmutableSortedDictionary<string, ImmutableArray<string>> factions = ImmutableSortedDictionary.Create<string, ImmutableArray<string>>(StringComparer.Ordinal);
+            if (configuration?.Raw.TryGetTableValue("factions", out LuaData.Table? table) == true)
+            {
+                List<LuaData> perArmy = [.. Positional(table!)];
+                for (int i = 0; i < perArmy.Count && i < playable.Length; i++)
+                {
+                    if (perArmy[i] is LuaData.Table allowed)
+                    {
+                        factions = factions.SetItem(playable[i], [.. Positional(allowed).OfType<LuaData.String>().Select(faction => faction.Value)]);
+                    }
+                }
+            }
+
+            return new ScenarioInfo
+            {
+                Name = scenario.Name,
+                Description = scenario.Description ?? "",
+                Author = new LuaTableReader(scenario.Raw).String("author") ?? "",
+                Type = scenario.Type == "campaign_coop" ? ScenarioType.CampaignCoop : ScenarioType.Skirmish,
+                PreviewPath = scenario.Preview ?? "",
+                NoRushRadius = scenario.NoRushRadius ?? 0,
+                AdaptiveMap = scenario.AdaptiveMap ?? false,
+                Reclaim = scenario.Reclaim is (double mass, double energy) ? new Reclaim { Mass = mass, Energy = energy } : null,
+                PlayableArmies = playable,
+                ExtraArmies = [.. configuration?.ExtraArmies ?? []],
+                ArmyFactions = factions,
+                Teams = teams,
+            };
+        }
+
+        /// <summary>
+        /// The no-rush offsets of the scenario by army (<c>norushoffsetX_ARMY_1</c>,
+        /// <c>norushoffsetY_ARMY_1</c>); a missing half is 0.
+        /// </summary>
+        private static Dictionary<string, Vector2> NoRushOffsets(MapScenario scenario)
+        {
+            Dictionary<string, Vector2> offsets = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+            foreach ((string key, LuaData value) in scenario.Raw.Value)
+            {
+                if (NoRushOffsetKey().Match(key) is { Success: true } match && value is LuaData.Number number)
+                {
+                    string army = match.Groups[2].Value;
+                    Vector2 offset = offsets.GetValueOrDefault(army);
+                    offsets[army] = match.Groups[1].Value == "X" ? offset with { X = (float)number.Value } : offset with { Y = (float)number.Value };
+                }
+            }
+            return offsets;
+        }
+
+        private static IEnumerable<LuaData> Positional(LuaData.Table table)
+        {
+            for (int i = 1; table.Value.TryGetValue(i.ToString(System.Globalization.CultureInfo.InvariantCulture), out LuaData? value); i++)
+            {
+                yield return value;
+            }
+        }
+
+        private static Terrain ToTerrain(Scmap scmap)
+        {
+            // a map stored in tiles (larger than 2048) becomes one image; the size of its tiles is kept
+            // when it is not the engine's
+            (int normalWidth, int normalHeight, TextureFormat normalFormat, byte[] normal) = NormalMapTiles.Stitch(scmap);
+            bool engineTiles = (scmap.NormalMapTileWidth, scmap.NormalMapTileHeight) == NormalMapTiles.DefaultTileSize(scmap.Width, scmap.Height);
+            (int previewWidth, int previewHeight, _, byte[] preview) = DdsTexture.Read(scmap.Preview, "preview");
+
+            return new Terrain
+            {
+                ScmapVersion = scmap.Version,
+                Heightmap = new Heightmap
+                {
+                    Scale = scmap.Heightmap.Scale,
+                    Samples = TiledBuffer<ushort>.FromArray(scmap.Width + 1, scmap.Height + 1, scmap.Heightmap.Samples),
+                },
+                Types = TiledBuffer<byte>.FromArray(scmap.Width, scmap.Height, scmap.TerrainTypes),
+                Shader = scmap.TerrainShader,
+                Tileset = scmap.Tileset,
+                Layers = [.. scmap.Layers.Select(l => new TerrainLayer { AlbedoPath = l.Albedo, AlbedoScale = l.AlbedoScale, NormalPath = l.Normal, NormalScale = l.NormalScale })],
+                StratumMasks = SplitMasks(scmap.StratumMasks),
+                NormalMap = Pixels.FromRgba(normalWidth, normalHeight, normal),
+                NormalMapFormat = normalFormat,
+                NormalMapTileWidth = engineTiles ? null : scmap.NormalMapTileWidth,
+                NormalMapTileHeight = engineTiles ? null : scmap.NormalMapTileHeight,
+                Preview = Pixels.FromRgba(previewWidth, previewHeight, preview),
+            };
+        }
+
+        private static Lighting ToLighting(ScmapLighting l) => new Lighting
+        {
+            Multiplier = l.LightingMultiplier,
+            SunDirection = l.SunDirection,
+            SunAmbience = l.SunAmbience,
+            SunColor = l.SunColor,
+            ShadowFillColor = l.ShadowFillColor,
+            SpecularColor = l.SpecularColor,
+            Bloom = l.Bloom,
+            FogColor = l.FogColor,
+            FogStart = l.FogStart,
+            FogEnd = l.FogEnd,
+        };
+
+        private static Water ToWater(Scmap scmap)
+        {
+            ScmapWater w = scmap.Water;
+            (int width, int height, TextureFormat format, byte[] rgba) = DdsTexture.Read(scmap.WaterMap, "water map");
+            return new Water
+            {
+                HasWater = w.HasWater,
+                Elevation = w.Elevation,
+                ElevationDeep = w.ElevationDeep,
+                ElevationAbyss = w.ElevationAbyss,
+                SurfaceColor = w.SurfaceColor,
+                ColorLerp = w.ColorLerp,
+                RefractionScale = w.RefractionScale,
+                FresnelBias = w.FresnelBias,
+                FresnelPower = w.FresnelPower,
+                UnitReflection = w.UnitReflection,
+                SkyReflection = w.SkyReflection,
+                SunShininess = w.SunShininess,
+                SunStrength = w.SunStrength,
+                SunDirection = w.SunDirection,
+                SunColor = w.SunColor,
+                SunReflection = w.SunReflection,
+                SunGlow = w.SunGlow,
+                Cubemap = w.Cubemap,
+                Ramp = w.WaterRamp,
+                WaveTextures = [.. w.WaveTextures.Select(t => new WaveTexture { Texture = t.Texture, NormalRepeat = t.NormalRepeat, NormalMovement = t.NormalMovement })],
+                WaveGenerators = [.. scmap.WaveGenerators.Select(g => new WaveGenerator
+                {
+                    Texture = g.Texture,
+                    Ramp = g.Ramp,
+                    Position = g.Position,
+                    Rotation = g.Rotation,
+                    Velocity = g.Velocity,
+                    LifetimeFirst = g.LifetimeFirst,
+                    LifetimeSecond = g.LifetimeSecond,
+                    PeriodFirst = g.PeriodFirst,
+                    PeriodSecond = g.PeriodSecond,
+                    ScaleFirst = g.ScaleFirst,
+                    ScaleSecond = g.ScaleSecond,
+                    FrameCount = g.FrameCount,
+                    FrameRateFirst = g.FrameRateFirst,
+                    FrameRateSecond = g.FrameRateSecond,
+                    StripCount = g.StripCount,
+                })],
+                Map = Pixels.FromRgba(width, height, rgba),
+                MapFormat = format,
+                FoamMask = TiledBuffer<byte>.FromArray(scmap.Width / 2, scmap.Height / 2, scmap.WaterFoamMask),
+                FlatnessMask = TiledBuffer<byte>.FromArray(scmap.Width / 2, scmap.Height / 2, scmap.WaterFlatnessMask),
+                DepthBiasMask = TiledBuffer<byte>.FromArray(scmap.Width / 2, scmap.Height / 2, scmap.WaterDepthBiasMask),
+            };
+        }
+
+        private static Skybox ToSkybox(ScmapSkybox s) => new Skybox
+        {
+            Position = s.Position,
+            HorizonHeight = s.HorizonHeight,
+            Scale = s.Scale,
+            SubtractHeight = s.SubtractHeight,
+            SubdivisionsAxis = s.SubdivisionsAxis,
+            SubdivisionsHeight = s.SubdivisionsHeight,
+            ZenithHeight = s.ZenithHeight,
+            HorizonColor = s.HorizonColor,
+            ZenithColor = s.ZenithColor,
+            DecalGlowMultiplier = s.DecalGlowMultiplier,
+            Albedo = s.Albedo,
+            Glow = s.Glow,
+            Planets = [.. s.Planets.Select(p => new Planet { Position = p.Position, Rotation = p.Rotation, Scale = p.Scale, Uv = p.Uv })],
+            CumulusLightRamp = s.CumulusLightRamp,
+            CumulusDispersionRamp = s.CumulusDispersionRamp,
+            CumulusTexture = s.CumulusTexture,
+            CirrusMultiplier = s.CirrusMultiplier,
+            CirrusColor = s.CirrusColor,
+            CirrusTexture = s.CirrusTexture,
+            CirrusLayers = [.. s.CirrusLayers.Select(c => new CirrusLayer { Frequency = c.Frequency, Speed = c.Speed, Direction = c.Direction })],
+        };
+
+        private static Army ToArmy(MapArmy a) => new Army
+        {
+            Name = a.Name,
+            Plans = string.IsNullOrEmpty(a.Plans) ? null : a.Plans,
+            Color = a.Color ?? 0,
+            Faction = a.Faction ?? 0,
+            Alliances = a.Alliances.ToImmutableSortedDictionary(StringComparer.Ordinal),
+            Units = ToGroup(a.Units),
+        };
+
+        private static UnitGroup ToGroup(MapUnitGroup g) => new UnitGroup
+        {
+            Name = g.Name,
+            Groups = [.. g.Groups.Select(ToGroup)],
+            Units = [.. g.Units.Select(u => new Unit
+            {
+                Name = u.Name,
+                Blueprint = u.BlueprintId,
+                Position = u.Position,
+                Orientation = u.Orientation,
+            })],
+        };
+
+        /// <summary>
+        /// Each mask texture holds four layers, one per channel: red, green, blue, alpha.
+        /// </summary>
+        private static StratumMasks SplitMasks(IReadOnlyList<byte[]> textures)
+        {
+            List<TiledBuffer<byte>> layers = new List<TiledBuffer<byte>>();
+            for (int texture = 0; texture < textures.Count; texture++)
+            {
+                (int width, int height, _, byte[] rgba) = DdsTexture.Read(textures[texture], $"stratum mask {texture + 1}");
+                for (int channel = 0; channel < 4; channel++)
+                {
+                    byte[] layer = new byte[width * height];
+                    for (int i = 0; i < layer.Length; i++)
+                    {
+                        layer[i] = rgba[i * 4 + channel];
+                    }
+                    layers.Add(TiledBuffer<byte>.FromArray(width, height, layer));
+                }
+            }
+            return new StratumMasks { Layers = [.. layers] };
+        }
+
+        private static string Single(string folder, string pattern)
+        {
+            // in any case (Map.SCMAP, Map_Scenario.lua), as the game reads them
+            string[] files = Directory.GetFiles(folder, pattern, FilePaths.IgnoringCase());
+            return files.Length == 1
+                ? files[0]
+                : throw new MapProjectException($"{folder} has {files.Length} files named {pattern}, expected one");
+        }
+
+        /// <summary>
+        /// The file in the folder that a path of the scenario names (in any case: the game's file
+        /// system ignores it), else the file of the usual name, else null.
+        /// </summary>
+        private static string? FindNamed(string folder, string? path, string usual)
+        {
+            string[] names = [Path.GetFileName(path ?? ""), usual];
+            return Directory.GetFiles(folder, "*.lua", FilePaths.IgnoringCase())
+                .Select(file => (file, rank: Array.FindIndex(names, name => name.Length > 0 && string.Equals(name, Path.GetFileName(file), StringComparison.OrdinalIgnoreCase))))
+                .Where(match => match.rank >= 0)
+                .OrderBy(match => match.rank)
+                .Select(match => match.file)
+                .FirstOrDefault();
+        }
+
+        private static T Parse<T>(string path, Func<string, T> parse)
+        {
+            try
+            {
+                return parse(File.ReadAllText(path, LuaEncoding));
+            }
+            catch (FormatException exception)
+            {
+                throw new MapProjectException($"{path}: {exception.Message}", exception);
+            }
+        }
+
+        [GeneratedRegex(@"^norushoffset([XY])_(.+)$")]
+        private static partial Regex NoRushOffsetKey();
+    }
+}

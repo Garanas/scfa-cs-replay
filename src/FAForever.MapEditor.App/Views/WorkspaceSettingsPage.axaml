@@ -1,0 +1,88 @@
+<!-- Workspace settings (F-5): where the workspace finds the game, FAF's data and the vault maps are exported to
+     (workspace.json), the converted assets with Convert again, and the plugins and diagnostics pages. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.WorkspaceSettingsPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog workspacesettings">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Workspace settings" />
+            <TextBlock Classes="secondary" Text="{Binding WorkspaceSettings.Folder}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Workspace folder" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <ScrollViewer Classes="workspacesettingslist">
+            <StackPanel Classes="stack">
+              <controls:FolderField Heading="Supreme Commander: Forged Alliance" Label="game folder of the workspace"
+                                    Help="The folder the game is installed in, with gamedata/env.scd and gamedata/units.scd."
+                                    Folder="{Binding WorkspaceSettings.GameFolder}" BrowseCommand="{Binding WorkspaceSettings.BrowseGameFolderCommand}" />
+              <controls:FolderField Heading="FAF's data" Label="FAF data folder of the workspace"
+                                    Help="FAF's gamedata folder: its env.nx2 and units.nx2 replace files of the game. Empty without FAF."
+                                    Folder="{Binding WorkspaceSettings.FafDataFolder}" BrowseCommand="{Binding WorkspaceSettings.BrowseFafDataFolderCommand}" />
+              <controls:FolderField Heading="Export folder: the vault" Label="vault folder of the workspace"
+                                    Help="The folder the FAF client keeps maps and mods in. Maps are exported into its maps folder."
+                                    Folder="{Binding WorkspaceSettings.VaultFolder}" BrowseCommand="{Binding WorkspaceSettings.BrowseVaultFolderCommand}" />
+              <TextBlock Classes="error" Text="{Binding WorkspaceSettings.Error}" IsVisible="{Binding WorkspaceSettings.HasError}" AutomationProperties.Name="What is wrong with the folders" />
+
+              <TextBlock Classes="heading section" Text="Converted assets" />
+              <TextBlock Classes="caption" Text="{Binding WorkspaceSettings.AssetsText}" AutomationProperties.Name="Format of the converted assets" />
+              <TextBlock Classes="caption" Text="{Binding WorkspaceSettings.AssetsCounts}" AutomationProperties.Name="What was converted" />
+              <TextBlock Classes="caption" Classes.warning="{Binding WorkspaceSettings.IsOutdated}" Text="{Binding WorkspaceSettings.AssetsState}"
+                         AutomationProperties.Name="Whether the assets are current" />
+              <Button Content="Convert again" Command="{Binding WorkspaceSettings.ConvertAgainCommand}" AutomationProperties.Name="Convert the assets again"
+                      AutomationProperties.HelpText="Converts the game's and FAF's environment and units into the workspace again: about a minute; the editor waits until it is done" />
+
+              <TextBlock Classes="heading section" Text="Procedural defaults for new and imported maps" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="What a map made or imported in this workspace regenerates on its own (while the views show it) and makes on export. A project opened keeps its own; a Procedural entry's Use as workspace default takes that result's choices from the open map."
+                         AutomationProperties.Name="What the Procedural defaults are" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding WorkspaceProceduralText}" AutomationProperties.Name="The workspace's Procedural defaults" />
+              <ItemsControl ItemsSource="{Binding WorkspaceProceduralRows}" AutomationProperties.Name="Procedural defaults of the workspace">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WorkspaceProceduralRow">
+                    <DockPanel>
+                      <CheckBox DockPanel.Dock="Right" Content="On export" IsVisible="{Binding HasExport}" IsChecked="{Binding OnExport, Mode=OneWay}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleWorkspaceOnExportCommand}" CommandParameter="{Binding Id}"
+                                AutomationProperties.Name="{Binding OnExportLabel}" />
+                      <CheckBox Content="{Binding Title}" IsChecked="{Binding Auto, Mode=OneWay}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleWorkspaceAutoCommand}" CommandParameter="{Binding Id}"
+                                AutomationProperties.Name="{Binding AutoLabel}" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock Classes="heading section" Text="More about the workspace" />
+              <StackPanel Classes="inline">
+                <Button Content="Plugins..." Command="{Binding WorkspaceSettings.OpenPluginsCommand}" AutomationProperties.Name="Open the plugins page" />
+                <Button Content="Diagnostics..." Command="{Binding WorkspaceSettings.OpenDiagnosticsCommand}" AutomationProperties.Name="Open the diagnostics page" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+        <Border Classes="dialogpart">
+          <!-- one way of saving for the whole page: the folders and the Procedural defaults together -->
+          <DockPanel>
+            <StackPanel Classes="inline" DockPanel.Dock="Right">
+              <Button Content="Save" Classes.accent="{Binding WorkspaceSettings.HasChanges}" Command="{Binding WorkspaceSettings.SaveCommand}"
+                      AutomationProperties.Name="Save the workspace settings"
+                      AutomationProperties.HelpText="Writes the folders and the Procedural defaults into workspace.json; another game or FAF folder asks for the assets to be converted again" />
+              <Button Content="Revert" Command="{Binding WorkspaceSettings.RevertCommand}" IsEnabled="{Binding WorkspaceSettings.HasChanges}"
+                      AutomationProperties.Name="Put the workspace settings back as saved" />
+              <Button Content="Close" Command="{Binding WorkspaceSettings.CloseCommand}" AutomationProperties.HelpText="Closes the page; changes not saved are dropped" />
+            </StackPanel>
+            <StackPanel Classes="stack" VerticalAlignment="Center">
+              <TextBlock Classes="caption" Classes.warning="{Binding WorkspaceSettings.HasChanges}" TextWrapping="Wrap" Text="{Binding WorkspaceSettings.ChangesText}"
+                         AutomationProperties.Name="Whether the workspace settings are saved" />
+              <TextBlock Classes="caption" Text="Help, Folders shows each of these folders in the file manager." />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

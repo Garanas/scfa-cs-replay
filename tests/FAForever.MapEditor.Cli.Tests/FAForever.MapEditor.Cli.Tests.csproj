@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FAForever.MapEditor.Cli\FAForever.MapEditor.Cli.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\FAForever.FileFormats.Map.Tests\assets\maps\HardFFA.v0001\*" LinkBase="assets\maps\HardFFA.v0001" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

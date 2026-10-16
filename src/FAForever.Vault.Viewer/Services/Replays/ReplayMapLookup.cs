@@ -14,7 +14,7 @@ public sealed class ReplayMapLookup(HttpClient http, IConfiguration configuratio
 {
     /// <summary>
     /// Enough for most replays; the rest need the first zstd block in full, which the second size
-    /// always holds (see <see cref="ReplayLoader.TryReadPathToScenario"/>).
+    /// always holds (see <see cref="ReplayLoader.TryReadMapPath"/>).
     /// </summary>
     private static readonly int[] StartSizes = [64 * 1024, 256 * 1024];
 
@@ -61,7 +61,7 @@ public sealed class ReplayMapLookup(HttpClient http, IConfiguration configuratio
             response.EnsureSuccessStatusCode();
 
             byte[] start = await response.Content.ReadAsByteArrayAsync();
-            if (MapPreviews.FolderOfPath(ReplayLoader.TryReadPathToScenario(start)) is { } folder)
+            if (MapPreviews.FolderOfPath(ReplayLoader.TryReadMapPath(start)) is { } folder)
             {
                 return folder;
             }

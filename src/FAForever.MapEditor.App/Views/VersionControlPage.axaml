@@ -1,0 +1,139 @@
+<!-- Version control (F-18): turning git on for the project with its choices, then a commit beside the saves, sharing
+     (push, pull) and the history of commits with going back to one. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:versioning="using:FAForever.MapEditor.Project.Versioning"
+             x:Class="FAForever.MapEditor.App.Views.VersionControlPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog versioncontrol">
+      <StackPanel>
+        <!-- The setup, shown before version control is on. -->
+        <StackPanel IsVisible="{Binding VersionControl.IsNotVersioned}">
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Turn on version control" />
+              <TextBlock Classes="caption"
+                         Text="Keeps every version of this project with git: commit beside save, go back to any commit, and share the project through a repository such as GitHub. The project's folder becomes a repository of its own." />
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="label" Text="Author of the commits" />
+              <TextBox Text="{Binding VersionControl.AuthorName}" PlaceholderText="Your name"
+                       AutomationProperties.Name="Author name" />
+              <TextBox Text="{Binding VersionControl.AuthorEmail}" PlaceholderText="Your email address"
+                       AutomationProperties.Name="Author email" />
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <CheckBox IsChecked="{Binding VersionControl.UseLfs}" Content="Keep the images and procedural sources in Git LFS" />
+              <TextBlock Classes="caption" Text="{Binding VersionControl.LfsNote}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="label" Text="Share through (optional)" />
+              <TextBox Text="{Binding VersionControl.Remote}" PlaceholderText="e.g. https://github.com/you/your-map.git"
+                       AutomationProperties.Name="Remote repository" />
+              <TextBlock Classes="caption"
+                         Text="Also written: a .gitignore that leaves procedural/temp out (what World Machine and Gaea build), and a .gitattributes. The first commit holds the project as it is saved." />
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
+                <Button Content="Cancel" Command="{Binding VersionControl.CloseCommand}" />
+                <Button Classes="accent" Content="Turn on version control" Command="{Binding VersionControl.TurnOnCommand}" />
+              </StackPanel>
+              <TextBlock Classes="error" Text="{Binding VersionControl.Error}" IsVisible="{Binding VersionControl.Error, Converter={x:Static ObjectConverters.IsNotNull}}"
+                         VerticalAlignment="Center" AutomationProperties.Name="Version control error" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- The commit, once version control is on. -->
+        <StackPanel IsVisible="{Binding VersionControl.IsVersioned}">
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Commit" />
+              <TextBlock Classes="caption" Text="{Binding VersionControl.Summary}" AutomationProperties.Name="Repository" />
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="label" Text="What changed" />
+              <TextBox x:Name="Message" Text="{Binding VersionControl.CommitMessage}" PlaceholderText="e.g. Raise the plateau in the north"
+                       AutomationProperties.Name="Commit message" />
+              <TextBlock Classes="caption" Text="Saves the map first when it has unsaved changes, then commits everything that changed in the project." />
+            </StackPanel>
+          </Border>
+          <!-- sharing through the repository chosen at the setup -->
+          <Border Classes="dialogpart">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}" VerticalAlignment="Center">
+                <Button Content="Pull" Command="{Binding VersionControl.PullCommand}" IsEnabled="{Binding VersionControl.IsShared}"
+                        ToolTip.Tip="Takes the commits of the shared repository; the map must be saved and committed first" />
+                <Button Content="Push" Command="{Binding VersionControl.PushCommand}" IsEnabled="{Binding VersionControl.IsShared}"
+                        ToolTip.Tip="Sends the commits to the shared repository; signing in is your git credential helper's" />
+              </StackPanel>
+              <StackPanel Classes="stack">
+                <TextBlock Classes="label" Text="Shared repository" />
+                <TextBlock Classes="caption" Text="{Binding VersionControl.ShareSummary}" AutomationProperties.Name="Sharing" />
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <!-- the history: a commit's files, and going back to it -->
+          <Border Classes="dialogpart">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="label" Text="History" />
+              <ListBox Classes="versionhistory" ItemsSource="{Binding VersionControl.History}" SelectedItem="{Binding VersionControl.ChosenCommit}"
+                       AutomationProperties.Name="Commits" AutomationProperties.HelpText="Choose a commit to see the files it changed">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="versioning:CommitInfo">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="mono secondary" Text="{Binding ShortHash}" />
+                      <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}">
+                        <Run Text="{Binding Author}" /><Run Text=" · " /><Run Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+                      </TextBlock>
+                      <TextBlock Margin="{StaticResource InlineGap}" Text="{Binding Subject}" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Classes="stack" IsVisible="{Binding VersionControl.HasChosenCommit}">
+                <ListBox Classes="versionfiles" ItemsSource="{Binding VersionControl.ChosenFiles}" AutomationProperties.Name="Files of the commit">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="versioning:CommitFile">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding Change}" />
+                        <TextBlock Classes="mono" Margin="{StaticResource InlineGap}" Text="{Binding Path}" />
+                      </DockPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="Go back to this commit" Command="{Binding VersionControl.GoBackCommand}" />
+                  <TextBlock Classes="caption" VerticalAlignment="Center"
+                             Text="The map becomes what this commit holds, as one step of undo. Nothing is lost: the files and the history stay; save and commit to keep it." />
+                </DockPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="dialogpart">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
+                <Button Content="Close" Command="{Binding VersionControl.CloseCommand}" />
+                <Button Classes="accent" Content="Commit" Command="{Binding VersionControl.CommitChangesCommand}" IsDefault="True" />
+              </StackPanel>
+              <TextBlock Classes="error" Text="{Binding VersionControl.Error}" IsVisible="{Binding VersionControl.Error, Converter={x:Static ObjectConverters.IsNotNull}}"
+                         VerticalAlignment="Center" AutomationProperties.Name="Commit error" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

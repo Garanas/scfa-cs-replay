@@ -1,0 +1,60 @@
+<!-- The stack control (any LayerStackViewModel): the layers, the highest first, each with a preview (larger while the mouse
+     rests on it), a check box to show it and one to lock it; buttons to add a layer by source, move the chosen one, remove it;
+     and, when ShowsSettings, the chosen layer's settings (combine, strength, clip, shown, locked) under the list. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Controls.LayerStackView"
+             x:DataType="vm:LayerStackViewModel"
+             x:Name="Root">
+  <StackPanel Classes="stack">
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding ChosenItem}" IsVisible="{Binding HasLayers}"
+             AutomationProperties.Name="{Binding ListTitle}"
+             AutomationProperties.HelpText="{Binding #Root.ListHelp}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:StackLayerItem">
+          <DockPanel>
+            <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsChecked="{Binding IsShown}" AutomationProperties.Name="{Binding ShowLabel}" />
+            <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
+              <controls:ImagePreview Picture="{Binding Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
+            </Border>
+            <CheckBox DockPanel.Dock="Right" Content="Lock" IsChecked="{Binding IsLocked}" AutomationProperties.Name="{Binding LockLabel}" />
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="{Binding Name}" />
+              <TextBlock Classes="caption" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </DockPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <TextBlock Classes="caption" IsVisible="{Binding IsEmpty}" Text="{Binding #Root.EmptyText}" />
+    <TextBlock Classes="caption" Text="{Binding Summary}" IsVisible="{Binding HasLayers}" />
+    <!-- who writes the files: the editor's own (.gen), the map's own, or a tool's that an image layer reads -->
+    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ResultNote}" IsVisible="{Binding HasLayers}"
+               AutomationProperties.Name="The file the layers make" />
+    <ItemsControl ItemsSource="{Binding AddChoices}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel Classes="chips" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:LayerAddChoice">
+          <Button Content="{Binding Title}" Command="{Binding Run}" IsEnabled="{Binding #Root.CanAdd}"
+                  AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <WrapPanel Classes="chips" IsVisible="{Binding HasLayers}">
+      <Button Content="Up" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}" AutomationProperties.Name="{Binding MoveUpLabel}" />
+      <Button Content="Down" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}" AutomationProperties.Name="{Binding MoveDownLabel}" />
+      <Button Content="Remove" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.Name="{Binding RemoveLabel}"
+              AutomationProperties.HelpText="{Binding #Root.RemoveHelp}" />
+    </WrapPanel>
+    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding FileNote}" IsVisible="{Binding #Root.ShowsChosenSettings}"
+               AutomationProperties.Name="The chosen layer's file" />
+    <controls:SettingList DataContext="{Binding Layer}" ShowsTitle="False"
+                          IsVisible="{Binding #Root.ShowsChosenSettings}" />
+  </StackPanel>
+</UserControl>

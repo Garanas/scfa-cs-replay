@@ -7,6 +7,20 @@
   (`2e8808cf-...`) on `http://127.0.0.1:5080` and the token proxy stays.
 - [ ] **Verify signing in on https://vault.jipwijnia.nl with the new client** after the next
   release (Hydra already accepts the client and its redirect URI; checked 2026-10-05).
+- [ ] **Try the map editor's upload to the vault once, with a real account** (`file.upload`, user
+  story M-8): built and tested only against a fake server; the first real upload needs the owner's
+  approval and a map of their own (a version in the vault cannot be taken back). The editor signs
+  in as the official FAF client (`2e8808cf-...`, which has `upload_map` and loopback redirects on
+  any port); consider asking the FAForever team for a client of the map editor's own, like
+  [gitops-stack#333](https://github.com/FAForever/gitops-stack/pull/333). The Viewer's production
+  client (`54576b8e-...`) has only `openid,offline,public_profile`, so an upload from the web would
+  need `upload_map` added there.
+- [ ] **Compare the map editor's skybox with the game's** (user story L-1): the dome's shape and
+  the horizon curve are known now (Draiget/faf-re's `SkyDome.cpp`, the game's `horizonLookup.dds`),
+  but how the glow feeds the bloom, and whether the engine draws more than 1024 sky objects
+  (Blackstar has 1196), are not. Screenshots from the game of a version 60 map with a skybox
+  (e.g. Blackstar) at known camera positions are needed to check the 3D view once it draws the
+  skybox itself.
 - [x] ~~Host https://vault.jipwijnia.nl~~: live since 2026-10-03, with automated deploys from
   `deploy/production`; the server is configured in
   [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps). Signing in (and so Search)
@@ -62,3 +76,7 @@
   the tag as `client_payload.version`) with a token that may do so here; the snippet is at the top
   of the workflow file. That needs the FAF team's agreement. The workflow has not run on GitHub yet:
   trigger it by hand once (Actions → Update unit data → Run workflow) to check it.
+- [x] ~~Settle the map editor's MediatR licence~~: the community licence of Lucky Penny Software
+  is accepted (2026-10-09) for MediatR 14 (`src/FAForever.MapEditor.App/Commands/CommandServices.cs`).
+  A key, if one is issued, goes in the environment as `MEDIATR_LICENSE_KEY`, not in the
+  repository; the editor runs without one.

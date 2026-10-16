@@ -1,0 +1,58 @@
+{
+  "id": "uaa0101",
+  "name": "Air Scout",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "AIR",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "HIGHALTAIR",
+    "INTELLIGENCE",
+    "MOBILE",
+    "OVERLAYRADAR",
+    "OVERLAYSONAR",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_fighter1_intel",
+  "buildIcon": "air",
+  "size": {
+    "x": 0.8,
+    "y": 0.4,
+    "z": 1
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.1,
+  "health": 25,
+  "massCost": 40,
+  "energyCost": 580,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/uaa0101/uaa0101_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uaa0101/uaa0101_albedo.png",
+      "normals": "/units/uaa0101/uaa0101_normalsts.png",
+      "specular": "/units/uaa0101/uaa0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uaa0101/uaa0101_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uaa0101/uaa0101_lod1_albedo.png",
+      "normals": "/units/uaa0101/uaa0101_normalsts.png",
+      "specular": "/units/uaa0101/uaa0101_lod1_specteam.png"
+    }
+  ]
+}

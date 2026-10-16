@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Cybran civilian",
+  "settings": {
+    "slots": [
+      {
+        "preset": "Cybran civilian city"
+      },
+      {
+        "preset": "Cybran civilian town"
+      },
+      {
+        "preset": "Cybran civilian village"
+      },
+      {
+        "preset": "Cybran civilian hamlet"
+      },
+      {
+        "preset": "Cybran colony"
+      },
+      {
+        "preset": "Cybran farm"
+      },
+      {
+        "preset": "Cybran network hub"
+      },
+      {
+        "preset": "Cybran relay station"
+      },
+      {},
+      {}
+    ]
+  }
+}

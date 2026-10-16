@@ -15,6 +15,16 @@ namespace FAForever.FileFormats.Map
     /// </remarks>
     public sealed record MapSave
     {
+        /// <summary>
+        /// The keys of <see cref="Raw"/> that a property holds, or that <see cref="MapSaveWriter"/>
+        /// writes empty (<c>Props</c>, <c>Orders</c>, <c>Platoons</c>). The rest are the editors'
+        /// counters (<c>next_unit_id</c>, ...).
+        /// </summary>
+        public static IReadOnlySet<string> TypedKeys { get; } = new HashSet<string>
+        {
+            "Props", "Areas", "MasterChain", "Chains", "Orders", "Platoons", "Armies",
+        };
+
         public required LuaData.Table Raw { get; init; }
 
         /// <summary>
@@ -51,7 +61,14 @@ namespace FAForever.FileFormats.Map
     /// </summary>
     /// <param name="Orientation">The rotation around each axis, in radians.</param>
     /// <param name="Raw">The marker's table, with the fields of its type such as <c>amount</c>.</param>
-    public sealed record MapMarker(string Name, string Type, Vector3 Position, Vector3 Orientation, LuaData.Table Raw);
+    public sealed record MapMarker(string Name, string Type, Vector3 Position, Vector3 Orientation, LuaData.Table Raw)
+    {
+        /// <summary>
+        /// The keys of <see cref="Raw"/> that a property holds; the others are the fields of the
+        /// marker's type, such as <c>amount</c> or <c>adjacentTo</c>.
+        /// </summary>
+        public static IReadOnlySet<string> TypedKeys { get; } = new HashSet<string> { "type", "position", "orientation" };
+    }
 
     /// <summary>
     /// A rectangle from (<see cref="X0"/>, <see cref="Z0"/>) to (<see cref="X1"/>, <see cref="Z1"/>), in game units.
@@ -74,7 +91,17 @@ namespace FAForever.FileFormats.Map
         MapEconomy? Economy,
         IReadOnlyDictionary<string, string> Alliances,
         MapUnitGroup Units,
-        LuaData.Table Raw);
+        LuaData.Table Raw)
+    {
+        /// <summary>
+        /// The keys of <see cref="Raw"/> that a property holds, or that <see cref="MapSaveWriter"/>
+        /// writes empty (<c>PlatoonBuilders</c>).
+        /// </summary>
+        public static IReadOnlySet<string> TypedKeys { get; } = new HashSet<string>
+        {
+            "personality", "plans", "color", "faction", "Economy", "Alliances", "Units", "PlatoonBuilders",
+        };
+    }
 
     /// <summary>
     /// The resources an army starts with.

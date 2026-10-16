@@ -1,0 +1,45 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, Seraphim tanks",
+  "settings": {
+    "group": {
+      "name": "Wreck field, Seraphim tanks",
+      "units": [
+        {
+          "blueprint": "xsl0303",
+          "x": 5.5479126,
+          "y": 0,
+          "z": -2.2669067,
+          "heading": 2.566
+        },
+        {
+          "blueprint": "xsl0203",
+          "x": -4.397003,
+          "y": 0,
+          "z": -4.1231995,
+          "heading": -2.548
+        },
+        {
+          "blueprint": "xsl0203",
+          "x": 2.5093994,
+          "y": 0,
+          "z": -2.375,
+          "heading": -2.958
+        },
+        {
+          "blueprint": "xsl0203",
+          "x": -6.4144897,
+          "y": 0,
+          "z": 3.9906921,
+          "heading": 2.906
+        }
+      ],
+      "groups": []
+    },
+    "count": 4,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "adaptive_adrastea.v0004, army ARMY_17"
+  }
+}

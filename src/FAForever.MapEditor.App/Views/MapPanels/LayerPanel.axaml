@@ -1,0 +1,32 @@
+<!-- The Paint inspector (S-1, S-2): the layer chosen in the panel, its albedo and normal texture (typed or from the picker) and
+     their scales; for a stratum, its mask as a stack of layers (the chosen painted layer is what the strata tool paints), what
+     a mask layer reads, and a rules layer's rules. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.LayerPanel"
+             x:DataType="vm:MainViewModel">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding LayerTextures.SelectedTitle}" AutomationProperties.Name="Layer" />
+        <controls:SettingList DataContext="{Binding LayerTextures.Layer}" ShowsTitle="False" />
+      </StackPanel>
+    </Border>
+    <Border Classes="group" IsVisible="{Binding LayerTextures.Selected.IsStratum, FallbackValue=False}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source='Mask layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <controls:LayerStackView DataContext="{Binding StratumStack}" ShowsSettings="True"
+                                 CanAdd="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}"
+                                 ListHelp="The highest first; the chosen painted layer is the one the strata tool paints, its settings are under the list"
+                                 EmptyText="The stratum has no mask."
+                                 RemoveHelp="The stratum's mask becomes what the other layers make" />
+        <controls:SettingList DataContext="{Binding StratumStack.Reference}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StratumStack.IsReference}" />
+        <controls:SettingList DataContext="{Binding StratumStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StratumStack.IsDecalMasks}" />
+      </StackPanel>
+    </Border>
+    <rules:MaskRulesPanel IsVisible="{Binding ShowsStratumRules}" />
+  </StackPanel>
+</UserControl>

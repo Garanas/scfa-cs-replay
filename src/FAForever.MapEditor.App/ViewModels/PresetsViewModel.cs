@@ -1,0 +1,504 @@
+using System.Text.Json.Nodes;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging;
+
+namespace FAForever.MapEditor.App.ViewModels;
+
+/// <summary>
+/// What the editor can save as a preset of a kind and apply again: a feature registers one per
+/// kind (<see cref="PresetsViewModel.Register"/>).
+/// </summary>
+/// <param name="Kind">E.g. <c>brush</c>; the folder in the workspace's presets.</param>
+/// <param name="Capture">The settings as they are now, and a name to suggest for them.</param>
+/// <param name="Apply">Makes the settings of a preset the editor's.</param>
+public sealed record PresetKind(string Kind, string Title, Func<(string Name, JsonObject Settings)> Capture, Action<Preset> Apply);
+
+/// <summary>
+/// How often a unit preset is placed on the open map, and how many of those instances are out of
+/// date (user story U-9).
+/// </summary>
+public sealed record PresetInstanceCount(int Placed, int OutOfDate);
+
+/// <summary>
+/// The presets of a mode's panel, of one kind (<see cref="PresetsViewModel.Kind"/>).
+/// </summary>
+public sealed record PresetSection(string Kind, string Title) : PanelSection(Title)
+{
+    /// <summary>
+    /// What the panel says while the kind has no presets: how to make one.
+    /// </summary>
+    public string EmptyText { get; init; } = "None yet: save the settings to use them again.";
+
+    /// <summary>
+    /// The Save button's label for screen readers and agents: what it keeps.
+    /// </summary>
+    public string SaveLabel { get; init; } = "Save the settings as a preset";
+}
+
+/// <summary>
+/// The workspace's presets (user story F-10): saved settings of a kind (a brush, later a lighting,
+/// water, units, markers, a palette of props) that are applied again. The files are in the
+/// workspace (<see cref="PresetLibrary"/>), read again when another tool changes them; the panel
+/// of a mode with a <see cref="PresetSection"/> lists those of its kind.
+/// </summary>
+public sealed partial class PresetsViewModel : ObservableObject
+{
+    private readonly ILogger _log;
+    private readonly SynchronizationContext? _ui;
+    private readonly Func<string, JsonObject, Task> _run;
+    private readonly Dictionary<string, PresetKind> _kinds = new Dictionary<string, PresetKind>(StringComparer.Ordinal);
+    private ProjectWatcher? _watcher;
+
+    /// <param name="run">Runs a command with arguments, as a button does.</param>
+    public PresetsViewModel(ILogger log, SynchronizationContext? ui, Func<string, JsonObject, Task> run)
+    {
+        _log = log;
+        _ui = ui;
+        _run = run;
+    }
+
+    /// <summary>
+    /// The workspace's presets; null until the workspace is ready.
+    /// </summary>
+    public PresetLibrary? Library { get; private set; }
+
+    /// <summary>
+    /// Whether presets can be saved: the workspace is ready.
+    /// </summary>
+    public bool HasLibrary => Library is not null;
+
+    /// <summary>
+    /// The kinds the editor can save and apply.
+    /// </summary>
+    public IReadOnlyCollection<PresetKind> Kinds => _kinds.Values;
+
+    /// <summary>
+    /// The kind the selected mode's panel lists, e.g. <c>brush</c>; null when it lists none.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Kind { get; private set; }
+
+    /// <summary>
+    /// The presets of <see cref="Kind"/>, by name.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    public partial IReadOnlyList<Preset> Shown { get; private set; } = [];
+
+    /// <summary>
+    /// Whether the panel's kind has no presets yet.
+    /// </summary>
+    public bool IsEmpty => _all.Count == 0;
+
+    /// <summary>
+    /// The names typed for a new preset, by kind: a name typed in the Water panel stays there.
+    /// </summary>
+    private readonly Dictionary<string, string> _newNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The name the panel's Save button gives a new preset of <see cref="Kind"/>; empty for the one
+    /// suggested. Each kind keeps its own: the Paint panel's brush presets do not show what was typed
+    /// for the water presets.
+    /// </summary>
+    public string NewName
+    {
+        get => Kind is string kind && _newNames.TryGetValue(kind, out string? name) ? name : "";
+        set
+        {
+            if (value != NewName && Kind is string kind)
+            {
+                _newNames[kind] = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    partial void OnKindChanged(string? value)
+    {
+        OnPropertyChanged(nameof(NewName));
+        OnPropertyChanged(nameof(HasFilters));
+        MakeChips();
+        Highlighted = null;
+    }
+
+    #region Instances of unit presets (U-9)
+
+    private readonly Dictionary<string, string?> _fingerprints = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    private System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Files.InMemory.Army>? _countedArmies;
+
+    /// <summary>
+    /// Raised after the presets were read again (a file changed, one was saved or deleted): what
+    /// shows the state of placed instances looks again.
+    /// </summary>
+    public event EventHandler? Changed;
+
+    /// <summary>
+    /// The fingerprint of the workspace's units preset of a name (<see cref="UnitPresets.Fingerprint(UnitPresetSettings)"/>),
+    /// null for a name it has no preset of or without a workspace; read from the file once, until
+    /// the presets change.
+    /// </summary>
+    public string? UnitPresetFingerprint(string name)
+    {
+        if (Library is not PresetLibrary library)
+        {
+            return null;
+        }
+        if (!_fingerprints.TryGetValue(name, out string? fingerprint))
+        {
+            fingerprint = PresetInstances.FingerprintOf(library, name);
+            _fingerprints[name] = fingerprint;
+        }
+        return fingerprint;
+    }
+
+    /// <summary>
+    /// The preset the panel's list highlights and scrolls to (Show the preset), by name; null for none.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Highlighted { get; set; }
+
+    /// <summary>
+    /// Per preset name (ignoring case), how often it is placed on the open map and how many of
+    /// those instances are out of date (the preset changed since): the list's badges.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyDictionary<string, PresetInstanceCount> Instances { get; private set; } = new Dictionary<string, PresetInstanceCount>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Counts the instances of a version of the map, when its armies changed or the presets did.
+    /// </summary>
+    /// <param name="again">Count also when the armies are those counted last (the presets changed).</param>
+    public void CountInstances(FAForever.MapEditor.Project.Files.InMemory.MapDocument? document, bool again = false)
+    {
+        if (!again && document?.Armies == _countedArmies)
+        {
+            return;
+        }
+        _countedArmies = document?.Armies;
+        Dictionary<string, PresetInstanceCount> counts = new Dictionary<string, PresetInstanceCount>(StringComparer.OrdinalIgnoreCase);
+        foreach (PlacedInstance instance in document?.Instances() ?? [])
+        {
+            PresetInstanceCount count = counts.GetValueOrDefault(instance.Instance.Preset, new PresetInstanceCount(0, 0));
+            bool outOfDate = HasLibrary && PresetInstances.StateOf(instance.Instance, UnitPresetFingerprint) == PresetInstanceState.Changed;
+            counts[instance.Instance.Preset] = new PresetInstanceCount(count.Placed + 1, count.OutOfDate + (outOfDate ? 1 : 0));
+        }
+        Instances = counts;
+    }
+
+    #endregion
+
+    /// <exception cref="ArgumentException">The kind is registered already, or is no kind.</exception>
+    public void Register(PresetKind kind)
+    {
+        if (!PresetLibrary.IsKind(kind.Kind) || !_kinds.TryAdd(kind.Kind, kind))
+        {
+            throw new ArgumentException($"The kind of preset '{kind.Kind}' is registered already or is no kind", nameof(kind));
+        }
+    }
+
+    /// <summary>
+    /// Raised when the library is another (null) or files changed in it (their paths): what lists
+    /// presets of a kind the panel does not (the unit palettes) reads them again.
+    /// </summary>
+    public event Action<IReadOnlyList<string>?>? LibraryChanged;
+
+    /// <summary>
+    /// Uses the presets of a library, without watching it (tests).
+    /// </summary>
+    public void Use(PresetLibrary library)
+    {
+        Library = library;
+        OnPropertyChanged(nameof(Library));
+        OnPropertyChanged(nameof(HasLibrary));
+        Refresh();
+        LibraryChanged?.Invoke(null);
+    }
+
+    /// <summary>
+    /// Uses the workspace's presets, and reads them again when a file changes there. Opening writes
+    /// only the example unit presets and palettes the workspace never had (<see cref="ExampleUnitPresets"/>,
+    /// <see cref="ExampleUnitPalettes"/>).
+    /// </summary>
+    public void Open(Workspace workspace)
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+        MoveOldFolders(workspace);
+        WriteExamples(workspace);
+        Use(workspace.Presets);
+        Watch();
+    }
+
+    /// <summary>
+    /// What the last workspace opened moved from its old folders into <c>presets/</c> (<see cref="PresetFolders"/>).
+    /// </summary>
+    public IReadOnlyList<PresetMove> Moved { get; private set; } = [];
+
+    /// <summary>
+    /// Brings the presets of the old kind names and the map templates of <c>templates/</c> into the
+    /// plural folders of <c>presets/</c>, once: a workspace without them stays as it is.
+    /// </summary>
+    private void MoveOldFolders(Workspace workspace)
+    {
+        try
+        {
+            Moved = PresetFolders.Move(workspace.Folder);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Moved = [];
+            _log.LogError(exception, "Moving the presets of {Folder} into presets failed: {Reason}", workspace.Folder, exception.Message);
+            return;
+        }
+        foreach (PresetMove move in Moved)
+        {
+            _log.LogInformation("Moved the preset {From} to {To}", move.From, move.To);
+        }
+        if (Moved.Count > 0)
+        {
+            _log.LogInformation("Moved {Count} presets and templates into {Folder}", Moved.Count, workspace.PresetsFolder);
+        }
+    }
+
+    /// <summary>
+    /// Writes the example unit presets and palettes the workspace never had (<see cref="ExampleUnitPresets"/>,
+    /// <see cref="ExampleUnitPalettes"/>).
+    /// </summary>
+    private void WriteExamples(Workspace workspace)
+    {
+        try
+        {
+            IReadOnlyList<string> written = ExampleUnitPresets.Ensure(workspace);
+            if (written.Count > 0)
+            {
+                _log.LogInformation("Wrote {Count} example unit presets into {Folder}", written.Count, workspace.PresetsFolder);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log.LogError(exception, "Writing the example unit presets into {Folder} failed: {Reason}", workspace.PresetsFolder, exception.Message);
+        }
+        try
+        {
+            IReadOnlyList<string> written = ExampleUnitPalettes.Ensure(workspace);
+            if (written.Count > 0)
+            {
+                _log.LogInformation("Wrote {Count} example unit palettes into {Folder}", written.Count, workspace.PresetsFolder);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log.LogError(exception, "Writing the example unit palettes into {Folder} failed: {Reason}", workspace.PresetsFolder, exception.Message);
+        }
+    }
+
+    private void Watch()
+    {
+        if (_watcher is not null || Library is not PresetLibrary library || !Directory.Exists(library.Folder))
+        {
+            return;
+        }
+        try
+        {
+            _watcher = new ProjectWatcher(library.Folder);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            _log.LogWarning(exception, "Cannot watch the presets in {Folder}: {Reason}", library.Folder, exception.Message);
+            return;
+        }
+        _watcher.Changed += files => UiThread.Run(_ui, () =>
+        {
+            _log.LogInformation("The presets changed on disk: {Files}", string.Join(", ", files));
+            Refresh();
+            LibraryChanged?.Invoke([.. files]);
+        });
+    }
+
+    /// <summary>
+    /// Lists the presets of the kind of a mode's panel.
+    /// </summary>
+    public void FollowMode(ModeDefinition mode) => FollowSections(mode.Sections);
+
+    /// <summary>
+    /// Lists the presets of the first preset section among the parts a mode's panel shows (those for
+    /// the active tool and the chosen entry, <c>MainViewModel.PanelSections</c>).
+    /// </summary>
+    public void FollowSections(IEnumerable<PanelSection> sections)
+    {
+        string? kind = sections.OfType<PresetSection>().FirstOrDefault()?.Kind;
+        if (kind == Kind && Kind is not null)
+        {
+            return;
+        }
+        Kind = kind;
+        Refresh();
+    }
+
+    /// <summary>
+    /// Shows the folder of the panel's kind, or of another, made when it is missing.
+    /// </summary>
+    /// <returns>The folder.</returns>
+    /// <exception cref="InvalidOperationException">No workspace, or no kind.</exception>
+    public string FolderOf(string? kind)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        string folder = library.FolderOf(kind ?? Kind ?? throw new InvalidOperationException("Name the kind of preset: this panel lists none"));
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
+    /// <summary>
+    /// The panel's Show the folder.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowFolder() => _run("presets.showFolder", new JsonObject { ["kind"] = Kind });
+
+    /// <summary>
+    /// Reads the presets of <see cref="Kind"/> again.
+    /// </summary>
+    public void Refresh()
+    {
+        // the files changed: the fingerprints of the unit presets are read again when asked
+        _fingerprints.Clear();
+        if (Library is null || Kind is null)
+        {
+            _all = [];
+            Shown = [];
+            OnPropertyChanged(nameof(IsEmpty));
+            Changed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+        List<string> unreadable = [];
+        try
+        {
+            _all = Library.List(Kind, unreadable);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log.LogWarning(exception, "Cannot read the presets in {Folder}: {Reason}", Library.Folder, exception.Message);
+            _all = [];
+        }
+        ApplyFilter();
+        OnPropertyChanged(nameof(IsEmpty));
+        foreach (string file in unreadable)
+        {
+            _log.LogWarning("A preset cannot be read: {File}", file);
+        }
+        if (Highlighted is string highlighted && !_all.Any(preset => string.Equals(preset.Name, highlighted, StringComparison.OrdinalIgnoreCase)))
+        {
+            Highlighted = null;
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Saves the settings of a kind as they are now.
+    /// </summary>
+    /// <param name="kind">Null for the kind the panel lists.</param>
+    /// <param name="name">Null or empty for the name the kind suggests, made unique.</param>
+    /// <returns>The preset.</returns>
+    /// <exception cref="InvalidOperationException">No workspace, or no kind to save.</exception>
+    /// <exception cref="ArgumentException">The editor cannot save presets of that kind.</exception>
+    public Preset Save(string? kind, string? name)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        PresetKind handler = Handler(kind ?? Kind ?? throw new InvalidOperationException("Choose a tool with settings to save, such as the sculpt or strata brush"));
+        return Save(handler.Kind, name, handler.Capture());
+    }
+
+    /// <summary>
+    /// Saves settings captured otherwise than as the kind captures them now (a group of units
+    /// chosen in the tree, whatever is selected).
+    /// </summary>
+    /// <param name="captured">The settings and the name to suggest for them.</param>
+    /// <param name="name">Null or empty for the suggested name, made unique.</param>
+    /// <returns>The preset.</returns>
+    /// <exception cref="InvalidOperationException">No workspace.</exception>
+    /// <exception cref="ArgumentException">The editor cannot save presets of that kind.</exception>
+    public Preset Save(string kind, string? name, (string Name, JsonObject Settings) captured)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        PresetKind handler = Handler(kind);
+        (string suggested, JsonObject settings) = captured;
+        Preset preset = new Preset(handler.Kind, string.IsNullOrWhiteSpace(name) ? library.FreeName(handler.Kind, suggested) : name.Trim(), settings);
+        string file = library.Save(preset);
+        _log.LogInformation("Saved the preset {Name} ({Kind}) in {File}", preset.Name, preset.Kind, file);
+        Refresh();
+        Watch();
+        return preset;
+    }
+
+    /// <summary>
+    /// Applies a preset of the workspace.
+    /// </summary>
+    /// <exception cref="ArgumentException">There is no such preset, or the editor cannot apply its kind.</exception>
+    /// <exception cref="MapProjectException">Its file cannot be read.</exception>
+    public Preset Apply(string kind, string name)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        PresetKind handler = Handler(kind);
+        Preset preset = library.Find(kind, name) ?? throw new ArgumentException($"There is no preset '{name}' of kind {kind}");
+        handler.Apply(preset);
+        return preset;
+    }
+
+    /// <summary>
+    /// Whether the workspace has a units preset of that name; a file that cannot be read counts as there.
+    /// </summary>
+    public bool HasUnitsPreset(string name)
+    {
+        try
+        {
+            return Library?.Find(PresetKinds.Units, name) is not null;
+        }
+        catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a preset of the workspace.
+    /// </summary>
+    /// <exception cref="ArgumentException">There is no such preset.</exception>
+    public void Delete(string kind, string name)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        if (!library.Delete(kind, name))
+        {
+            throw new ArgumentException($"There is no preset '{name}' of kind {kind}");
+        }
+        _log.LogInformation("Deleted the preset {Name} ({Kind})", name, kind);
+        Refresh();
+    }
+
+    /// <summary>
+    /// The panel's Save button: saves under <see cref="NewName"/> through the command.
+    /// </summary>
+    [RelayCommand]
+    private async Task SaveNew()
+    {
+        await _run("edit.saveAsPreset", new JsonObject { ["kind"] = Kind, ["name"] = NewName.Trim().Length == 0 ? null : NewName.Trim() });
+        NewName = "";
+    }
+
+    /// <summary>
+    /// A preset's button in the panel: applies it through the command.
+    /// </summary>
+    [RelayCommand]
+    private Task ApplyShown(Preset preset) => _run("presets.apply", new JsonObject { ["kind"] = preset.Kind, ["name"] = preset.Name });
+
+    /// <summary>
+    /// A preset's delete button in the panel.
+    /// </summary>
+    [RelayCommand]
+    private Task DeleteShown(Preset preset) => _run("presets.delete", new JsonObject { ["kind"] = preset.Kind, ["name"] = preset.Name });
+
+    private PresetKind Handler(string kind) => _kinds.GetValueOrDefault(PresetKinds.Of(kind))
+        ?? throw new ArgumentException($"The editor cannot save or apply presets of kind '{kind}' yet: {string.Join(", ", _kinds.Keys)}");
+}

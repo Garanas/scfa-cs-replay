@@ -1,0 +1,64 @@
+{
+  "id": "xsb2108",
+  "name": "Tactical Missile Launcher",
+  "faction": "Seraphim",
+  "techLevel": 2,
+  "categories": [
+    "BUILTBYTIER2COMMANDER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DRAGBUILD",
+    "INDIRECTFIRE",
+    "OVERLAYINDIRECTFIRE",
+    "PRODUCTFA",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "SHOWATTACKRETICLE",
+    "SILO",
+    "SIZE4",
+    "SORTSTRATEGIC",
+    "STRATEGIC",
+    "STRUCTURE",
+    "TACTICALMISSILEPLATFORM",
+    "TECH2",
+    "VISIBLETORECON",
+    "VOLATILE"
+  ],
+  "strategicIcon": "icon_structure2_missile",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.65,
+    "y": 0.8,
+    "z": 1
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.05,
+  "health": 900,
+  "massCost": 825,
+  "energyCost": 4500,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/xsb2108/xsb2108_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb2108/xsb2108_albedo.png",
+      "normals": "/units/xsb2108/xsb2108_normalsts.png",
+      "specular": "/units/xsb2108/xsb2108_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/xsb2108/xsb2108_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb2108/xsb2108_lod1_albedo.png",
+      "normals": "/units/xsb2108/xsb2108_normalsts.png",
+      "specular": "/units/xsb2108/xsb2108_lod1_specteam.png"
+    }
+  ]
+}

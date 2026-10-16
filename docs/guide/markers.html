@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A tour of the Markers mode</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>A tour of the Markers mode</h1>
+<p>Spawns, mass and hydrocarbon deposits, path nodes and chains, with one deposit placed by you.</p>
+<section class="step" id="welcome">
+<h2>1. Markers</h2>
+<p>Markers are the points the game reads from the map: where each army starts, where the mass and hydrocarbon deposits lie, the path nodes the AI follows, and places a script can point at. About ten steps. You will place one deposit yourself; Undo takes it away again.</p>
+</section>
+<section class="step" id="panel">
+<h2>2. The panel lists the markers</h2>
+<img src="images/markers/02-panel.webp" alt="The panel lists the markers">
+<p>One row for each kind of marker with how many the map has, then the path nodes by layer, then the chains. The check box at the left of a row shows or hides that kind in the views. Choose a row to see it in the inspector.</p>
+</section>
+<section class="step" id="tools">
+<h2>3. The tools</h2>
+<img src="images/markers/03-tools.webp" alt="The tools">
+<p>Select picks markers. Spawn, Mass, Hydrocarbon, AI marker and Blank place one marker per click. Path node lays a path, Chain joins markers in an order, Weather and Clouds place weather, and Preset places a saved group of markers.</p>
+</section>
+<section class="step" id="choose-mass">
+<h2>4. Try it: choose the Mass tool</h2>
+<img src="images/markers/04-choose-mass.webp" alt="Try it: choose the Mass tool">
+<p>Click Mass in the list of tools.</p>
+<p class="done">The Mass tool is active. Its settings are in the row above the views.</p>
+<img src="images/markers/04-choose-mass-after.webp" alt="Try it: choose the Mass tool, after the step">
+</section>
+<section class="step" id="place-mass">
+<h2>5. Try it: place a mass deposit</h2>
+<img src="images/markers/05-place-mass.webp" alt="Try it: place a mass deposit">
+<p>Click on the map. The deposit goes to the middle of the nearest ogrid, as the game puts it, and gets the next free name.</p>
+<p class="done">That is one deposit, one step of Undo. It is selected, so the inspector shows it.</p>
+<img src="images/markers/05-place-mass-after.webp" alt="Try it: place a mass deposit, after the step">
+</section>
+<section class="step" id="inspector">
+<h2>6. The inspector edits the marker</h2>
+<img src="images/markers/06-inspector.webp" alt="The inspector edits the marker">
+<p>What you selected last: the deposit&#39;s name and resource, and for other kinds the army of a spawn, the type of an AI marker or the layer of a path node. A field changes every selected marker at once.</p>
+</section>
+<section class="step" id="options">
+<h2>7. The tool&#39;s settings</h2>
+<img src="images/markers/07-options.webp" alt="The tool&#39;s settings">
+<p>Spawns, AI markers and path nodes can snap to a grid, and a path node has its layer: land, amphibious, water or air. Deposits always snap to an ogrid&#39;s centre. A deposit on steep ground gets a warning here and in the status bar.</p>
+</section>
+<section class="step" id="path">
+<h2>8. Paths of nodes</h2>
+<img src="images/markers/08-path.webp" alt="Paths of nodes">
+<p>With the Path node tool a click on empty ground places a node linked to the selected one, so clicks lay a path. Drag from one node to another to link them. Nodes of different layers never link. The Procedural mode can also generate a whole network for you.</p>
+</section>
+<section class="step" id="chains">
+<h2>9. Chains and the adaptive map</h2>
+<img src="images/markers/09-chains.webp" alt="Chains and the adaptive map">
+<p>A chain is a list of markers in an order, for scripts. Select markers and use Chain from the selection, or click them one by one with the Chain tool. The adaptive map entry makes deposits wait for the army that starts nearest.</p>
+</section>
+<section class="step" id="kind">
+<h2>10. A kind in the inspector</h2>
+<img src="images/markers/10-kind.webp" alt="A kind in the inspector">
+<p>Choosing the row Mass in the list shows how many there are, with Select them and Clear them. Clearing is one step of Undo.</p>
+</section>
+<section class="step" id="chips">
+<h2>11. Showing markers in the views</h2>
+<img src="images/markers/11-chips.webp" alt="Showing markers in the views">
+<p>The chips above the views switch the Markers overlay on and off (Path nodes too, behind More when the window is narrow). Choosing a marker tool shows its kind on its own.</p>
+</section>
+<section class="step" id="end">
+<h2>12. That is the Markers mode</h2>
+<p>Spawns also make the armies, so the Units mode places each army&#39;s first base. Help, Tours starts this tour again and lists the others.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

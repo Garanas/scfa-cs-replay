@@ -1,0 +1,16 @@
+# Prometheus takes the metrics over OTLP (--web.enable-otlp-receiver): it scrapes nothing, as a
+# desktop program cannot be scraped. Samples up to 30 days old are accepted, so that the files of
+# earlier sessions can be read in.
+global:
+  evaluation_interval: 1m
+
+otlp:
+  # labels on every metric, besides job (service.name) and instance (service.instance.id)
+  promote_resource_attributes:
+    - service.version
+    - os.type
+    - editor.install.id
+
+storage:
+  tsdb:
+    out_of_order_time_window: 30d

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FAForever.MapEditor.Project\FAForever.MapEditor.Project.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The maps of the map library's tests, one per .scmap version. -->
+    <None Include="..\FAForever.FileFormats.Map.Tests\assets\maps\**\*" LinkBase="assets\maps" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,79 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon civilian hamlet",
+  "settings": {
+    "group": {
+      "name": "Aeon civilian hamlet",
+      "units": [
+        {
+          "blueprint": "uac1501",
+          "x": 5.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 6.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -12.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -12.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -7.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 11.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 11.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -0.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -1.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 9,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_017, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

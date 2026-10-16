@@ -1,0 +1,67 @@
+<!-- The dock under the views: lists that span the map. The tabs are in the order of DockTab. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:views="using:FAForever.MapEditor.App.Views"
+             x:Class="FAForever.MapEditor.App.Views.Dock"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="dock">
+    <TabControl x:Name="Tabs" Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
+      <!-- what the checks find, worst first; a double click or Enter goes to a problem's place -->
+      <TabItem Header="{Binding Problems.Header}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Classes="inline">
+            <TextBlock Classes="secondary" Text="{Binding Problems.Summary}" />
+            <Button Classes="chip" Content="Check again" Command="{Binding RunCommand}" CommandParameter="plugins.check" />
+          </StackPanel>
+          <ListBox x:Name="ProblemList" ItemsSource="{Binding Problems.Items}" AutomationProperties.Name="Problems"
+                   AutomationProperties.HelpText="Click a problem to select its things; double-click it or press Enter to go to its place"
+                   Tapped="OnProblemTapped" DoubleTapped="OnProblemDoubleTapped">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProblemItem">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Text="{Binding SeverityText}" />
+                  <TextBlock Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="History">
+        <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" AutomationProperties.Name="History"
+                 AutomationProperties.HelpText="Choosing a step undoes or redoes up to it">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:HistoryEntry">
+              <TextBlock Text="{Binding Description}" Classes.undone="{Binding IsUndone}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Assets">
+        <views:AssetShelf DataContext="{Binding Assets}" />
+      </TabItem>
+      <TabItem Header="{Binding Diagnostics.ConsoleHeader}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Classes="inline">
+            <CheckBox IsChecked="{Binding Diagnostics.ConsoleShowsProblemsOnly}" Content="Only warnings and errors" />
+            <Button Classes="chip" Content="Diagnostics..." Command="{Binding RunCommand}" CommandParameter="help.diagnostics" />
+          </StackPanel>
+          <ListBox x:Name="ConsoleList" Classes="log" ItemsSource="{Binding Diagnostics.ShownConsole}" AutomationProperties.Name="Console">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ConsoleEntry">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding TimeText}" />
+                  <TextBlock DockPanel.Dock="Left" Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}"
+                             Text="{Binding LevelText}" IsVisible="{Binding IsProblem}" />
+                  <TextBlock Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </Border>
+</UserControl>

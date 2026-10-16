@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Cybran T1 base",
+  "settings": {
+    "slots": [
+      {
+        "unit": "urb0101"
+      },
+      {
+        "unit": "urb0102"
+      },
+      {
+        "unit": "urb1103"
+      },
+      {
+        "unit": "urb1101"
+      },
+      {
+        "unit": "urb1105"
+      },
+      {
+        "unit": "urb5101"
+      },
+      {
+        "unit": "urb2101"
+      },
+      {
+        "unit": "urb3101"
+      },
+      {
+        "unit": "urb0103"
+      },
+      {
+        "unit": "urb1106"
+      }
+    ]
+  }
+}

@@ -8,6 +8,27 @@ The libraries live in `src/`:
 - `FAForever.FileFormats.Blueprints`: blueprint files (`.bp`) of units, projectiles, props and effects.
 - `FAForever.FileFormats.Lua`: Lua values and the data-only Lua that game files are written in.
 - `FAForever.FileFormats.Map`: maps: the binary `.scmap` and its `_save.lua` and `_scenario.lua`.
+- `FAForever.FileFormats.Mesh`: meshes of units and props (`.scm`), as glTF, and small pictures of them.
+
+## Map editor
+
+The beginnings of a desktop map editor: a map as a project of JSON and PNG files that terrain
+tools and image editors work on, packed into the game's files on export.
+
+- `src/FAForever.MapEditor.Project`: the editor's model of a map and its project format.
+- `src/FAForever.MapEditor.Cli`: the `faf-map` tool.
+- `src/FAForever.MapEditor.App`: the editor's window (Avalonia): open, import, save and export maps,
+  paint the heightmap, undo and redo; it reads back what other tools change in the project.
+
+```sh
+faf-map workspace init "D:/FAF Map Editor"                 # the workspace: projects and the game's assets
+faf-map workspace convert                                  # env and units of the game and FAF, as PNG and JSON
+faf-map unpack maps/theta_passage.v0004 theta_passage      # a map folder into a project
+faf-map pack theta_passage "<game>/maps" --version 5        # a project into maps/theta_passage.v0005
+faf-map pack theta_passage "<game>/maps" --watch            # pack again on every change
+faf-map-editor theta_passage --automation 5371              # the editor, driven by...
+faf-map editor stroke points=[[10,10],[50,50]]              # ...commands like these
+```
 
 ## Web app
 

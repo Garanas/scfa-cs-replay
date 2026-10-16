@@ -1,0 +1,12 @@
+<!-- The Lighting panel (L-1): what there is, the sun, the colours, fog, bloom, the sky and the map-wide shadow decal;
+     the inspector edits the chosen one (Views/MapPanels/PanelPartView). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.LightingPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <controls:PanelPartList DataContext="{Binding LightingSettings.Parts}" />
+  </Border>
+</UserControl>

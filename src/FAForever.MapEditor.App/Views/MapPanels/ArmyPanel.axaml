@@ -1,0 +1,57 @@
+<!-- The chosen army's fields (M-4): its name, whether players take it, its team, factions and alliances, and Remove.
+     One view for the Map mode's list of armies and the Units mode's tree (an army chosen there). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.ArmyPanel"
+             x:DataType="vm:ArmiesViewModel">
+  <StackPanel Classes="stack">
+    <DockPanel>
+      <Button DockPanel.Dock="Right" Classes="beside" Content="Rename" Command="{Binding RenameArmyCommand}"
+              AutomationProperties.Name="Rename the chosen army" />
+      <TextBox Text="{Binding ArmyName}"
+               AutomationProperties.Name="Name of the chosen army"
+               AutomationProperties.HelpText="Its spawn marker takes the new name too; Enter renames it">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding RenameArmyCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
+    </DockPanel>
+    <CheckBox Content="Playable" IsChecked="{Binding Playable}"
+              AutomationProperties.Name="Players take the chosen army"
+              AutomationProperties.HelpText="A playable army gets a spawn when it has none; an extra army is one no player takes" />
+    <DockPanel>
+      <Button DockPanel.Dock="Right" Classes="beside" Content="Set" Command="{Binding SetTeamCommand}"
+              AutomationProperties.Name="Put the chosen army in the team" />
+      <TextBox Text="{Binding Team}" PlaceholderText="Team (none)"
+               AutomationProperties.Name="Team of the chosen army"
+               AutomationProperties.HelpText="Empty for no team; Enter sets it. The game's lobby reads only the team FFA of every playable army, which the export writes first">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding SetTeamCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
+    </DockPanel>
+    <TextBlock Classes="label" Text="Limited to the factions (none: any)" />
+    <UniformGrid Columns="2">
+      <CheckBox Content="UEF" IsChecked="{Binding Uef}" />
+      <CheckBox Content="Aeon" IsChecked="{Binding Aeon}" />
+      <CheckBox Content="Cybran" IsChecked="{Binding Cybran}" />
+      <CheckBox Content="Seraphim" IsChecked="{Binding Seraphim}" />
+    </UniformGrid>
+    <TextBlock Classes="label" Text="Alliances" />
+    <ItemsControl ItemsSource="{Binding Alliances}" AutomationProperties.Name="Alliances of the chosen army">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:AllianceRow">
+          <DockPanel>
+            <ComboBox DockPanel.Dock="Right" ItemsSource="{x:Static vm:AllianceRow.Choices}" SelectedItem="{Binding Stance}"
+                      AutomationProperties.Name="{Binding Other, StringFormat='Stance towards {0}'}" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding Other}" />
+          </DockPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Button HorizontalAlignment="Stretch" Content="Remove the army" Command="{Binding RemoveArmyCommand}"
+            AutomationProperties.Name="Remove the chosen army"
+            AutomationProperties.HelpText="With its units and its spawn" />
+  </StackPanel>
+</UserControl>

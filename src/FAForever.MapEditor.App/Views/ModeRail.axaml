@@ -1,0 +1,42 @@
+<!-- The rail of modes: one button per mode, the map's and its things' at the top; at the bottom, below a divider, the
+     Procedural and Plugins modes. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ModeRail"
+             x:DataType="vm:MainViewModel">
+  <UserControl.DataTemplates>
+    <DataTemplate x:DataType="vm:ModeItem">
+      <Button Classes="rail" Classes.selected="{Binding IsSelected}"
+              Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}"
+              CommandParameter="{Binding Definition.CommandId}"
+              ToolTip.Tip="{Binding Tip}"
+              AutomationProperties.Name="{Binding Definition.Title}"
+              AutomationProperties.HelpText="{Binding Definition.Help}">
+        <Path Classes="icon" Data="{Binding Definition.Icon, Converter={x:Static controls:IconConverter.Instance}}" />
+      </Button>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+  <Border Classes="rail">
+    <DockPanel>
+      <StackPanel Classes="rail" DockPanel.Dock="Bottom">
+        <Border Classes="raildivider" />
+        <ItemsControl ItemsSource="{Binding BottomRailModes}" AutomationProperties.Name="Modes at the bottom">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="rail" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </StackPanel>
+      <ItemsControl ItemsSource="{Binding RailModes}" AutomationProperties.Name="Modes">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="rail" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+      </ItemsControl>
+    </DockPanel>
+  </Border>
+</UserControl>

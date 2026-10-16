@@ -1,0 +1,61 @@
+{
+  "id": "urb0101",
+  "name": "Land Factory",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CONSTRUCTION",
+    "CYBRAN",
+    "DRAGBUILD",
+    "FACTORY",
+    "LAND",
+    "PRODUCTSC1",
+    "RALLYPOINT",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "SIZE16",
+    "SORTCONSTRUCTION",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_factory1_land",
+  "buildIcon": "land",
+  "size": {
+    "x": 4.3,
+    "y": 1,
+    "z": 4.3
+  },
+  "footprint": {
+    "sizeX": 5,
+    "sizeZ": 5
+  },
+  "uniformScale": 0.05,
+  "health": 2750,
+  "massCost": 240,
+  "energyCost": 2100,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/urb0101/urb0101_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb0101/urb0101_albedo.png",
+      "normals": "/units/urb0101/urb0101_normalsts.png",
+      "specular": "/units/urb0101/urb0101_specteam.png"
+    },
+    {
+      "cutoff": 500,
+      "mesh": "/units/urb0101/urb0101_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb0101/urb0101_lod1_albedo.png",
+      "normals": "/units/urb0101/urb0101_normalsts.png",
+      "specular": "/units/urb0101/urb0101_lod1_specteam.png"
+    }
+  ]
+}

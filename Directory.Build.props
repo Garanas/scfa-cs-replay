@@ -5,4 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <!-- The map editor is a beta: its version reads 1.0.0-beta, shown in the window's title, the exported
+       _scenario.lua and the name of CI's executable. Removing the suffix ends the beta everywhere. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('FAForever.MapEditor'))">
+    <VersionSuffix>beta</VersionSuffix>
+  </PropertyGroup>
 </Project>

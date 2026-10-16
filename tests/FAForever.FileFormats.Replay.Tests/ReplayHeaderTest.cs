@@ -312,5 +312,72 @@ namespace FAForever.FileFormats.Replay.Tests
             // Structural: observers are exactly the clients no army claims.
             Assert.AreEqual(header.Clients.Length - header.Armies.Count(army => army.SourceId is not null), observers.Count);
         }
+
+        /// <summary>
+        /// The map path of the header is the path of the .scmap (the engine's mMapName), in every asset.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", "/maps/SCMP_009/SCMP_009.scmap")]
+        [DataRow("assets/faforever/mods.fafreplay", "/maps/project_tumulus.v0004/Project_Tumulus.scmap")]
+        [DataRow("assets/faforever/gzip/20802415.fafreplay", "/maps/SCMP_037/SCMP_037.scmap")]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay", "/maps/X1MP_009/X1MP_009.scmap")]
+        public void MapPathIsTheScmapTest(string file, string expectedMapPath)
+        {
+            Assert.AreEqual(expectedMapPath, Load(file).Header.MapPath);
+        }
+
+        /// <summary>
+        /// The number after each client's name is its pause allowance (mTimeouts): 3 for players of
+        /// a multiplayer game on FAF (lobby option Timeouts), -1 (unlimited) in single player games.
+        /// It is not the FAF id of the player: that is OwnerID in the army's options.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 3)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 3)]
+        [DataRow("assets/faforever/gzip/20802415.fafreplay", 3)]
+        [DataRow("assets/faforever/zstd/22338092.fafreplay", -1)]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay", -1)]
+        public void PauseAllowanceTest(string file, int expectedAllowance)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            foreach (ReplaySource client in header.Clients)
+            {
+                Assert.AreEqual(expectedAllowance, client.PauseAllowance, client.PlayerName);
+            }
+
+            foreach (ReplayPlayerOptions army in header.Armies.Where(army => army.SourceId is not null && army.Raw.Value.ContainsKey("OwnerID")))
+            {
+                Assert.AreNotEqual(army.Raw.TryGetStringValue("OwnerID", out string? owner) ? owner : null, header.Clients[army.SourceId!.Value].PauseAllowance.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Each army lists the sources that control it, closed by 255. The lobby gives a human army
+        /// one source and AI or civilian armies none; the first source becomes the army's SourceId.
+        /// </summary>
+        [TestMethod]
+        public void ArmySourceListTest()
+        {
+            Replay replay = new ReplayStreamBuilder().Header([0], [], [0, 1]).Advance().EndGame().Load();
+
+            CollectionAssert.AreEqual(new int?[] { 0, null, 0 }, replay.Header.Armies.Select(army => army.SourceId).ToArray());
+            Assert.AreEqual(1, replay.Body.UserInput.OfType<ReplayInput.EndGame>().Single().Tick, "The header is read to its end.");
+        }
+
+        /// <summary>
+        /// A source can control more than one army: in this lobby game the second player's army lists
+        /// source 0 too, while the header has one client.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/gzip/20802415.fafreplay")]
+        public void SourceOfTwoArmiesTest(string file)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            Assert.AreEqual(1, header.Clients.Length);
+            CollectionAssert.AreEqual(new int?[] { 0, 0 }, header.Armies.Select(army => army.SourceId).ToArray());
+            CollectionAssert.AreEqual(new[] { "Jip", "Azath0th" }, header.Armies.Select(army => army.PlayerName).ToArray());
+        }
     }
 }

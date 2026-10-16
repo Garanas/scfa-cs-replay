@@ -1,0 +1,44 @@
+<!-- The Sketch mode's sheets (N-1): each with its eye (Shown or Hidden), its name and how many strokes it holds; the one chosen is the one
+     the pencil and the eraser work in, and the inspector shows. Add makes an empty sheet, Duplicate copies the chosen one, Delete takes it away. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.SketchPanels.SketchSheetsPanel"
+             x:DataType="vm:SketchViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="chip icononly" Command="{Binding AddCommand}"
+                ToolTip.Tip="Add an empty sheet and draw into it"
+                AutomationProperties.Name="Add a sheet" AutomationProperties.HelpText="Adds an empty sheet at the end and chooses it">
+          <Path Classes="icon small" Data="{StaticResource Icon.Plus}" />
+        </Button>
+        <TextBlock Classes="overline" VerticalAlignment="Center" Text="{Binding Source=Sheets, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      </DockPanel>
+      <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding ChosenItem}" IsVisible="{Binding !IsEmpty}"
+               AutomationProperties.Name="Sheets of the sketch"
+               AutomationProperties.HelpText="The chosen sheet is the one the pencil and the eraser work in; its eye shows or hides it">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:SketchSheetItem">
+            <DockPanel>
+              <Button DockPanel.Dock="Left" Classes="chip" Classes.on="{Binding Shown}" Content="{Binding EyeText}" Command="{Binding ToggleShownCommand}"
+                      AutomationProperties.Name="{Binding EyeLabel}" />
+              <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding CountText}" VerticalAlignment="Center"
+                         AutomationProperties.Name="{Binding Name, StringFormat='Strokes of {0}'}" />
+              <TextBlock Text="{Binding Name}" Margin="{StaticResource InlineGap}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="{Binding Label}" />
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock Classes="caption" IsVisible="{Binding IsEmpty}"
+                 Text="None yet: the first stroke of the pencil makes a sheet, or add one. A sheet holds strokes that show, hide and clear together, with a legend that says what its colours mean. The sketch is kept in the project and never exported." />
+      <WrapPanel Classes="chips" IsVisible="{Binding HasChosen}">
+        <Button Content="Duplicate" Command="{Binding DuplicateCommand}"
+                AutomationProperties.Name="Duplicate the chosen sheet" AutomationProperties.HelpText="A copy with its strokes, legend and opacity, right after it" />
+        <Button Content="Delete" Command="{Binding DeleteCommand}"
+                AutomationProperties.Name="Delete the chosen sheet" AutomationProperties.HelpText="Takes the sheet and its strokes away; undo brings them back" />
+      </WrapPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

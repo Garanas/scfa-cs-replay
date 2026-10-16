@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Aeon defences",
+  "settings": {
+    "slots": [
+      {
+        "unit": "uab5101"
+      },
+      {
+        "unit": "uab2101"
+      },
+      {
+        "unit": "uab2301"
+      },
+      {
+        "unit": "uab2104"
+      },
+      {
+        "unit": "uab2204"
+      },
+      {
+        "unit": "uab2304"
+      },
+      {
+        "unit": "uab4202"
+      },
+      {
+        "unit": "uab4301"
+      },
+      {
+        "unit": "uab2108"
+      },
+      {
+        "unit": "uab2109"
+      }
+    ]
+  }
+}

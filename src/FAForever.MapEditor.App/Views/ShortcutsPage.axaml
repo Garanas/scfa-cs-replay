@@ -1,0 +1,62 @@
+<!-- Keyboard shortcuts (F-1): every command's shortcut from the registry, the keys of the tools and the mouse in each
+     view, each line its keys, what they do and where; the search narrows them all. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ShortcutsPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog shortcuts">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Keyboard shortcuts" />
+            <TextBlock Classes="caption"
+                       Text="The commands' shortcuts (also in the menus and the palette, Ctrl+K), the keys the tools take while a view has the keyboard, and the mouse in each view." />
+            <TextBox Text="{Binding Shortcuts.Query}" PlaceholderText="Search: a key, a command, a tool, a view"
+                     AutomationProperties.Name="Search the shortcuts" AutomationProperties.HelpText="Every word must be in a line's keys, what it does or where" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <ScrollViewer Classes="shortcutslist">
+            <StackPanel Classes="stack">
+              <ItemsControl ItemsSource="{Binding Shortcuts.Sections}" AutomationProperties.Name="Shortcuts">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Classes="stack" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ShortcutSection">
+                    <StackPanel Classes="stack">
+                      <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                      <ItemsControl ItemsSource="{Binding Items}" AutomationProperties.Name="{Binding Title}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ShortcutItem">
+                            <DockPanel AutomationProperties.Name="{Binding Label}">
+                              <TextBlock DockPanel.Dock="Left" Classes="shortcutkeys" Text="{Binding Keys}" />
+                              <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Where}" TextWrapping="NoWrap" />
+                              <TextBlock Text="{Binding What}" TextWrapping="Wrap" />
+                            </DockPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="caption" Text="Nothing holds every word of the search." IsVisible="{Binding Shortcuts.IsEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+        <Border Classes="dialogpart">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="Close" Command="{Binding Shortcuts.CloseCommand}" />
+            <TextBlock Classes="caption" Text="{Binding Shortcuts.Count, StringFormat='{}{0} shortcuts'}" VerticalAlignment="Center" AutomationProperties.Name="Shortcuts shown" />
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

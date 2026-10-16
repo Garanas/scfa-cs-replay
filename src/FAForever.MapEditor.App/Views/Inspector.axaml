@@ -1,0 +1,468 @@
+<!-- The inspector: the properties of what is selected or active (F-11), by mode; its parts a line apart.
+     An asset chosen in the shelf shows here until the choice is cleared (F-8, F-9); what is selected on
+     the map shows here instead of the mode's parts, with its shared fields and a section per kind. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
+             xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
+             xmlns:sketchpanels="using:FAForever.MapEditor.App.Views.SketchPanels"
+             x:Class="FAForever.MapEditor.App.Views.Inspector"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="inspector">
+    <ScrollViewer>
+      <Panel>
+        <StackPanel IsVisible="{Binding Assets.HasSelection}" AutomationProperties.Name="Asset">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding Assets.Shown.Name}" TextWrapping="Wrap" AutomationProperties.Name="Asset name" />
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownDetail}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <Border Classes="thumbnail preview">
+                <Panel>
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownImage}" Model="{Binding Assets.ShownModel}" DecodeWidth="512" IsVisible="{Binding Assets.HasShownImage}"
+                                           AutomationProperties.Name="Picture of the asset" />
+                  <Path Classes="icon" Data="{Binding Assets.ShownGlyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !Assets.HasShownImage}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Panel>
+              </Border>
+              <StackPanel Classes="inline" IsVisible="{Binding Assets.HasShownNormalImage}">
+                <Border Classes="thumbnail normalpreview">
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownNormalImage}" AutomationProperties.Name="Normal map of the asset" />
+                </Border>
+                <TextBlock Classes="caption" Text="Normal map" />
+              </StackPanel>
+              <StackPanel Classes="inline" IsVisible="{Binding Assets.HasShownIcon}">
+                <Border Classes="thumbnail normalpreview">
+                  <Panel>
+                    <controls:AssetThumbnail Source="{Binding Assets.ShownIconBackground}" DecodeWidth="128" Checker="False" />
+                    <controls:AssetThumbnail Source="{Binding Assets.ShownIcon}" DecodeWidth="128" Checker="False" AutomationProperties.Name="Icon of the unit" />
+                  </Panel>
+                </Border>
+                <TextBlock Classes="caption" Text="Its icon in the game" />
+              </StackPanel>
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownUses}" IsVisible="{Binding Assets.ShownUses, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         AutomationProperties.Name="Uses of the asset" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group" IsVisible="{Binding Assets.IsFamilySelected}">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="{Binding Assets.MembersTitle}" />
+              <TextBlock Classes="caption" Text="{Binding Assets.SetText}" IsVisible="{Binding Assets.IsSetSelected}" AutomationProperties.Name="Decal set" />
+              <Button Content="Choose the whole set" Command="{Binding Assets.ChooseWholeSetCommand}" IsVisible="{Binding Assets.IsSetSelected}"
+                      AutomationProperties.HelpText="Places the set as one decal with all its textures; choosing a texture below places that one alone" />
+              <ListBox ItemsSource="{Binding Assets.Selected.Members}" SelectedItem="{Binding Assets.SelectedMember}" AutomationProperties.Name="{Binding Assets.MembersTitle}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="workspaces:AssetEntry">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <ItemsControl ItemsSource="{Binding Assets.Shown.Facts}" AutomationProperties.Name="Facts">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="workspaces:AssetFact">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding Label}" Width="{StaticResource FactLabelWidth}" />
+                      <Panel>
+                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" IsVisible="{Binding !IsEconomy}" />
+                        <!-- a unit's cost, a prop's reclaim: after the mass and energy icons (F-8) -->
+                        <controls:EconomyAmount Mass="{Binding Mass, TargetNullValue=0}" Energy="{Binding Energy, TargetNullValue=0}" IsVisible="{Binding IsEconomy}" />
+                      </Panel>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="label" Text="Comes from" />
+              <TextBlock Text="{Binding Assets.ShownSource}" TextWrapping="Wrap" AutomationProperties.Name="Where the asset comes from" />
+              <TextBlock Classes="label" Text="{Binding Assets.ShownKeyLabel}" />
+              <TextBox Classes="mono" Text="{Binding Assets.Shown.Key, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                       AutomationProperties.Name="Path of the asset" AutomationProperties.HelpText="How a map or the workspace names it; select it to copy" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <!-- the buttons wrap onto another line when the inspector is narrow -->
+              <WrapPanel Classes="chips">
+                <Button Content="{Binding Assets.ShownStarText}" Command="{Binding RunCommand}" CommandParameter="assets.star"
+                        AutomationProperties.Name="Star the asset" AutomationProperties.HelpText="Starred assets show under Starred on the shelf and in the picker, in every map of the workspace" />
+                <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
+                <Button Content="Read again" Command="{Binding RunCommand}" CommandParameter="assets.reloadShown" AutomationProperties.Name="Read this asset again"
+                        AutomationProperties.HelpText="Reads its blueprint and pictures from the workspace again, after a tool changed them; the other assets stay as they are" />
+                <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+        <!-- what is selected on the map (F-11): the fields all kinds share, then a section per kind -->
+        <StackPanel IsVisible="{Binding InspectsSelection}" AutomationProperties.Name="Selection">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Selection, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding Selection.Inspector.Title}" TextWrapping="Wrap" AutomationProperties.Name="Selected" />
+              <TextBlock Classes="caption" Text="{Binding Selection.Inspector.Kinds}" AutomationProperties.Name="Kinds selected" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Place" />
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="X" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.X, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="X of the selection"
+                         AutomationProperties.HelpText="In ogrids; a value puts every selected thing there; a dash when they differ" />
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Z" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.Z, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Z of the selection"
+                         AutomationProperties.HelpText="In ogrids; a value puts every selected thing there; a dash when they differ" />
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Height" Width="{StaticResource FactLabelWidth}" />
+                <TextBlock Classes="mono" Text="{Binding Selection.Inspector.Height}" AutomationProperties.Name="Height of the selection"
+                           ToolTip.Tip="It follows the terrain" />
+              </DockPanel>
+              <DockPanel IsVisible="{Binding Selection.Inspector.CanTurn}">
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Heading" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.Heading, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Heading of the selection"
+                         AutomationProperties.HelpText="In degrees, clockwise from the right in the top view; a value turns every selected thing to it; a dash when they differ" />
+              </DockPanel>
+              <StackPanel Classes="inline">
+                <Button Content="Duplicate" Command="{Binding RunCommand}" CommandParameter="edit.duplicate" />
+                <Button Content="Delete" Command="{Binding RunCommand}" CommandParameter="edit.delete" />
+                <Button Content="Select none" Command="{Binding RunCommand}" CommandParameter="select.none" AutomationProperties.HelpText="The inspector shows the mode again" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <!-- a template per kind: each kind's own fields go into its section class (ViewModels/SelectionInspector.cs) and its template -->
+          <ItemsControl ItemsSource="{Binding Selection.Inspector.Sections}" AutomationProperties.Name="Selected by kind">
+            <ItemsControl.DataTemplates>
+              <DataTemplate DataType="vm:MarkerSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected markers" />
+                    <DockPanel IsVisible="{Binding CanRename}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Name" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="commit" Text="{Binding Name, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Name of the marker"
+                               AutomationProperties.HelpText="The name scripts know it by; another marker's name is refused" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasResources}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Resource" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Resources}" SelectedItem="{Binding Resource}" HorizontalAlignment="Stretch" AutomationProperties.Name="Resource of the deposits" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasResources}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Spawns with" Width="{StaticResource FactLabelWidth}" />
+                      <Button DockPanel.Dock="Right" Classes="beside" Content="Nearest" Command="{Binding WaitForNearestArmyCommand}"
+                              AutomationProperties.Name="Wait for the nearest army"
+                              AutomationProperties.HelpText="Each selected deposit waits for the army of the spawn nearest to it" />
+                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding SpawnWithArmy}" HorizontalAlignment="Stretch" AutomationProperties.Name="Army the deposits wait for"
+                                AutomationProperties.HelpText="On an adaptive map, a deposit is left out unless a player takes its army; Always keeps it whoever plays" />
+                    </DockPanel>
+                    <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding Warning}" IsVisible="{Binding HasWarning}" AutomationProperties.Name="Slope of the deposits" />
+                    <DockPanel IsVisible="{Binding HasAiMarkers}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Type" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding AiTypes}" SelectedItem="{Binding AiType}" HorizontalAlignment="Stretch" AutomationProperties.Name="Type of the AI markers" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasPathNodes}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Layer" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding Layer}" HorizontalAlignment="Stretch" AutomationProperties.Name="Layer of the path nodes"
+                                AutomationProperties.HelpText="A node put on another layer loses its links" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasSpawns}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="No rush X" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NoRushX, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="No-rush offset across"
+                               AutomationProperties.HelpText="Where the no-rush circle lies from the spawn, in game units; empty for around the spawn" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasSpawns}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="No rush Z" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NoRushZ, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="No-rush offset down"
+                               AutomationProperties.HelpText="Where the no-rush circle lies from the spawn, in game units; empty for around the spawn" />
+                    </DockPanel>
+                    <!-- weather definitions and generators (R-1) -->
+                    <StackPanel IsVisible="{Binding Weather.HasDefinitions}">
+                      <controls:SettingList DataContext="{Binding Weather.Definition}" />
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding Weather.HasGenerators}">
+                      <controls:SettingList DataContext="{Binding Weather.Generator}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:PropSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected props" />
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Pitch" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Pitch, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Pitch of the selected props"
+                               AutomationProperties.HelpText="In degrees, leaning each prop towards its own z; a value tilts every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Roll" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Roll, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Roll of the selected props"
+                               AutomationProperties.HelpText="In degrees, leaning each prop towards its own -x; a value tilts every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Scale" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Scale, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Scale of the selected props"
+                               AutomationProperties.HelpText="1 is the model's own size; a value scales every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Reclaim" Width="{StaticResource FactLabelWidth}" />
+                      <controls:EconomyAmount Mass="{Binding ReclaimShown.Mass, FallbackValue=0}" Energy="{Binding ReclaimShown.Energy, FallbackValue=0}" Suffix="{Binding ReclaimShown.Suffix, FallbackValue={x:Null}}"
+                                              AutomationProperties.Name="{Binding Reclaim, StringFormat='Reclaim of the selected props: {0}'}" />
+                    </DockPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Align to terrain" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.alignToTerrain"
+                              AutomationProperties.HelpText="Tilt each prop so that it stands along the terrain's normal, keeping its heading" />
+                      <Button Content="Upright" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.upright"
+                              AutomationProperties.HelpText="Stand each prop straight up, keeping its heading" />
+                    </StackPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Drop to ground" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.dropToGround"
+                              AutomationProperties.HelpText="Put each prop on the terrain, sunk by the Props panel's sink" />
+                      <Button Content="Randomise" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.randomize"
+                              AutomationProperties.HelpText="Turn each prop at random and scale it between the Props panel's scales" />
+                    </StackPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Replace..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.replace"
+                              AutomationProperties.HelpText="Give the props another blueprint, chosen in the picker" />
+                      <Button Content="Random variant" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.randomVariant"
+                              AutomationProperties.HelpText="Give each prop a variant of its family at random" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <!-- the decals' own fields (D-1): size, the distances they show at, their place in the order -->
+              <DataTemplate DataType="vm:DecalSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected decals" />
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Type" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock Classes="mono" Text="{Binding Types}" AutomationProperties.Name="Types of the selected decals" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Width" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Width, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Width of the selected decals"
+                               AutomationProperties.HelpText="In ogrids, along each decal's own x axis; a value gives it to every selected decal, about its centre; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Length" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Length, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Length of the selected decals"
+                               AutomationProperties.HelpText="In ogrids, along each decal's own z axis; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Shown within" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding CutOff, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Distance the selected decals show within"
+                               AutomationProperties.HelpText="The game does not draw a decal when the camera is further away than this (its cut-off LOD); maps mostly use 200 to 800; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Hidden within" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NearCutOff, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Distance the selected decals hide within"
+                               AutomationProperties.HelpText="The game does not draw a decal when the camera is closer than this (its near cut-off LOD); usually 0; a dash when they differ" />
+                    </DockPanel>
+                    <TextBlock Classes="label" Text="Order" />
+                    <StackPanel Classes="inline">
+                      <Button Content="Front" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.toFront"
+                              AutomationProperties.Name="Bring the decals to the front" ToolTip.Tip="On top of every other decal (Ctrl+Shift+])" />
+                      <Button Content="Forward" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.forward"
+                              AutomationProperties.Name="Bring the decals forward" ToolTip.Tip="One place up in the map's order (Ctrl+])" />
+                      <Button Content="Back" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.backward"
+                              AutomationProperties.Name="Send the decals backward" ToolTip.Tip="One place down in the map's order (Ctrl+[)" />
+                      <Button Content="Bottom" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.toBack"
+                              AutomationProperties.Name="Send the decals to the back" ToolTip.Tip="Under every other decal (Ctrl+Shift+[)" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:UnitSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected units" />
+                    <!-- their cost after the mass and energy icons, as the shelf's inspector shows a unit's (F-8) -->
+                    <DockPanel IsVisible="{Binding Cost, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Cost" Width="{StaticResource FactLabelWidth}" />
+                      <controls:EconomyAmount Mass="{Binding Cost.Mass, FallbackValue=0}" Energy="{Binding Cost.Energy, FallbackValue=0}" Suffix="{Binding Cost.Suffix, FallbackValue={x:Null}}"
+                                              AutomationProperties.Name="{Binding Cost.Text, StringFormat='Cost of the selected units: {0}'}" />
+                    </DockPanel>
+                    <!-- a dash while they belong to different armies, as the Group's choice below shows one -->
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Army" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" PlaceholderText="—" HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="Army of the selected units"
+                                AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL; a dash when they belong to different armies" />
+                    </DockPanel>
+                    <!-- the army's groups as a choice (U-11): a dash while they are in different ones or belong to several armies -->
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Group" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding GroupChoice}" IsEnabled="{Binding CanChooseGroup}" PlaceholderText="—"
+                                HorizontalAlignment="Stretch" AutomationProperties.Name="Group of the selected units"
+                                AutomationProperties.HelpText="Choosing a group moves the selected units into it, each staying in its army; a dash when they are in different groups or armies" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Blueprint" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock Classes="mono" Text="{Binding Blueprint}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Blueprint of the selected units" />
+                    </DockPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Replace..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.replace"
+                              AutomationProperties.Name="Replace the units' blueprint"
+                              AutomationProperties.HelpText="Give the selected units another blueprint, chosen in the picker; their name, place, heading, army and group stay, structures stay on the build grid" />
+                    </StackPanel>
+                    <!-- each unit becomes the same kind of unit of that faction; one that has none stays as it is -->
+                    <TextBlock Classes="label" Text="To faction" />
+                    <WrapPanel Classes="chips">
+                      <Button Classes="chip" Content="UEF" Command="{Binding ToFactionCommand}" CommandParameter="uef" AutomationProperties.Name="Convert the units to UEF"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Cybran" Command="{Binding ToFactionCommand}" CommandParameter="cybran" AutomationProperties.Name="Convert the units to Cybran"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Aeon" Command="{Binding ToFactionCommand}" CommandParameter="aeon" AutomationProperties.Name="Convert the units to Aeon"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Seraphim" Command="{Binding ToFactionCommand}" CommandParameter="seraphim" AutomationProperties.Name="Convert the units to Seraphim"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                    </WrapPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Group" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.group"
+                              AutomationProperties.Name="Group the selected units" ToolTip.Tip="Put the selected units into a new group (Ctrl+G)"
+                              AutomationProperties.HelpText="A new group under the deepest group that holds them all, one per army; Ctrl+G" />
+                      <Button Content="Ungroup" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.ungroup"
+                              IsEnabled="{Binding CanUngroup}" AutomationProperties.Name="Ungroup the selected units"
+                              AutomationProperties.HelpText="Dissolve the group the selected units are in: its units and groups go into the group above" />
+                      <Button Content="Distribute" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.distribute"
+                              IsEnabled="{Binding CanDistribute}" AutomationProperties.Name="Distribute the selected units evenly"
+                              AutomationProperties.HelpText="Three or more units: spread them evenly between the first and last along the longer of x and z; structures stay on the build grid" />
+                    </StackPanel>
+                    <!-- wrecks (U-5): the army's WRECKAGE group; a dash when some are -->
+                    <CheckBox Content="Wrecks" IsChecked="{Binding Wrecks}" AutomationProperties.Name="The selected units are wrecks"
+                              AutomationProperties.HelpText="Wrecks lie in their army's WRECKAGE group, which the game turns into wrecks when it starts" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:AreaSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected areas" />
+                    <!-- one area alone: its name and corners to type (M-5) -->
+                    <!-- the playable area at the start (M-3) -->
+                    <CheckBox Content="Playable area" IsChecked="{Binding Playable}" IsVisible="{Binding IsSingle}"
+                              AutomationProperties.HelpText="Make this area the playable area at the start; the export makes the map's script set it" />
+                    <TextBlock Classes="caption" Text="The first area is the playable area unless another is chosen" IsVisible="{Binding IsPlayableByConvention}" />
+                    <Panel IsVisible="{Binding IsSingle}">
+                      <controls:SettingList DataContext="{Binding Fields}" ShowsTitle="False" />
+                    </Panel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.DataTemplates>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel IsVisible="{Binding InspectsMode}">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding SelectedMode.Definition.Title}" />
+            </StackPanel>
+          </Border>
+          <ItemsControl ItemsSource="{Binding InspectorParts}" AutomationProperties.Name="Inspector">
+            <ItemsControl.DataTemplates>
+              <!-- what is chosen in the Map panel's list (wave 14A) -->
+              <DataTemplate DataType="vm:MapDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MapParts.Parts}" />
+              </DataTemplate>
+              <!-- what is chosen in the Lighting and Water panels' lists -->
+              <DataTemplate DataType="vm:LightingDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).LightingSettings.Parts}" />
+              </DataTemplate>
+              <!-- the chosen map-wide decal (D-1) of the Decals panel -->
+              <DataTemplate DataType="vm:MapWideDecalDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.Parts}" />
+              </DataTemplate>
+              <!-- the chosen entry of the Procedural mode's list (wave 10D) -->
+              <DataTemplate DataType="vm:ProceduralDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ProceduralList.Parts}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:WaterDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WaterSettings.Parts}" />
+              </DataTemplate>
+              <!-- the chosen mask's stack with its rules (K-1, K-2), and the rules of props (P-4): a view of their own each -->
+              <DataTemplate DataType="vm:MaskStackSection">
+                <panels:MaskStackPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:PropRuleSection">
+                <rules:PropRulePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:LayerSection">
+                <panels:LayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <!-- the chosen height layer or curve (T-5, T-4) -->
+              <DataTemplate DataType="vm:HeightLayerSection">
+                <panels:HeightLayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <!-- the army or group chosen in the Units mode's tree (U-3, M-4) -->
+              <DataTemplate DataType="vm:UnitGroupDetailsSection">
+                <panels:UnitGroupPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies}" />
+              </DataTemplate>
+              <!-- the chosen sheet of the Sketch mode (N-1) -->
+              <DataTemplate DataType="vm:SketchSheetSection">
+                <sketchpanels:SketchSheetPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Sketch}" />
+              </DataTemplate>
+              <!-- the chosen projected image of the Sketch mode (N-2) -->
+              <DataTemplate DataType="vm:ProjectedImageDetailsSection">
+                <sketchpanels:ProjectedImagePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:PlannedSection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <Border Classes="planned">
+                      <StackPanel Classes="stack">
+                        <TextBlock Classes="caption" Text="{Binding Missing}" />
+                        <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <!-- the chosen entry of the Plugins mode's list: a plugin, or all of them (wave 14C) -->
+              <DataTemplate DataType="vm:PluginDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins.Parts}" />
+              </DataTemplate>
+              <!-- the entry chosen in the Markers panel's list (wave 14B): a kind, a layer of path nodes, a chain, the adaptive map -->
+              <DataTemplate DataType="vm:MarkerDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers.Parts}" />
+              </DataTemplate>
+            </ItemsControl.DataTemplates>
+          </ItemsControl>
+          <!-- only in a mode with no part of its own to show: how to select things -->
+          <Border Classes="group" IsVisible="{Binding HasNoInspectorParts}">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Selection" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in either view; shift adds, control toggles. The handles then move, turn and scale the selection." />
+            </StackPanel>
+          </Border>
+          <!-- what the sketch does over the terrain in the other modes (N-1): which sheets show at what opacity, and how to hide them -->
+          <Border Classes="group" IsVisible="{Binding HasSketchNote}">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="overline" Text="{Binding Source=Sketch, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding SketchNote}" AutomationProperties.Name="The sketch over the terrain" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Panel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

@@ -1,0 +1,20 @@
+<!-- The game's assets are missing or outdated: why, and the button to convert them. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.UpdateAssetsPage"
+             x:DataType="vm:MainViewModel">
+  <StackPanel Classes="page" VerticalAlignment="Center">
+    <TextBlock Classes="title" Text="The game's assets need updating" />
+    <ItemsControl ItemsSource="{Binding Setup.AssetReasons}" AutomationProperties.Name="Why">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Classes="item" Text="{Binding}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Classes="error" Text="{Binding Setup.Error}" IsVisible="{Binding Setup.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    <TextBlock Classes="caption" Text="The editor converts them again before it opens: a minute or so." />
+    <Button Content="Update the assets" Classes="accent" HorizontalAlignment="Left" MinWidth="160" Command="{Binding RunCommand}" CommandParameter="workspace.convert" />
+  </StackPanel>
+</UserControl>

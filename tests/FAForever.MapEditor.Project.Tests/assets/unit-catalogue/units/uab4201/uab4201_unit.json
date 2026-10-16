@@ -1,0 +1,59 @@
+{
+  "id": "uab4201",
+  "name": "Tactical Missile Defense",
+  "faction": "Aeon",
+  "techLevel": 2,
+  "categories": [
+    "AEON",
+    "ANTIMISSILE",
+    "BUILTBYTIER2COMMANDER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "DEFENSE",
+    "DRAGBUILD",
+    "OVERLAYDEFENSE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SORTDEFENSE",
+    "STRUCTURE",
+    "TECH2",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure2_antimissile",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.65,
+    "y": 1,
+    "z": 1.25
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.05,
+  "health": 500,
+  "massCost": 280,
+  "energyCost": 3200,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/uab4201/uab4201_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab4201/uab4201_albedo.png",
+      "normals": "/units/uab4201/uab4201_normalsts.png",
+      "specular": "/units/uab4201/uab4201_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uab4201/uab4201_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab4201/uab4201_lod1_albedo.png",
+      "normals": "/units/uab4201/uab4201_normalsts.png",
+      "specular": "/units/uab4201/uab4201_lod1_specteam.png"
+    }
+  ]
+}

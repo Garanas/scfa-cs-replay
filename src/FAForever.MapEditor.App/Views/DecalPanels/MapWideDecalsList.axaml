@@ -1,0 +1,42 @@
+<!-- A list of the map-wide decals (D-1): in the Decals panel all three slots, in the Procedural mode the normal and
+     shadow decals. Each entry shows a preview, its title and source, and Generate now for a generated one; choosing
+     an entry shows it in the inspector (MapWideSlotView through PanelPartView). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.DecalPanels.MapWideDecalsList"
+             x:DataType="vm:MapWideList">
+  <Border Classes="group">
+    <StackPanel Classes="partgroup">
+      <TextBlock Classes="overline" Text="{Binding Source=Map-wide decals, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <ItemsControl ItemsSource="{Binding Rows}" AutomationProperties.Name="Map-wide decals">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="partentries" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MapWideRow">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="Generate" Command="{Binding Slot.GenerateNowCommand}"
+                      IsVisible="{Binding Slot.CanGenerate}" IsEnabled="{Binding !Slot.IsGenerating}"
+                      AutomationProperties.Name="{Binding Slot.GenerateLabel}" AutomationProperties.HelpText="Previews it in the views from the final heightmap; the export makes it at full size" />
+              <Button Classes="partentry partwithpreview" Classes.selected="{Binding Part.LooksChosen}"
+                      Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
+                      ToolTip.Tip="{Binding Part.Help}"
+                      AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
+                <DockPanel>
+                  <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
+                    <controls:ImagePreview Picture="{Binding Slot.Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
+                  </Border>
+                  <controls:PartEntryText Title="{Binding Part.Title}" Detail="{Binding Part.Detail}" />
+                </DockPanel>
+              </Button>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

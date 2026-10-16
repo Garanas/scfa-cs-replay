@@ -1,0 +1,24 @@
+<!-- A map-wide decal in the inspector (D-1): its preview, how it stands, Generate now, its source and file, the
+     albedo's specular, the shadow's settings. The Decals, Lighting and Procedural inspectors show it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.DecalPanels.MapWideSlotView"
+             x:DataType="vm:MapWideSlotViewModel">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <Border Classes="thumbnail preview" IsVisible="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <controls:ImagePreview Picture="{Binding Preview}" AutomationProperties.Name="{Binding Title, StringFormat='Preview of the map-wide {0}'}" />
+        </Border>
+        <TextBlock Classes="caption" Text="{Binding Status}" AutomationProperties.Name="{Binding Title, StringFormat='How the map-wide {0} stands'}" />
+        <Button Content="{Binding GenerateText}" Command="{Binding GenerateNowCommand}" IsVisible="{Binding CanGenerate}" IsEnabled="{Binding !IsGenerating}"
+                AutomationProperties.Name="{Binding GenerateLabel}" AutomationProperties.HelpText="Previews it in the views from the final heightmap; the export makes it at full size" />
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding Settings}" ShowsTitle="False" />
+    </Border>
+  </StackPanel>
+</UserControl>

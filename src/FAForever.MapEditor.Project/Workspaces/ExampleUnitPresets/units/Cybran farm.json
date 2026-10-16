@@ -1,0 +1,135 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran farm",
+  "settings": {
+    "group": {
+      "name": "Cybran farm",
+      "units": [
+        {
+          "blueprint": "urc1101",
+          "x": -0.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc0001",
+          "x": 0.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -0.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -0.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -3.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc0001",
+          "x": -1.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -6.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 7.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -8.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -12.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 7.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -16.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1302",
+          "x": 2.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 3.142
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 5.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 15.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 11.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -8.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": -3.142
+        }
+      ],
+      "groups": []
+    },
+    "count": 17,
+    "role": "civilian",
+    "source": "funeral_plains.v0001, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

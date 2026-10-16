@@ -1,0 +1,84 @@
+{
+  "id": "procedural",
+  "title": "A tour of the Procedural mode and the export",
+  "summary": "Results the editor works out from the map, the steps of the export, and where to find Export and Upload to the vault.",
+  "order": 70,
+  "needs": ["Map"],
+  "start": [{ "run": "procedural.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Procedural",
+      "text": "Some of what a map needs is worked out from the rest of it: where units can walk, the paths of the AI, the normal map, the preview. This mode lists those results. It ends with the export, which writes the map for the game. About twelve steps; nothing is exported."
+    },
+    {
+      "id": "panel",
+      "target": { "part": "panel" },
+      "title": "The results",
+      "text": "One row for each result, under Movement, Terrain surface, From rules and Pictures. Each says how it stands: Missing, Out of date or Current. Generate makes it. Export is the last row."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "Two tools",
+      "text": "Connected regions chooses a region of ground that units can travel between by clicking it. Path nodes edits the generated path network by hand: click to add a node, drag to move or link."
+    },
+    {
+      "id": "generate",
+      "target": { "label": "Generate the walkability" },
+      "before": [{ "run": "view.inspectPart", "part": "procedural.walkability" }],
+      "title": "Try it: generate the walkability",
+      "text": "Press Generate beside Walkability. It marks where land, air and water units can go, as the game works it out.",
+      "until": { "path": "generated.walkability", "value": "Current" },
+      "doItForMe": { "run": "generate.walkability" },
+      "done": "The walkability is Current. Generating changes nothing in the map's own data, so there is no step of Undo.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The inspector",
+      "text": "For the chosen result: how it stands, Generate, whether the views preview it, whether it regenerates on its own, what it is made from, and what the export does with it."
+    },
+    {
+      "id": "preview",
+      "target": { "label": "Preview the walkability in the views" },
+      "before": [{ "run": "view.overlay.walkability", "on": false }],
+      "title": "Try it: see the result",
+      "text": "Tick Preview in the views, or the Walkability chip above the views.",
+      "until": { "path": "show.walkability", "value": true },
+      "doItForMe": { "run": "view.overlay.walkability", "on": true },
+      "done": "The top view now tints where units cannot go."
+    },
+    {
+      "id": "auto",
+      "target": { "label": "Regenerate results on their own" },
+      "title": "Regenerating on its own",
+      "text": "While a result is shown in the views, the editor makes it again after you change what it is made from, a second later. This switch turns that off for the whole editor; each result has its own choice in the inspector."
+    },
+    {
+      "id": "export",
+      "target": { "part": "inspector" },
+      "before": [{ "run": "view.inspectPart", "part": "procedural.export" }],
+      "title": "The export",
+      "text": "This is the Export row. The inspector lists the steps the export takes, in order: the normal map when it is out of date, the preview picture, the decals and path networks you chose to write, the walkability marks, the reclaim totals, the textures as DDS files and last the map folder. Each shows waiting, running, done or failed. Its Export button runs them."
+    },
+    {
+      "id": "export-menu",
+      "target": { "label": "File", "type": "MenuItem" },
+      "title": "File, Export to the vault",
+      "text": "File, Export to the vault (Ctrl+E) runs those steps and writes the map folder for the game into the workspace's vault folder. It works on a copy: your project and its generated results stay as they are. This tour does not export; choose it yourself when you are ready."
+    },
+    {
+      "id": "upload",
+      "target": { "label": "File", "type": "MenuItem" },
+      "title": "File, Upload to the vault",
+      "text": "File, Upload to the vault sends the map to the FAForever vault. It runs the checks, exports the next version, asks you to confirm, signs you in through your browser and uploads. The Sandbox cannot be uploaded: a map needs its own name and description first."
+    },
+    {
+      "id": "end",
+      "title": "That is the Procedural mode",
+      "text": "Help, Tours starts this tour again and lists the others."
+    }
+  ]
+}

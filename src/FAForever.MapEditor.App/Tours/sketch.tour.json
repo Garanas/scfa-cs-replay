@@ -1,0 +1,107 @@
+{
+  "id": "sketch",
+  "title": "Drafting a map",
+  "summary": "Sketch a map before you build it: pencil strokes, symbols, labels, sheets and a picture to trace.",
+  "order": 15,
+  "needs": ["Map"],
+  "start": [{ "run": "sketch.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Drafting a map",
+      "text": "No idea where to begin? Draw first and build later. A sketch is a draft on top of the map: rough lines, symbols and words that never reach the game. Fourteen steps. Back and Next go through them; Escape ends the tour."
+    },
+    {
+      "id": "rail",
+      "target": { "label": "Sketch", "under": "Modes" },
+      "before": [{ "run": "sketch.mode" }],
+      "title": "The Sketch mode",
+      "text": "This button on the rail, or F10, opens the Sketch mode. It sits first because a draft comes first. The sketch is kept in the project, shows in every mode to guide the work, and is never exported."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "The tools",
+      "text": "Pencil draws lines. Eraser rubs them out. Symbol stamps a small sign: a spawn, a mass point and the like. Label writes words. Select picks, moves and recolours what you drew. Image shows a picture of your own to trace."
+    },
+    {
+      "id": "try-pencil",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }, { "run": "tool.sketch.pencil" }],
+      "title": "Try it: draw a line",
+      "text": "Press the left mouse in the map and drag, then let go. A click makes a dot; Shift makes a straight line.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "sketch.draw", "points": [[90, 90], [130, 100], [155, 130], [125, 160]] },
+      "done": "That line is one stroke. The first stroke made a sheet for it. Ctrl+Z takes it back.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "colours",
+      "target": { "part": "options" },
+      "title": "Colours and widths",
+      "text": "Six colours: red, yellow, green, blue, white and black. The keys 1 to 6 choose one. The width is Thin, Medium or Thick (behind More when the window is narrow); the keys [ and ] make it smaller and larger. Choose before you draw, as with a pen."
+    },
+    {
+      "id": "mirror",
+      "target": { "label": "Symmetry", "type": "ComboBox" },
+      "title": "Mirror and the map's symmetry",
+      "text": "A map for two teams is usually the same on both sides. Choose the map's symmetry here, and the Mirror box of the pencil, the eraser and the Symbol tool repeats each stroke and symbol on the other side. Mirror stays off until the map has a symmetry.",
+      "guide": { "more": "Mirror is the tool's own wish; the symmetry itself is chosen once for the map, in this box beside the views." }
+    },
+    {
+      "id": "sheets",
+      "target": { "part": "inspector" },
+      "title": "Sheets and the legend",
+      "text": "A sheet is a layer of the sketch: one for the spawns, one for the water, one for a second idea. Add one with + in the panel, and show, hide or clear each on its own. Here you name the sheet, set how faint it is in the other modes, and write its legend: what each colour means on this sheet."
+    },
+    {
+      "id": "try-symbol",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }, { "run": "tool.sketch.symbol" }],
+      "title": "Try it: stamp a symbol",
+      "text": "The row above holds six: a spawn, a mass point, a hydrocarbon point, an arrow, a cross and a question mark. Click in the map to stamp the chosen one.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "sketch.symbol", "x": 96, "z": 160, "kind": "spawn" },
+      "done": "The symbol is on the sheet. Ctrl+Z takes it back.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "label",
+      "target": { "label": "Label", "under": "Tools" },
+      "before": [{ "run": "tool.sketch.label" }],
+      "title": "Labels",
+      "text": "With Label, click in the map and type: a name for a lake, a note about an expansion, a question to answer later. Enter keeps it. Its colour and size are in the row above."
+    },
+    {
+      "id": "eraser",
+      "target": { "label": "Eraser", "under": "Tools" },
+      "before": [{ "run": "tool.sketch.eraser" }],
+      "title": "The eraser",
+      "text": "Drag it over a line to rub out the part it passes; the rest stays. Hold Alt to take away whole strokes, symbols and labels instead. A drag is one step of undo."
+    },
+    {
+      "id": "image",
+      "target": { "label": "Project an image" },
+      "title": "Projected images",
+      "text": "Project an image... asks for a picture file: a drawing, a photo, a screenshot of another map. It is copied into the project and laid over the top view, to trace or to build towards. You can move, turn, scale and fade it, and have several. Images show in the top view only; Ctrl+Shift+J shows or hides them. The tour opens no files: press the button when you have a picture."
+    },
+    {
+      "id": "chip",
+      "target": { "label": "Show Sketch" },
+      "title": "Showing the sketch",
+      "text": "The Sketch chip turns the sketch on or off in every mode, as does Ctrl+Shift+K. Hide it to see the map as it is, show it to build along the draft."
+    },
+    {
+      "id": "3d",
+      "target": { "label": "3D", "type": "TabItem", "under": "View" },
+      "before": [{ "run": "view.3d" }],
+      "title": "The sketch in 3D",
+      "text": "Strokes, symbols and labels lie on the ground in the 3D view too, and climb the hills. You can draw and stamp there as in the top view. Projected images stay in the top view."
+    },
+    {
+      "id": "end",
+      "title": "A draft to build from",
+      "text": "Next: the tour of the Terrain mode, which turns a draft into ground. Help, Tours lists it and starts this one again."
+    }
+  ]
+}

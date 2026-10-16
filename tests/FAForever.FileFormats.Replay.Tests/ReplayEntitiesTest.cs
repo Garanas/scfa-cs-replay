@@ -18,7 +18,7 @@ namespace FAForever.FileFormats.Replay.Tests
         private static ReplayInput.IssueCommand Order(int tick, CommandType type, int[] ids, bool queued = false, string blueprintId = "", bool position = true)
             => new(tick, 0, Units(ids), new CommandData(
                 tick, type, position ? new CommandTarget.Position(tick, 0, tick) : new CommandTarget.None(), new CommandFormation.NoFormation(),
-                blueprintId, new LuaData.Nil(), ClearQueue: !queued, 0, 0, 0, 0, 0, 0));
+                blueprintId, new LuaData.Nil(), ClearQueue: !queued, -1, -1, new CommandTarget.None(), [], 1, 1));
 
         [TestMethod]
         public void GuessesWhatEachEntityIs()

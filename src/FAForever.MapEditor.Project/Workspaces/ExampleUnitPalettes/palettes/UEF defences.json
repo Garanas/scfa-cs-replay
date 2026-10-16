@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "UEF defences",
+  "settings": {
+    "slots": [
+      {
+        "unit": "ueb5101"
+      },
+      {
+        "unit": "ueb2101"
+      },
+      {
+        "unit": "ueb2301"
+      },
+      {
+        "unit": "ueb2104"
+      },
+      {
+        "unit": "ueb2204"
+      },
+      {
+        "unit": "ueb2304"
+      },
+      {
+        "unit": "ueb4202"
+      },
+      {
+        "unit": "ueb4301"
+      },
+      {
+        "unit": "ueb2108"
+      },
+      {
+        "unit": "ueb2109"
+      }
+    ]
+  }
+}

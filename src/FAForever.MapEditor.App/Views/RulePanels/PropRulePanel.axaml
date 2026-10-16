@@ -1,0 +1,60 @@
+<!-- The prop rule chosen in the Props panel (P-4), in the inspector: its palette (taken from the panel's), the layers that
+     allow and forbid, and its fields in groups. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.RulePanels.PropRulePanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack" DataContext="{Binding PropRules}" x:DataType="vm:PropRulesViewModel">
+      <TextBlock Classes="overline" Text="{Binding Source=Rule, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !HasChosen}"
+                 Text="Add a rule in the Props panel, or choose one there, to edit it here." />
+      <StackPanel Classes="stack" IsVisible="{Binding HasChosen}">
+        <TextBlock Classes="heading" Text="{Binding Heading}" TextWrapping="Wrap" />
+        <TextBlock Classes="label" Text="Props" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding PaletteText}" AutomationProperties.Name="Props of the rule" />
+        <Button Content="Take the panel's palette" Command="{Binding TakePaletteCommand}"
+                AutomationProperties.HelpText="The rule places the props of the Props panel's palette, with their weights" />
+        <TextBlock Classes="label section" Text="Layers" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !HasConditions}" Text="None: anywhere on the map." />
+        <ItemsControl ItemsSource="{Binding Conditions}" AutomationProperties.Name="Layers of the rule">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PropRuleConditionItem">
+              <Border Classes="panel">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Classes="beside" Content="×" Command="{Binding RemoveCommand}" VerticalAlignment="Top"
+                          AutomationProperties.Name="{Binding Settings.Title, StringFormat='Remove {0}'}" />
+                  <controls:SettingList DataContext="{Binding Settings}" ShowsTitle="False" />
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Add" Command="{Binding AddConditionCommand}" AutomationProperties.Name="Add the layer to the rule" />
+          <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding NewLayer}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Layer to add" AutomationProperties.HelpText="A stratum's mask or a mask for tools" />
+        </DockPanel>
+        <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="Settings of the rule">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SettingGroup">
+              <controls:SettingList Classes="section" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

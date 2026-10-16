@@ -1,0 +1,88 @@
+using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Workspaces;
+using MediatR;
+
+namespace FAForever.MapEditor.App.Commands;
+
+/// <summary>
+/// Makes a map from scratch (user story M-2): flat terrain at a height, water or none, the strata
+/// of a biome, spawns on a circle and the playable area over the whole map. It is no project until
+/// it is saved. Without arguments, with a person, it shows the page of a new map, which runs it with
+/// the choices; with arguments it makes the map at once, without asking about the open map's
+/// changes (as <c>file.open</c> with a folder).
+/// </summary>
+/// <param name="Size">In ogrids: 256 (5 km), 512, 1024, 2048 or 4096 (81 km).</param>
+/// <param name="Height">Of the terrain, in game units.</param>
+/// <param name="WaterElevation">The water's surface; deep and abyss follow 5 and 15 below unless given.</param>
+/// <param name="Biome"><c>evergreen</c>, <c>desert</c>, <c>tundra</c>, <c>lava</c>, <c>tropical</c> or <c>red-barrens</c>.</param>
+/// <param name="Players">The spawns, 1 to 16.</param>
+/// <param name="Template">A map template of the workspace's <c>templates</c> folder, or <c>Sandbox</c>
+/// (user story M-2): a template of settings gives what the other arguments leave out; a template of
+/// a whole map is copied under the name, the other arguments unused.</param>
+/// <param name="Discard">Run without a person, whether the open map's unsaved changes may be lost; else it refuses.</param>
+[EditorCommand("file.new", "New map...", Gesture = "Ctrl+N", Story = "M-2", Needs = Needs.Idle | Needs.NoStroke)]
+public sealed record NewMapRequest(
+    string? Name = null,
+    int? Size = null,
+    float? Height = null,
+    bool? Water = null,
+    float? WaterElevation = null,
+    float? DeepElevation = null,
+    float? AbyssElevation = null,
+    string? Biome = null,
+    int? Players = null,
+    string? Template = null,
+    bool? Discard = null) : IRequest
+{
+    public bool IsEmpty => this with { Discard = null } == new NewMapRequest();
+}
+
+public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<NewMapRequest>
+{
+    public Task Handle(NewMapRequest request, CancellationToken cancellationToken)
+    {
+        if (request.IsEmpty && dialogs is not DialogGuard { Quiet: true })
+        {
+            model.NewMapPage.Open(model.Setup.Workspace?.TemplatesFolder);
+            return Task.CompletedTask;
+        }
+        NewMapSettings defaults = new NewMapSettings();
+        if (request.Template is string name)
+        {
+            MapTemplate template = MapTemplates.Find(model.Setup.Workspace?.TemplatesFolder ?? "", name)
+                ?? throw new ArgumentException($"There is no map template '{name}': {string.Join(", ", MapTemplates.List(model.Setup.Workspace?.TemplatesFolder ?? "").Select(t => t.Name))}");
+            if (template.Kind != MapTemplateKind.Settings)
+            {
+                MapDocument copy = MapTemplates.Copy(template, request.Name ?? defaults.Name, model.VersionControl.AuthorName, model.Assets.Catalog);
+                UnsavedChanges.RefuseToDiscard(model, dialogs, request.Discard, "make a new map");
+                model.OpenNewMap(copy);
+                model.Status = $"A new map from the template {template.Name}; it is no project until you save it";
+                return Task.CompletedTask;
+            }
+            defaults = MapTemplates.Apply(MapTemplates.ReadSettings(template.Path!), defaults);
+        }
+        NewMapSettings settings = new NewMapSettings
+        {
+            Name = request.Name ?? defaults.Name,
+            Size = request.Size ?? defaults.Size,
+            Height = request.Height ?? defaults.Height,
+            Water = request.Water ?? defaults.Water,
+            WaterElevation = request.WaterElevation ?? defaults.WaterElevation,
+            DeepElevation = request.DeepElevation,
+            AbyssElevation = request.AbyssElevation,
+            Biome = request.Biome ?? defaults.Biome,
+            Players = request.Players ?? defaults.Players,
+            Author = model.VersionControl.AuthorName,
+            Layers = request.Biome is null ? defaults.Layers : null,
+            ExtraArmies = defaults.ExtraArmies,
+            Lighting = defaults.Lighting,
+        };
+        // the arguments checked first, then the changes the new map would replace
+        MapDocument document = NewMap.Create(settings);
+        UnsavedChanges.RefuseToDiscard(model, dialogs, request.Discard, "make a new map");
+        model.OpenNewMap(document);
+        return Task.CompletedTask;
+    }
+}

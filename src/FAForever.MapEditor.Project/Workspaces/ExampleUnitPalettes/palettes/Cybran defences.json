@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Cybran defences",
+  "settings": {
+    "slots": [
+      {
+        "unit": "urb5101"
+      },
+      {
+        "unit": "urb2101"
+      },
+      {
+        "unit": "urb2301"
+      },
+      {
+        "unit": "urb2104"
+      },
+      {
+        "unit": "urb2204"
+      },
+      {
+        "unit": "urb2304"
+      },
+      {
+        "unit": "urb4202"
+      },
+      {},
+      {
+        "unit": "urb2108"
+      },
+      {
+        "unit": "urb2109"
+      }
+    ]
+  }
+}

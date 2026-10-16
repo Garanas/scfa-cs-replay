@@ -1,0 +1,27 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FAForever.MapEditor.App.App"
+             RequestedThemeVariant="Dark">
+  <!-- Fluent for the controls, compact; the editor's own look is in Styles/ (see the guide's UI rules),
+       and Styles/Fluent.axaml points Fluent's controls at it -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://faf-map-editor/Styles/Tokens.axaml" />
+        <ResourceInclude Source="avares://faf-map-editor/Styles/Fluent.axaml" />
+        <ResourceInclude Source="avares://faf-map-editor/Styles/Controls.axaml" />
+        <ResourceInclude Source="avares://faf-map-editor/Styles/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme DensityStyle="Compact">
+      <FluentTheme.Palettes>
+        <!-- the window's background (Region) and the text (BaseHigh) of concept A -->
+        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource AccentColor}" RegionColor="{StaticResource Gray800}" BaseHigh="{StaticResource Gray50}" />
+        <ColorPaletteResources x:Key="Light" Accent="{StaticResource AccentColor}" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://faf-map-editor/Styles/Classes.axaml" />
+  </Application.Styles>
+</Application>

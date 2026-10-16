@@ -16,42 +16,66 @@ namespace FAForever.FileFormats.Replay
         private static readonly CommandTarget.None NoTarget = new CommandTarget.None();
         private static readonly CommandFormation.NoFormation NoFormation = new CommandFormation.NoFormation();
 
+        private static readonly CommandCell[] NoCells = [];
+
         /// <summary>
-        /// Retrieves a command from the stream.
+        /// Retrieves a command from the stream, in the layout of the engine's
+        /// <c>CDecoder::DecodeCommandData</c> followed by the clear-queue byte of
+        /// <c>DecodeIssueCommand</c> (faf-re, src/sdk/moho/misc/CDecoder.cpp).
         /// </summary>
         private static CommandData LoadCommandData(ReplayBinaryReader reader)
         {
             int commandId = reader.ReadInt32();
-
-            // unknown
-            int arg1 = reader.ReadInt32();
-
+            int coordinatingCommandId = reader.ReadInt32();
             CommandType commandType = (CommandType)reader.ReadByte();
-
-            // unknown
-            int arg2 = reader.ReadInt32();
-
+            int insertBeforeCommandId = reader.ReadInt32();
             CommandTarget target = LoadCommandTarget(reader);
-
-            // unknown
-            byte arg3 = reader.ReadByte();
-
+            CommandTarget secondTarget = LoadCommandTarget(reader);
             CommandFormation formation = LoadCommandFormation(reader);
-
             string blueprintId = reader.ReadNullTerminatedString();
-
-            // unknown
-            int arg4 = reader.ReadInt32();
-            int arg5 = reader.ReadInt32();
-            int arg6 = reader.ReadInt32();
-
+            CommandCell[] cells = LoadCells(reader);
+            int maxCount = reader.ReadInt32();
+            int count = reader.ReadInt32();
             LuaData luaData = LuaDataLoader.ReadLuaData(reader);
 
             // 1 = the order replaces the queue, 0 = queued after the current orders (shift).
             bool clearQueue = reader.ReadByte() > 0;
 
-            return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, clearQueue, arg1, arg2, arg3, arg4, arg5, arg6);
+            return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, clearQueue,
+                coordinatingCommandId, insertBeforeCommandId, secondTarget, cells, maxCount, count);
         }
+
+        /// <summary>
+        /// Retrieves a list of map cells: an int32 count, then per cell an int16 x and an int16 z
+        /// (<c>CDecoder::DecodeCells</c>).
+        /// </summary>
+        private static CommandCell[] LoadCells(ReplayBinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            if (count == 0)
+            {
+                return NoCells;
+            }
+
+            if (count < 0 || count > (reader.BaseStream.Length - reader.BaseStream.Position) / 4)
+            {
+                throw new InvalidDataException($"Invalid number of cells: {count}.");
+            }
+
+            CommandCell[] cells = new CommandCell[count];
+            for (int i = 0; i < count; i++)
+            {
+                cells[i] = new CommandCell(reader.ReadInt16(), reader.ReadInt16());
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// Retrieves an orientation: a quaternion as w, x, y, z.
+        /// </summary>
+        private static ReplayOrientation LoadOrientation(ReplayBinaryReader reader)
+            => new ReplayOrientation(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
 
         /// <summary>
         /// Retrieves the selection of a command from the stream.
@@ -84,8 +108,12 @@ namespace FAForever.FileFormats.Replay
                         return new CommandTarget.Position(x, y, z);
                     }
 
-                default:
+                case CommandTargetType.None:
                     return NoTarget;
+
+                default:
+                    // the engine rejects any other type as well (CDecoder::DecodeTarget)
+                    throw new InvalidDataException($"Invalid target type: {(int)eventCommandTargetType}.");
             }
         }
 
@@ -100,13 +128,10 @@ namespace FAForever.FileFormats.Replay
                 return NoFormation;
             }
 
-            float heading = reader.ReadSingle();
-            float x = reader.ReadSingle();
-            float y = reader.ReadSingle();
-            float z = reader.ReadSingle();
+            ReplayOrientation orientation = LoadOrientation(reader);
             float scale = reader.ReadSingle();
 
-            return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
+            return new CommandFormation.Formation(formationId, orientation, scale);
         }
 
         /// <summary>
@@ -134,33 +159,50 @@ namespace FAForever.FileFormats.Replay
 
             int inputProcessed = 0;
             EntityIdBuffer entityIds = invariant?.EntityIds ?? new EntityIdBuffer();
-            while (reader.BaseStream.Position < reader.BaseStream.Length)
+            Stream stream = reader.BaseStream;
+            long streamLength = stream.Length;
+            long position = stream.Position;
+            while (position < streamLength)
             {
+                // Every message is framed: a type byte, then the length of the whole message (these
+                // three bytes included) as an unsigned 16-bit number, then the content (CMessage in
+                // the engine). A message must decode to exactly its length; one that does not, or of
+                // an unknown type, is stepped over by its length and reported as an Error, so a
+                // mistake in one message does not derail the rest of the stream.
+                long messageStart = position;
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
-                // includes the type and this number of bytes, which is a bit confusing. 
-                int numberOfBytes = reader.ReadInt16() - (1 + 2);
+                if (messageStart + 3 > streamLength)
+                {
+                    input.Add(new ReplayInput.Error(tick, source, type, new EndOfStreamException("The stream ends inside the frame of a message."), ReadRemainder(reader, messageStart + 1, streamLength)));
+                    position = streamLength;
+                    break;
+                }
 
+                int length = reader.ReadUInt16() - 3;
+                long messageEnd = messageStart + 3 + length;
+                if (length < 0 || messageEnd > streamLength)
+                {
+                    string problem = length < 0 ? "The length of the message is smaller than its frame." : "The stream ends inside the message.";
+                    input.Add(new ReplayInput.Error(tick, source, type, new EndOfStreamException(problem), ReadRemainder(reader, messageStart + 3, streamLength)));
+                    position = streamLength;
+                    break;
+                }
+
+                position = messageEnd;
+
+                // The messages that change the state of the loop have a fixed size, checked before they
+                // are read; they make up most of the stream, so they stay out of DecodeInput.
                 switch (type)
                 {
-                    case ReplayInputType.Advance:
-                        {
-                            int ticksToAdvance = reader.ReadInt32();
-                            tick += ticksToAdvance;
-                            break;
-                        }
-
-                    case ReplayInputType.SetCommandSource:
-                        {
-                            int sourceId = reader.ReadByte();
-                            source = sourceId;
-                            break;
-                        }
-
-                    case ReplayInputType.CommandSourceTerminated:
-                        input.Add(new ReplayInput.CommandSourceTerminated(tick, source));
+                    case ReplayInputType.Advance when length == 4:
+                        tick += reader.ReadInt32();
                         break;
 
-                    case ReplayInputType.VerifyChecksum:
+                    case ReplayInputType.SetCommandSource when length == 1:
+                        source = reader.ReadByte();
+                        break;
+
+                    case ReplayInputType.VerifyChecksum when length == 20:
                         {
                             // Every client records its checksum of the same tick (every 50 ticks); the
                             // game is in sync while they agree. The first one of a tick is the
@@ -178,6 +220,52 @@ namespace FAForever.FileFormats.Replay
                             }
                             break;
                         }
+
+                    case ReplayInputType.Advance:
+                    case ReplayInputType.SetCommandSource:
+                    case ReplayInputType.VerifyChecksum:
+                        input.Add(new ReplayInput.Error(tick, source, type,
+                            new InvalidDataException($"The {type} message is {length + 3} bytes long; it is {type switch { ReplayInputType.Advance => 7, ReplayInputType.SetCommandSource => 4, _ => 23 }} bytes."),
+                            ReadRemainder(reader, messageStart + 3, messageEnd)));
+                        break;
+
+                    default:
+                        DecodeInput(reader, type, length, messageEnd, tick, source, input, entityIds);
+                        break;
+                }
+
+                // break out of the loop if we have processed the desired number of inputs
+                inputProcessed++;
+                if (inputToProcess.HasValue && inputProcessed >= inputToProcess.Value)
+                {
+                    break;
+                }
+            }
+
+            int completionPercentage = (int)Math.Round(100 * ((float)reader.BaseStream.Position - startingPointOfStream) / (reader.BaseStream.Length - startingPointOfStream));
+            return new ReplayBodyInvariant(input, tick, source, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage)
+            {
+                EntityIds = entityIds,
+            };
+        }
+
+        /// <summary>
+        /// Decodes a message that leaves the state of the input loop alone and adds it to
+        /// <paramref name="input"/>; when it does not decode to exactly its <paramref name="length"/>
+        /// (or cannot be decoded at all) adds an Error in its place. Leaves the stream at the end of
+        /// the message. A method of its own, so the exception handling stays out of the loop.
+        /// </summary>
+        private static void DecodeInput(ReplayBinaryReader reader, ReplayInputType type, int length, long messageEnd, int tick, int source, List<ReplayInput> input, EntityIdBuffer entityIds)
+        {
+            int inputCount = input.Count;
+            Exception? failure = null;
+            try
+            {
+                switch (type)
+                {
+                    case ReplayInputType.CommandSourceTerminated:
+                        input.Add(new ReplayInput.CommandSourceTerminated(tick, source));
+                        break;
 
                     case ReplayInputType.RequestPause:
                         input.Add(new ReplayInput.RequestPause(tick, source));
@@ -206,9 +294,9 @@ namespace FAForever.FileFormats.Replay
                         {
                             string blueprintId = reader.ReadNullTerminatedString();
                             float x = reader.ReadSingle();
+                            float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            float heading = reader.ReadSingle();
-                            input.Add(new ReplayInput.CreateProp(tick, source, blueprintId, x, z, heading));
+                            input.Add(new ReplayInput.CreateProp(tick, source, blueprintId, x, y, z));
                             break;
                         }
 
@@ -221,11 +309,13 @@ namespace FAForever.FileFormats.Replay
 
                     case ReplayInputType.WarpEntity:
                         {
+                            // a VTransform: the orientation, then the position
                             int entityId = reader.ReadInt32();
+                            ReplayOrientation orientation = LoadOrientation(reader);
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            input.Add(new ReplayInput.WarpEntity(tick, source, entityId, x, y, z));
+                            input.Add(new ReplayInput.WarpEntity(tick, source, entityId, orientation, x, y, z));
                             break;
                         }
 
@@ -286,16 +376,15 @@ namespace FAForever.FileFormats.Replay
                             break;
                         }
 
-                    case ReplayInputType.UpdateCommandParameters:
+                    case ReplayInputType.SetCommandCells:
                         {
                             int commandId = reader.ReadInt32();
-                            LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
+                            CommandCell[] cells = LoadCells(reader);
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            input.Add(new ReplayInput.UpdateCommandLuaParameters(tick, source, commandId, luaParameters, x, y, z));
+                            input.Add(new ReplayInput.SetCommandCells(tick, source, commandId, cells, x, y, z));
                             break;
-
                         }
 
                     case ReplayInputType.RemoveFromCommandQueue:
@@ -320,8 +409,9 @@ namespace FAForever.FileFormats.Replay
 
                     case ReplayInputType.ExecuteLuaInSim:
                         {
-                            string luaCode = reader.ReadNullTerminatedString();
-                            input.Add(new ReplayInput.ExecuteLuaInSim(tick, source, luaCode));
+                            string functionName = reader.ReadNullTerminatedString();
+                            LuaData arguments = LuaDataLoader.ReadLuaData(reader);
+                            input.Add(new ReplayInput.ExecuteLuaInSim(tick, source, functionName, arguments));
                             break;
                         }
 
@@ -339,22 +429,38 @@ namespace FAForever.FileFormats.Replay
                         break;
 
                     default:
-                        throw new Exception("Unknown replay input type");
-                }
-
-                // break out of the loop if we have processed the desired number of inputs
-                inputProcessed++;
-                if (inputToProcess.HasValue && inputProcessed >= inputToProcess.Value)
-                {
-                    break;
+                        input.Add(new ReplayInput.Unknown(tick, source, type, ReadRemainder(reader, messageEnd - length, messageEnd)));
+                        break;
                 }
             }
-
-            int completionPercentage = (int)Math.Round(100 * ((float)reader.BaseStream.Position - startingPointOfStream) / (reader.BaseStream.Length - startingPointOfStream));
-            return new ReplayBodyInvariant(input, tick, source, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage)
+            catch (Exception exception) when (exception is not OutOfMemoryException)
             {
-                EntityIds = entityIds,
-            };
+                failure = exception;
+            }
+
+            long position = reader.BaseStream.Position;
+            if (failure is null && position != messageEnd)
+            {
+                failure = new InvalidDataException($"The {type} message is {length + 3} bytes long but decodes to {position - (messageEnd - length - 3)} bytes.");
+            }
+
+            if (failure is not null)
+            {
+                input.RemoveRange(inputCount, input.Count - inputCount);
+                input.Add(new ReplayInput.Error(tick, source, type, failure, ReadRemainder(reader, messageEnd - length, messageEnd)));
+            }
+        }
+
+        /// <summary>
+        /// Reads the bytes from <paramref name="start"/> to <paramref name="end"/> (the content of a
+        /// message that is reported rather than decoded) and leaves the stream at the end.
+        /// </summary>
+        private static byte[] ReadRemainder(ReplayBinaryReader reader, long start, long end)
+        {
+            reader.BaseStream.Position = start;
+            byte[] data = reader.ReadBytes((int)Math.Max(0, end - start));
+            reader.BaseStream.Position = end;
+            return data;
         }
 
         /// <summary>
@@ -521,17 +627,20 @@ namespace FAForever.FileFormats.Replay
         /// </summary>
         private static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
         {
+            // The layout of the engine's VCR_CreateReplay (faf-re, src/sdk/moho/misc/SessionStartup.cpp).
             string gameVersion = reader.ReadNullTerminatedString();
 
-            // Always \r\n
-            string Unknown1 = reader.ReadNullTerminatedString();
+            // "\r\n"
+            reader.ReadNullTerminatedString();
 
-            String[] replayVersionAndScenario = reader.ReadNullTerminatedString().Split("\r\n");
-            String replayVersion = replayVersionAndScenario[0];
-            String pathToScenario = replayVersionAndScenario[1];
+            // "Replay v1.9\r\n" without a closing zero (a fixed signature the engine compares), then the
+            // path of the .scmap
+            String[] replayVersionAndMap = reader.ReadNullTerminatedString().Split("\r\n");
+            String replayVersion = replayVersionAndMap[0];
+            String mapPath = replayVersionAndMap[1];
 
-            // Always \r\n and an unknown character
-            string Unknown2 = reader.ReadNullTerminatedString();
+            // "\r\n\x1A": a line break and Ctrl-Z, the DOS end-of-text mark, in every known replay
+            reader.ReadNullTerminatedString();
 
             int numberOfBytesForMods = reader.ReadInt32();
             List<LuaData> mods = new List<LuaData>();
@@ -555,7 +664,7 @@ namespace FAForever.FileFormats.Replay
             ReplaySource[] clients = new ReplaySource[numberOfClients];
             for (int i = 0; i < numberOfClients; i++)
             {
-                clients[i] = new ReplaySource(PlayerName: reader.ReadNullTerminatedString(), PlayerId: reader.ReadInt32());
+                clients[i] = new ReplaySource(PlayerName: reader.ReadNullTerminatedString(), PauseAllowance: reader.ReadInt32());
             }
 
             Boolean cheatsEnabled = reader.ReadByte() > 0;
@@ -567,23 +676,23 @@ namespace FAForever.FileFormats.Replay
                 int numberOfBytesPlayerOptions = reader.ReadInt32();
                 LuaData playerOptionsData = LuaDataLoader.ReadLuaData(reader);
 
-                // 255 means that no client controls the army: an AI or a civilian army.
-                int playerSource = reader.ReadByte();
-                if (playerOptionsData is LuaData.Table armyTable)
+                // The sources that control the army, each a byte, closed by 255. An AI or a civilian
+                // army has none; the lobby gives a human army one, which becomes its SourceId.
+                int? playerSource = null;
+                for (int source = reader.ReadByte(); source != 255; source = reader.ReadByte())
                 {
-                    armies.Add(LoadPlayerOptions(armyTable, playerSource != 255 ? playerSource : null));
+                    playerSource ??= source;
                 }
 
-                // ???
-                if (playerSource != 255)
+                if (playerOptionsData is LuaData.Table armyTable)
                 {
-                    byte[] Unknown3 = reader.ReadBytes(1); // always -1
+                    armies.Add(LoadPlayerOptions(armyTable, playerSource));
                 }
             }
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader(gameVersion, replayVersion, pathToScenario, scenario, clients, mods.ToArray(), armies.ToArray(), cheatsEnabled, seed);
+            return new ReplayHeader(gameVersion, replayVersion, mapPath, scenario, clients, mods.ToArray(), armies.ToArray(), cheatsEnabled, seed);
         }
 
         private static Replay LoadReplay(ReplayBinaryReader reader)
@@ -856,16 +965,16 @@ namespace FAForever.FileFormats.Replay
         }
 
         /// <summary>
-        /// Reads the path to the scenario ("/maps/{folder}/{folder}_scenario.lua") from the start of a
-        /// replay from FAForever, without the rest of the file: for when only the map is wanted, such as a
-        /// generated map, whose name the server leaves out of the metadata ("mapname":"None").
+        /// Reads the path of the map file ("/maps/{folder}/{name}.scmap", <see cref="ReplayHeader.MapPath"/>)
+        /// from the start of a replay from FAForever, without the rest of the file: for when only the map is
+        /// wanted, such as a generated map, whose name the server leaves out of the metadata ("mapname":"None").
         ///
         /// The path is the third string of the header, so a few hundred decompressed bytes hold it. A zstd
         /// body decompresses one block at a time and a block holds up to 128 KB, so the start may need the
         /// first block in full: about 130 KB after the metadata line at most, often far less (32 KB for a
         /// 10 player game). Returns null when the start is too short for it or is not a replay.
         /// </summary>
-        public static string? TryReadPathToScenario(ReadOnlySpan<byte> start)
+        public static string? TryReadMapPath(ReadOnlySpan<byte> start)
         {
             int endOfMetadata = start.IndexOf((byte)'\n');
             if (endOfMetadata < 0)

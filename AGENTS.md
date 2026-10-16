@@ -3,7 +3,7 @@
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
 
-This file holds what applies everywhere. Each top-level folder and four projects have their own
+This file holds what applies everywhere. Each top-level folder and seven projects have their own
 guide, which agents that support nested guides pick up when they touch files there. Read it before
 planning work there:
 
@@ -20,6 +20,16 @@ planning work there:
 - **Map work** (`FAForever.FileFormats.Map`):
   [`src/FAForever.FileFormats.Map/AGENTS.md`](src/FAForever.FileFormats.Map/AGENTS.md) covers the
   `.scmap` versions, the map's Lua files, the navigational mesh and the test maps.
+- **Mesh work** (`FAForever.FileFormats.Mesh`):
+  [`src/FAForever.FileFormats.Mesh/AGENTS.md`](src/FAForever.FileFormats.Mesh/AGENTS.md) covers the
+  `.scm` and `.sca` layouts as the engine reads them (from the faf-re reconstruction), how the engine
+  draws a mesh (skinning, LODs, texture and shader names), glTF's conventions and other tools' quirks.
+- **Map editor work** (`FAForever.MapEditor.Project`, `FAForever.MapEditor.Cli`):
+  [`src/FAForever.MapEditor.Project/AGENTS.md`](src/FAForever.MapEditor.Project/AGENTS.md) covers the
+  editor's model, the project format, undo and what the export to the game's files derives;
+  [`src/FAForever.MapEditor.App/AGENTS.md`](src/FAForever.MapEditor.App/AGENTS.md) the window, how
+  to drive a running editor (automation) to check a change, and the checklist every feature of
+  the window goes through (automation command, labels, headless test, performance spans).
 - **UI work** (`FAForever.Vault.Viewer`): [`src/FAForever.Vault.Viewer/AGENTS.md`](src/FAForever.Vault.Viewer/AGENTS.md)
   covers WebAssembly rules, styling and theming, icons, shareable view state (the URL guardrails),
   the Moderation tab and its AI prompt, analytics, Playwright.
@@ -27,15 +37,19 @@ planning work there:
 ## Solution layout
 
 Folders by role (`src/`, `tests/`, `benchmarks/`, `sandbox/`); the solution groups the projects by
-product in the solution folders `FileFormats` and `Vault`.
+product in the solution folders `FileFormats`, `Vault` and `MapEditor`.
 
 | Project | Purpose |
 |---|---|
 | `src/FAForever.FileFormats.Lua` | Lua values (`LuaData`), their formatter, and an evaluator for the data-only Lua that game files are written in. |
 | `src/FAForever.FileFormats.Blueprints` | Blueprint files (`.bp`), blueprint ids, unit names and factions. References Lua. |
 | `src/FAForever.FileFormats.Map` | Map files: the binary `.scmap` (versions 53, 56, 60) and the `_save.lua` / `_scenario.lua` next to it. References Lua. |
+| `src/FAForever.FileFormats.Mesh` | Meshes of units and props (`.scm`, version 5): bones, vertices, triangles; written back or as glTF (`.glb`) and read from it; drawn into a small picture without a graphics card (`MeshPreview`). References nothing. |
 | `src/FAForever.FileFormats.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). References Lua and Blueprints. |
 | `src/FAForever.Vault.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
+| `src/FAForever.MapEditor.Project` | The map editor's model of a map, its project format (JSON + PNG) and the import and export of the game's files. References Map, Blueprints and Mesh; desktop only (Magick.NET). |
+| `src/FAForever.MapEditor.Cli` | `faf-map`: unpack a map folder into a project, pack a project into a map folder (`--watch` to repack on every change), send commands to a running editor (`editor`). |
+| `src/FAForever.MapEditor.App` | `faf-map-editor`: the map editor's window (Avalonia 12), with an automation server (`--automation <port>`). |
 | `src/FAForever.Vault.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay, unit and About pages. |
 | `tests/FAForever.FileFormats.*.Tests` | MSTest suites, one per library, with real assets under `assets/`. |
 | `benchmarks/FAForever.FileFormats.Replay.Benchmarks` | BenchmarkDotNet harness. |
@@ -52,10 +66,13 @@ project only lists its project reference.
 dotnet build FAForever.sln                              # build everything
 dotnet test FAForever.sln                               # run every test project
 dotnet watch --project src/FAForever.Vault.Server       # run the hosted app on http://127.0.0.1:5080
+dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]   # the map editor
+faf-map guide build --out docs/guide --port 5399 --settings <scratch settings>   # the editor's guide from its tours (check, render too)
 tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from src/FAForever.Vault.Viewer/
 ```
 
-VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`.
+VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`,
+`editor` and `editor: open a map` (asks for a folder; both with automation on port 5371).
 
 - The server **must** run on `http://127.0.0.1:5080` in development: the development OAuth client only
   accepts loopback redirect URIs, and `wwwroot/appsettings.json` pins `RedirectUri` to that origin.
@@ -67,6 +84,19 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   Everything about the server (compose stack, setup script, deploy key, runbook) lives in a
   separate public repository, [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps); try
   the image locally with `docker build -t scfa-cs-replay . && docker run --rm -p 8080:8080 scfa-cs-replay`.
+  The map editor is built on every push to `main` too (`.github/workflows/map-editor.yml`, also
+  run by hand): one standalone executable each for Windows (`win-x64`), Linux (`linux-x64`) and
+  macOS (`osx-arm64`), self-contained and single file (the runtime and native libraries inside,
+  its version carrying the commit), kept 90 days as the artifacts `faf-map-editor-<rid>-<commit>`
+  (the executable is named `faf-map-editor-<commit>`, `.exe` on Windows; the Windows exe as it is,
+  the others in a tar `faf-map-editor-<rid>-<commit>.tar.gz` that keeps the executable bit). The Linux build is
+  started on a virtual display first (`tools/editor-smoke.sh`: the setup page, automation, a
+  screenshot, closing) and draws a map of the tests in the 3D view on Mesa's software OpenGL
+  (`tools/editor-smoke-3d.sh`; artifact `faf-map-editor-smoke-linux`); the macOS build is not started.
+  **Linux works** (Ubuntu 24.04, 2026-10-11): the editor, its 3D view (desktop OpenGL 3.3+; without a
+  graphics driver `FAF_MAP_EDITOR_SOFTWARE_GL=1`), the App, Project, Cli and Map tests, and files named
+  in any case (the editor's guide, "Linux and macOS"). **macOS is untested**: never started, its file
+  dialogs, OpenGL (Apple's 4.1, deprecated) and default folders unchecked.
   The footer shows the commit a build came from (`src/FAForever.Vault.Viewer/Services/BuildInfo.cs`; CI
   passes it as the `SOURCE_REVISION` build argument, since the image build has no `.git`).
 
@@ -81,6 +111,7 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://api.faforever.com/game/{id}/replay` | anonymous | `*` | 302 → `content.faforever.com/replays/...fafreplay`; browser fetch can follow it. Do **not** proxy replay downloads. |
 | `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
 | `https://content.faforever.com/maps/{folder}.zip` | anonymous | `*` | A map version's archive; the folder is lower case (the server is case sensitive). Range requests work (206) with an explicit range; a suffix range (`bytes=-n`) is not a CORS-safelisted header and fails, so ask HEAD for `Content-Length` first. `Content-Range` is not exposed. |
+| `https://api.faforever.com/maps/upload` | Bearer token, scope `upload_map` | not checked | The map editor's upload (M-8): `POST` multipart, `file` (the zip, a name ending in `.zip`) and `metadata` (JSON `{"isRanked": false}`); 200 and no body, or 422 with JSON:API errors. Details in `src/FAForever.MapEditor.Project/AGENTS.md`, "The vault". Never call it from tests or automation. |
 | `https://api.faforever.com/data/mapVersionReview` | Bearer token | `*` | Map reviews (score 1 to 5, text). Post to `/data/mapVersion/{id}/reviews` with the player as relationship, patch or delete `/data/mapVersionReview/{id}`; only the author may change one (as the FAF client does). |
 | `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); a 500 for a map it cannot render. Every generator version is accepted, but rendering can still fail: `1.22.2_vi45m3weufsq2_byhaf7yebubqe3kl` (replay 27907732) gets "The generation request failed for unknown reasons" while 1.21.2 maps render (verified 2026-10-07). |
 
@@ -131,7 +162,8 @@ OAuth clients (both public, PKCE):
 
 ## Gotchas
 
-- Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
+- Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second** (they
+  count the engine's beats, which go on during a pause).
 - `ReplayLoadingStage` is declared in the **global namespace** (not `FAForever.FileFormats.Replay`).
 - `ReplayMetadata` field names are mixed-case on purpose (they mirror the JSON): `uid`, `mapname`,
   `launched_at` (unix seconds), `num_players`, `FeaturedMod`, …
@@ -139,3 +171,18 @@ OAuth clients (both public, PKCE):
   (e.g. `tools/tailwindcss.exe`) must stay optional in the build.
 - `TODO.md` at the repo root tracks open items that need the project owner (OAuth client
   registration, live-login verification, …). Add to it when blocked instead of guessing.
+
+## Editing files from a shell (agents)
+
+The working copy is Windows: most files have CRLF line endings (git stores LF), and the source is
+UTF-8. Shell tools get this wrong in ways that are hard to see in a diff:
+
+- Bash heredocs whose text holds an apostrophe break unless the delimiter is quoted (`<<'EOF'`),
+  and `\n` inside Python or C# text in a heredoc is easy to get wrong.
+- `sed -i` in Git Bash may write the file back with LF; Python's `open()` reads and writes cp1252
+  unless given `encoding='utf-8', newline=''`.
+- Prefer the editor tools (Edit, Write). For a scripted change, `faf-map dev replace <file>
+  --old-file a.txt --new-file b.txt [--count n | --all]` replaces text keeping the file's line
+  endings (whatever those of the old and new text), its UTF-8 and byte order mark, and refuses when
+  the old text does not occur exactly as often as expected (once by default) or the file is not
+  UTF-8. Write the old and new text to files in a scratch folder first.

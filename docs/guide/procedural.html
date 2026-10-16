@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A tour of the Procedural mode and the export</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>A tour of the Procedural mode and the export</h1>
+<p>Results the editor works out from the map, the steps of the export, and where to find Export and Upload to the vault.</p>
+<section class="step" id="welcome">
+<h2>1. Procedural</h2>
+<p>Some of what a map needs is worked out from the rest of it: where units can walk, the paths of the AI, the normal map, the preview. This mode lists those results. It ends with the export, which writes the map for the game. About twelve steps; nothing is exported.</p>
+</section>
+<section class="step" id="panel">
+<h2>2. The results</h2>
+<img src="images/procedural/02-panel.webp" alt="The results">
+<p>One row for each result, under Movement, Terrain surface, From rules and Pictures. Each says how it stands: Missing, Out of date or Current. Generate makes it. Export is the last row.</p>
+</section>
+<section class="step" id="tools">
+<h2>3. Two tools</h2>
+<img src="images/procedural/03-tools.webp" alt="Two tools">
+<p>Connected regions chooses a region of ground that units can travel between by clicking it. Path nodes edits the generated path network by hand: click to add a node, drag to move or link.</p>
+</section>
+<section class="step" id="generate">
+<h2>4. Try it: generate the walkability</h2>
+<img src="images/procedural/04-generate.webp" alt="Try it: generate the walkability">
+<p>Press Generate beside Walkability. It marks where land, air and water units can go, as the game works it out.</p>
+<p class="done">The walkability is Current. Generating changes nothing in the map&#39;s own data, so there is no step of Undo.</p>
+<img src="images/procedural/04-generate-after.webp" alt="Try it: generate the walkability, after the step">
+</section>
+<section class="step" id="inspector">
+<h2>5. The inspector</h2>
+<img src="images/procedural/05-inspector.webp" alt="The inspector">
+<p>For the chosen result: how it stands, Generate, whether the views preview it, whether it regenerates on its own, what it is made from, and what the export does with it.</p>
+</section>
+<section class="step" id="preview">
+<h2>6. Try it: see the result</h2>
+<img src="images/procedural/06-preview.webp" alt="Try it: see the result">
+<p>Tick Preview in the views, or the Walkability chip above the views.</p>
+<p class="done">The top view now tints where units cannot go.</p>
+<img src="images/procedural/06-preview-after.webp" alt="Try it: see the result, after the step">
+</section>
+<section class="step" id="auto">
+<h2>7. Regenerating on its own</h2>
+<img src="images/procedural/07-auto.webp" alt="Regenerating on its own">
+<p>While a result is shown in the views, the editor makes it again after you change what it is made from, a second later. This switch turns that off for the whole editor; each result has its own choice in the inspector.</p>
+</section>
+<section class="step" id="export">
+<h2>8. The export</h2>
+<img src="images/procedural/08-export.webp" alt="The export">
+<p>This is the Export row. The inspector lists the steps the export takes, in order: the normal map when it is out of date, the preview picture, the decals and path networks you chose to write, the walkability marks, the reclaim totals, the textures as DDS files and last the map folder. Each shows waiting, running, done or failed. Its Export button runs them.</p>
+</section>
+<section class="step" id="export-menu">
+<h2>9. File, Export to the vault</h2>
+<img src="images/procedural/09-export-menu.webp" alt="File, Export to the vault">
+<p>File, Export to the vault (Ctrl+E) runs those steps and writes the map folder for the game into the workspace&#39;s vault folder. It works on a copy: your project and its generated results stay as they are. This tour does not export; choose it yourself when you are ready.</p>
+</section>
+<section class="step" id="upload">
+<h2>10. File, Upload to the vault</h2>
+<img src="images/procedural/10-upload.webp" alt="File, Upload to the vault">
+<p>File, Upload to the vault sends the map to the FAForever vault. It runs the checks, exports the next version, asks you to confirm, signs you in through your browser and uploads. The Sandbox cannot be uploaded: a map needs its own name and description first.</p>
+</section>
+<section class="step" id="end">
+<h2>11. That is the Procedural mode</h2>
+<p>Help, Tours starts this tour again and lists the others.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

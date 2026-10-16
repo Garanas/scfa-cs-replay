@@ -1,0 +1,115 @@
+<!-- The chosen plugin in the Plugins mode's inspector (F-15): on or off with its kind as a tag, its description, version,
+     category and folder, its errors, a button per command, its fields, and what it registered. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:plugins="using:FAForever.MapEditor.App.Plugins"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.PluginPanels.PluginPartView"
+             x:DataType="vm:PluginPart"
+             x:Name="Root">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <DockPanel>
+          <Border DockPanel.Dock="Right" Classes="badge pluginkind" VerticalAlignment="Center"
+                  ToolTip.Tip="What sort of plugin it is: the kind its plugin.json names">
+            <TextBlock Text="{Binding Plugin.Kind}" AutomationProperties.Name="Kind of the plugin" />
+          </Border>
+          <CheckBox Content="On" IsChecked="{Binding Plugin.IsOn, Mode=OneWay}" Command="{Binding ToggleCommand}"
+                    AutomationProperties.Name="{Binding Plugin.Manifest.Name, StringFormat='{}{0} on'}"
+                    AutomationProperties.HelpText="On or off; the settings remember it. Off, its commands, tools and checks are gone" />
+        </DockPanel>
+        <TextBlock Classes="caption" Text="{Binding Plugin.Manifest.Description}"
+                   IsVisible="{Binding Plugin.Manifest.Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <DockPanel IsVisible="{Binding Plugin.Manifest.Version, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Version" />
+          <TextBlock Classes="mono" Text="{Binding Plugin.Manifest.Version}" AutomationProperties.Name="Version of the plugin" />
+        </DockPanel>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Listed under" />
+          <TextBlock Text="{Binding Plugin.ListedUnder}" TextWrapping="Wrap" AutomationProperties.Name="Category of the plugin" />
+        </DockPanel>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Folder" />
+          <TextBlock Classes="mono" Text="{Binding Plugin.Id}" TextWrapping="Wrap" ToolTip.Tip="{Binding Plugin.Folder}"
+                     AutomationProperties.Name="Folder of the plugin" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- its errors: loading, a run, a check, an event (the last five) -->
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Errors, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <SelectableTextBlock Classes="pluginerrors" Text="{Binding Plugin.ErrorText}" IsVisible="{Binding Plugin.HasErrors}"
+                             AutomationProperties.Name="{Binding Plugin.Id, StringFormat='Errors of {0}'}" />
+        <TextBlock Classes="caption" Text="None" IsVisible="{Binding !Plugin.HasErrors}" />
+      </StackPanel>
+    </Border>
+
+    <!-- its warnings: what is doubtful but does not stop it (a kind the editor does not know) -->
+    <Border Classes="group" IsVisible="{Binding Plugin.HasWarnings}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Warnings, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <TextBlock Classes="caption warning" TextWrapping="Wrap" Text="{Binding Plugin.WarningText}"
+                   AutomationProperties.Name="{Binding Plugin.Id, StringFormat='Warnings of {0}'}" />
+      </StackPanel>
+    </Border>
+
+    <!-- a button per command: a run is one step of undo -->
+    <Border Classes="group" IsVisible="{Binding Plugin.HasCommands}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Commands, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <ItemsControl ItemsSource="{Binding Plugin.CommandItems}" AutomationProperties.Name="{Binding Plugin.Id, StringFormat='Commands of {0}'}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="plugins:PluginCommandItem">
+              <Button Classes="beside" Content="{Binding Title}" ToolTip.Tip="{Binding Description}"
+                      Command="{Binding #Root.((vm:PluginPart)DataContext).RunCommand}" CommandParameter="{Binding CommandId}"
+                      AutomationProperties.HelpText="{Binding Description}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+    <!-- its fields, remembered in the user's settings -->
+    <Border Classes="group" IsVisible="{Binding Plugin.Panel, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Fields, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <Panel IsVisible="{Binding Plugin.Panel, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <controls:SettingList DataContext="{Binding Plugin.Panel}" ShowsTitle="False" />
+        </Panel>
+      </StackPanel>
+    </Border>
+
+    <!-- what it registered: commands, tools with their mode, checks, fields, events -->
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Registers, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <ItemsControl ItemsSource="{Binding Plugin.Facts}" AutomationProperties.Name="{Binding Plugin.Id, StringFormat='What {0} registered'}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="plugins:PluginFact">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" />
+                <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="caption" IsVisible="{Binding !Plugin.HasFacts}"
+                   Text="Nothing: a plugin registers its commands, tools, checks, fields and events when it is on and its plugin.lua loads." />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

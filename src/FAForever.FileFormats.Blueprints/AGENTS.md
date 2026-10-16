@@ -17,6 +17,11 @@ the text.
 - `LuaSourceParser` evaluates the data-only Lua subset (tables, constant expressions, named calls to
   functions the caller supplies; no function definitions or control flow) and throws
   `LuaSyntaxException` with a line number.
+- `LuaSourceWriter` writes data as Lua source that `LuaSourceParser` reads back to the same value:
+  literals (strings escaped, numbers as the shortest text that round-trips, `float` and `double`
+  apart), keys (`size`, `['Mass 08']`, `[5]`), tables over lines, and an indenting builder for files
+  (`Open`, `Field`, `Close`). A `LuaInlineFormatter` lets the caller write values it knows, such as
+  the map functions (`VECTOR3( 1, 2, 3 )`).
 - `LuaTableReader` reads typed fields from a table (`Number`, `String`, `Section`, `List`,
   `Dictionary`, ...); a missing or mistyped field reads as absent. The blueprint and map records
   are built with it, each by its own `Read` method or parser.

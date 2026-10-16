@@ -1,0 +1,47 @@
+{
+  "id": "ueb1101",
+  "name": "Power Generator",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "ENERGYPRODUCTION",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON",
+    "VOLATILE"
+  ],
+  "strategicIcon": "icon_structure1_energy",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.85,
+    "z": 0.6
+  },
+  "uniformScale": 0.04,
+  "health": 600,
+  "massCost": 75,
+  "energyCost": 750,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 215,
+      "mesh": "/units/ueb1101/ueb1101_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/ueb1101/ueb1101_albedo.png",
+      "normals": "/units/ueb1101/ueb1101_normalsts.png",
+      "specular": "/units/ueb1101/ueb1101_specteam.png"
+    }
+  ]
+}

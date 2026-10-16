@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Seraphim T2",
+  "settings": {
+    "slots": [
+      {
+        "unit": "xsb0201"
+      },
+      {
+        "unit": "xsb0202"
+      },
+      {
+        "unit": "xsb0203"
+      },
+      {
+        "unit": "xsb1201"
+      },
+      {
+        "unit": "xsb1202"
+      },
+      {
+        "unit": "xsb2301"
+      },
+      {
+        "unit": "xsb2204"
+      },
+      {
+        "unit": "xsb2303"
+      },
+      {
+        "unit": "xsb4202"
+      },
+      {
+        "unit": "xsb3201"
+      }
+    ]
+  }
+}

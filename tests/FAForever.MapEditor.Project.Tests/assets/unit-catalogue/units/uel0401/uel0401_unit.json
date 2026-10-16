@@ -1,0 +1,67 @@
+{
+  "id": "uel0401",
+  "name": "Experimental Mobile Factory",
+  "faction": "Uef",
+  "techLevel": 4,
+  "categories": [
+    "AIRSTAGINGPLATFORM",
+    "AMPHIBIOUS",
+    "ARTILLERY",
+    "BUBBLESHIELDSPILLOVERCHECK",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "CONSTRUCTION",
+    "CQUEMOV",
+    "DRAGBUILD",
+    "EXPERIMENTAL",
+    "EXTERNALFACTORY",
+    "INDIRECTFIRE",
+    "LAND",
+    "LOWSELECTPRIO",
+    "MOBILE",
+    "NEEDMOBILEBUILD",
+    "OVERLAYANTIAIR",
+    "OVERLAYANTINAVY",
+    "OVERLAYDEFENSE",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYMISC",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHIELD",
+    "SHOWQUEUE",
+    "SNIPEMODE",
+    "UEF",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_experimental_generic",
+  "buildIcon": "amph",
+  "size": {
+    "x": 5.2,
+    "y": 1.4,
+    "z": 7.5
+  },
+  "uniformScale": 0.215,
+  "health": 12500,
+  "massCost": 28000,
+  "energyCost": 350000,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/uel0401/uel0401_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0401/uel0401_albedo.png",
+      "normals": "/units/uel0401/uel0401_normalsts.png",
+      "specular": "/units/uel0401/uel0401_specteam.png"
+    },
+    {
+      "cutoff": 600,
+      "mesh": "/units/uel0401/uel0401_lod1.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0401/uel0401_lod1_albedo.png",
+      "normals": "/units/uel0401/uel0401_normalsts.png",
+      "specular": "/units/uel0401/uel0401_lod1_specteam.png"
+    }
+  ]
+}

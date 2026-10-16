@@ -1,0 +1,98 @@
+{
+  "id": "paint",
+  "title": "Painting the terrain's strata",
+  "summary": "The terrain's textures: strata, their masks, the strata brush and the 3D view.",
+  "order": 40,
+  "needs": ["Map"],
+  "start": [{ "run": "paint.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Painting strata",
+      "text": "The terrain's looks are strata: a texture each, laid over the one below, and a mask that says where it shows. The Paint mode picks the textures and paints the masks. Thirteen steps."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "The strata brush",
+      "text": "The Strata tool paints the mask of the chosen stratum. Where the mask is full, that stratum's texture covers the ones below."
+    },
+    {
+      "id": "layers",
+      "target": { "label": "Layer textures" },
+      "title": "The layers",
+      "text": "From the bottom: the lower layer covers the whole map, then strata 1 to 8, then the upper layer, which lies over everything. Each row shows the texture and the stratum's mask. Unused strata are empty."
+    },
+    {
+      "id": "choose-stratum",
+      "target": { "label": "Layer textures" },
+      "before": [{ "run": "layers.choose", "target": "stratum:1", "layer": "Painted" }],
+      "title": "Try it: choose a stratum",
+      "text": "Click Stratum 2 in the list. The strata brush paints the stratum you chose.",
+      "until": { "path": "coverageStacks.shown", "value": "stratum-2" },
+      "doItForMe": { "run": "layers.choose", "target": "stratum:2", "layer": "Painted" },
+      "done": "The map shows Stratum 2's mask in colour, and the inspector shows its textures."
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The stratum's textures",
+      "text": "The albedo is the texture's colour and the normal map its relief, each with a scale: a smaller scale repeats the texture more often. Choose... picks a texture from the game's files and your own."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "title": "The brush's settings",
+      "text": "Shape, edge and radius, and under More the strength and Erase. Slope and Height limit the brush to ground whose slope or height is within the range you set, such as rock only on steep ground."
+    },
+    {
+      "id": "paint",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }, { "run": "tool.paint.strata" }],
+      "title": "Try it: paint one stroke",
+      "text": "Press the left mouse in the top view and drag over the map to paint the stratum's mask; with Erase on, the brush removes it. Each stroke is one step of undo; with symmetry on it paints every part of the map.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "brush.stroke", "points": [[100, 100], [112, 104], [124, 100]] },
+      "done": "The stratum's mask is painted where you dragged. Ctrl+Z takes the stroke back."
+    },
+    {
+      "id": "mask-layers",
+      "target": { "label": "Stratum layers" },
+      "title": "A stratum's mask is a stack",
+      "text": "Under Mask layers: the painted layer, and more layers that are an image, another mask, another stratum or rules, each combined with the ones below. Use them to build a mask from the terrain instead of painting all of it."
+    },
+    {
+      "id": "rules",
+      "target": { "label": "Add a rules stratum layer" },
+      "title": "Rules from the terrain",
+      "text": "A rules layer makes the mask from slope, height, distance from the water or noise. Grass on flat ground and rock on slopes need no painting, and the mask follows the terrain when you sculpt it."
+    },
+    {
+      "id": "manage",
+      "target": { "label": "Add a stratum" },
+      "title": "Adding and ordering strata",
+      "text": "Add a stratum takes the next free one, Remove takes the chosen one out, and Up and Down change its order: the higher a stratum, the later it is laid over the others. The map's version sets how many there are."
+    },
+    {
+      "id": "shader",
+      "target": { "label": "Terrain shader" },
+      "title": "The terrain shader",
+      "text": "The shader decides how the game lays the strata together. Forged Alliance's has eight strata. The notes under it say what the game reads from each texture."
+    },
+    {
+      "id": "see-3d",
+      "target": { "label": "3D", "type": "TabItem", "under": "View" },
+      "before": [{ "run": "view.top" }],
+      "title": "Try it: see it in 3D",
+      "text": "Click 3D to see the textures as the game draws them.",
+      "until": { "path": "tab", "value": "3d" },
+      "doItForMe": { "run": "view.3d" },
+      "done": "The terrain is drawn with its strata. Both views share the camera."
+    },
+    {
+      "id": "end",
+      "title": "That is the Paint mode",
+      "text": "Help, Tours lists the tour of the window and the others."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "id": "xsl0401",
+  "name": "Experimental Assault Bot",
+  "faction": "Seraphim",
+  "techLevel": 4,
+  "categories": [
+    "AMPHIBIOUS",
+    "BOT",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DIRECTFIRE",
+    "DRAGBUILD",
+    "EXPERIMENTAL",
+    "LAND",
+    "LOWSELECTPRIO",
+    "MOBILE",
+    "NEEDMOBILEBUILD",
+    "OVERLAYANTIAIR",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTFA",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "SHOWATTACKRETICLE",
+    "SNIPEMODE",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_experimental_generic",
+  "buildIcon": "amph",
+  "size": {
+    "x": 2.3,
+    "y": 7.5,
+    "z": 2.3
+  },
+  "footprint": {
+    "sizeX": 3,
+    "sizeZ": 3
+  },
+  "uniformScale": 0.042,
+  "health": 67000,
+  "massCost": 26500,
+  "energyCost": 330000,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 500,
+      "mesh": "/units/xsl0401/xsl0401_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsl0401/xsl0401_albedo.png",
+      "normals": "/units/xsl0401/xsl0401_normalsts.png",
+      "specular": "/units/xsl0401/xsl0401_specteam.png"
+    }
+  ]
+}

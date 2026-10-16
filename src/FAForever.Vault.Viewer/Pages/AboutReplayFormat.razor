@@ -331,15 +331,18 @@
                 </div>
             </div>
             <p>
-                Did you notice the grey boxes? Six pieces of this message are still a mystery.
-                Nobody has worked out yet what they mean. Because we know their size, we can step over them,
-                and the rest still reads fine. A little mystery is part of the fun.
+                Some pieces matter only for special orders. The two numbers around the order kind serve coordinated attacks
+                and slotting an order into a factory queue. Later come a second target, a list of map cells and two counts.
+                This order, like almost every order, leaves them at their defaults. What the game does with them we know from
+                <a href="https://github.com/Draiget/faf-re" target="_blank" rel="noreferrer" class="text-primary hover:underline">faf-re</a>,
+                a rebuild of the game's engine from its machine code.
             </p>
             <p>
                 The unit id deserves a word too. Units are not stored by name. Each army counts its units, starting at its own number:
-                the first army at 0, the second at 1,048,576, and so on. Number 0 of each army is always its Commander.
-                Other units get the next number when they first appear. That is all a replay knows about a unit.
-                Whether it is a tank or a bomber, we have to guess from the orders it gets.
+                the first army at 0, the second at 1,048,576, and so on. Number 0 of each army is its first unit, the Commander.
+                A new unit takes the lowest number that is free, and the number of a destroyed unit becomes free again
+                about ten seconds later, so in a long game one number can belong to several units, one after the other.
+                That is all a replay knows about a unit. Whether it is a tank or a bomber, we have to guess from the orders it gets.
             </p>
         </AboutChapter>
 
@@ -540,7 +543,7 @@
         ("A curious marker", "0D 0A 1A", "A line break and then byte 1A, the old end of file mark from the days of DOS. Most likely it is there so that showing the file as text stops at this point."),
         ("The mods", "", "Every mod that was active, as Lua tables. Our game used none."),
         ("The scenario", "", "The map and the lobby options: the victory condition, the unit cap, the sharing rules and more. Osiris is 1024 by 1024, a 20 km map."),
-        ("The clients", "", "Everyone who joined the game, players and observers, each with their FAF player id. Our game had two."),
+        ("The clients", "", "Everyone who joined the game, players first and then observers, each with how often they may pause the game: three times for a player, never for an observer. Our game had two."),
         ("Cheats", "", "A single byte. Were cheats allowed?"),
         ("The armies", "", "One Lua table per army, straight from the lobby: faction, team, start spot, colour, rating, country and clan. Our game: Cybran against Aeon."),
         ("The seed", "49592157", "The starting number for every bit of chance in the game."),

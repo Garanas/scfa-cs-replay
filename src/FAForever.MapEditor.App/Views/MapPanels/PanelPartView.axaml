@@ -1,0 +1,149 @@
+<!-- The inspector's part of what is chosen in a mode panel's list (the Water and Lighting panels): its title and
+     what it is for, then its content by type. A new kind of part (a layer stack) adds its template here. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
+             xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
+             xmlns:pluginpanels="using:FAForever.MapEditor.App.Views.PluginPanels"
+             xmlns:local="using:FAForever.MapEditor.App.Views.MapPanels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
+             x:DataType="vm:PanelParts">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding Chosen.Title}" AutomationProperties.Name="Inspected part" />
+        <TextBlock Classes="caption" Text="{Binding Chosen.Help}" IsVisible="{Binding Chosen.Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+    <ContentControl Content="{Binding Chosen.Content}">
+      <ContentControl.DataTemplates>
+        <!-- fields: a group each, their titles when there are several -->
+        <DataTemplate DataType="vm:SettingsPart">
+          <StackPanel>
+            <ItemsControl ItemsSource="{Binding Groups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SettingGroup">
+                  <Border Classes="group">
+                    <controls:SettingList ShowsTitle="{Binding $parent[ContentControl].((vm:SettingsPart)Content).ShowsTitles}" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border Classes="group" IsVisible="{Binding Caption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Classes="caption" Text="{Binding Caption}" />
+            </Border>
+          </StackPanel>
+        </DataTemplate>
+        <!-- a map-wide decal (D-1): the Decals, Lighting and Procedural panels list it -->
+        <DataTemplate DataType="vm:MapWideSlotViewModel">
+          <decalpanels:MapWideSlotView />
+        </DataTemplate>
+        <!-- a generated result of the Procedural mode, and its export's steps (wave 10D) -->
+        <DataTemplate DataType="vm:ProceduralPart">
+          <procedural:ProceduralPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ProceduralExportPart">
+          <procedural:ExportStepsPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <!-- the skybox (L-1): the version 60 sky dome, the Lighting panel's -->
+        <DataTemplate DataType="vm:SkyboxPart">
+          <panels:SkyboxPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:PlannedPart">
+          <Border Classes="group">
+            <Border Classes="planned">
+              <StackPanel Classes="stack">
+                <TextBlock Classes="caption" Text="{Binding Missing}" />
+                <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+              </StackPanel>
+            </Border>
+          </Border>
+        </DataTemplate>
+        <!-- a water map (W-2): the water brush that paints it -->
+        <DataTemplate DataType="vm:WaterMapPart">
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="The Paint water tool paints this map's chosen painted layer; the top view shows the map while the tool is active. Its shape, radius, strength and erase are in the tool's options." />
+              <!-- the map as a stack of layers (W-2): exported as what its layers make -->
+              <StackPanel Classes="stack" IsVisible="{Binding HasStack}">
+                <controls:LayerStackView DataContext="{Binding Stack}" ShowsSettings="True"
+                                         ListHelp="The highest first; the chosen painted layer is the one the water brush paints, its settings are under the list"
+                                         EmptyText="The map has no layers."
+                                         RemoveHelp="The map becomes what the other layers make" />
+                <Panel IsVisible="{Binding Stack.IsReference, FallbackValue=False}">
+                  <controls:SettingList DataContext="{Binding Stack.Reference}" />
+                </Panel>
+                <Panel IsVisible="{Binding Stack.IsDecalMasks, FallbackValue=False}">
+                  <controls:SettingList DataContext="{Binding Stack.DecalMasks}" />
+                </Panel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+        <!-- the wave generators (W-1): their list, add and remove, the chosen one's fields -->
+        <DataTemplate DataType="vm:WaveGeneratorsPart">
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="{Binding Water.GeneratorsSummary}" />
+              <ListBox ItemsSource="{Binding Water.Generators}" SelectedItem="{Binding Water.SelectedGenerator}" MaxHeight="{StaticResource SettingListHeight}"
+                       AutomationProperties.Name="Wave generators">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WaveGeneratorItem">
+                    <TextBlock Text="{Binding Title}" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Classes="inline">
+                <Button Content="Add" Command="{Binding Water.AddGeneratorCommand}"
+                        AutomationProperties.Name="Add a wave generator" AutomationProperties.HelpText="In the middle of the map; type its place below, or place one with the Waves tool" />
+                <Button Content="Remove" Command="{Binding Water.RemoveGeneratorCommand}" IsEnabled="{Binding Water.HasSelectedGenerator}"
+                        AutomationProperties.Name="Remove the wave generator" />
+              </StackPanel>
+              <Panel IsVisible="{Binding Water.HasSelectedGenerator}">
+                <controls:SettingList DataContext="{Binding Water.Generator}" ShowsTitle="False" />
+              </Panel>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+        <!-- the Map mode's entries (wave 14A): the information, size and playable area, script and files, an army, an area -->
+        <DataTemplate DataType="vm:MapInformationPart">
+          <panels:MapInformationPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapSizePart">
+          <panels:MapSizePanel />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapScriptPart">
+          <panels:ScriptPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapArmyPart">
+          <Border Classes="group">
+            <panels:ArmyPanel DataContext="{Binding Armies}" />
+          </Border>
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapAreaPart">
+          <panels:MapAreaPanel />
+        </DataTemplate>
+        <!-- a plugin of the Plugins mode, and the overview of all of them (F-15, wave 14C) -->
+        <DataTemplate DataType="vm:PluginPart">
+          <pluginpanels:PluginPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:PluginsOverviewPart">
+          <pluginpanels:PluginsOverviewView />
+        </DataTemplate>
+        <!-- the Markers mode's entries (wave 14B): a kind or layer of path nodes, a chain, the adaptive map -->
+        <DataTemplate DataType="vm:MarkerKindItem">
+          <local:MarkerKindPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ChainPart">
+          <local:ChainPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:AdaptivePart">
+          <local:AdaptivePartView />
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+  </StackPanel>
+</UserControl>

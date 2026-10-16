@@ -1,0 +1,7 @@
+{
+  "name": "Reclaim per army",
+  "version": "1.1",
+  "description": "Counts the reclaim of the props nearest to each spawn, and warns when an army has much more or less than the others.",
+  "category": "Checks",
+  "kind": "check"
+}

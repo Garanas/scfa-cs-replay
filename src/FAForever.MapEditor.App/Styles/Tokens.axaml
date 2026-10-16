@@ -1,0 +1,432 @@
+<!--
+  The design tokens: every colour, font, size and distance the editor's own views use, by what it
+  is for. Views and controls refer to these keys and never to a value; a change of look is a change
+  here. Colours come in two layers: the palette (the raw colours of concept A) and the brushes
+  named after their use, which differ per theme variant. The editor runs dark; the light values
+  keep a light variant working. Styles/Fluent.axaml points Fluent's own controls at the same
+  brushes.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- the palette: greys from dark to light -->
+  <Color x:Key="Gray950">#FF161616</Color>
+  <Color x:Key="Gray900">#FF181818</Color>
+  <Color x:Key="Gray850">#FF1A1A1A</Color>
+  <Color x:Key="Gray800">#FF202020</Color>
+  <Color x:Key="Gray750">#FF242424</Color>
+  <Color x:Key="Gray700">#FF2A2A2A</Color>
+  <Color x:Key="Gray690">#FF2E2E2E</Color>
+  <Color x:Key="Gray650">#FF333333</Color>
+  <Color x:Key="Gray600">#FF3A3A3A</Color>
+  <Color x:Key="Gray550">#FF4A4A4A</Color>
+  <Color x:Key="Gray300">#FFB3B3B3</Color>
+  <Color x:Key="Gray250">#FFCCCCCC</Color>
+  <Color x:Key="Gray200">#FFE0E0E0</Color>
+  <Color x:Key="Gray150">#FFEBEBEB</Color>
+  <Color x:Key="Gray100">#FFF3F3F3</Color>
+  <Color x:Key="Gray50">#FFF2F2F2</Color>
+  <!-- the palette: colours -->
+  <Color x:Key="Blue900">#FF0B3A5E</Color>
+  <Color x:Key="Blue850">#FF0E4673</Color>
+  <Color x:Key="Blue500">#FF2B8FE0</Color>
+  <Color x:Key="Blue300">#FF6CB8F6</Color>
+  <Color x:Key="Blue100">#FFCCE4F7</Color>
+  <Color x:Key="Coral300">#FFFF8A7A</Color>
+  <Color x:Key="Coral200">#FFFFB4A8</Color>
+  <Color x:Key="Coral100">#FFFFD2CB</Color>
+  <Color x:Key="Maroon800">#FF5C2520</Color>
+  <Color x:Key="Red700">#FFC42B1C</Color>
+  <Color x:Key="Amber500">#FFE8A23A</Color>
+  <Color x:Key="Amber300">#FFE8C27A</Color>
+  <Color x:Key="Amber100">#FFFFE2B0</Color>
+  <Color x:Key="Amber800">#FF5A4520</Color>
+  <Color x:Key="Amber900">#FF2B2414</Color>
+  <Color x:Key="Amber700">#FF9A6A10</Color>
+
+  <!-- the accent of buttons, selections and sliders, the same on every computer (Fluent takes the system's otherwise) -->
+  <Color x:Key="AccentColor">#FF0078D4</Color>
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <!-- behind the map, in the views and the 3D view's sky; the rail of modes -->
+      <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray900}" />
+      <!-- panels beside the map -->
+      <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray850}" />
+      <!-- the window under everything: the menu bar, the status bar, dialogs -->
+      <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray800}" />
+      <!-- a button that is not the point: a tool, a planned control -->
+      <SolidColorBrush x:Key="ControlBrush" Color="{StaticResource Gray750}" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="{StaticResource Gray650}" />
+      <!-- a button of an action, a chosen view tab; the same, under the mouse -->
+      <SolidColorBrush x:Key="ControlRaisedBrush" Color="{StaticResource Gray700}" />
+      <SolidColorBrush x:Key="ControlHoverBrush" Color="{StaticResource Gray650}" />
+      <SolidColorBrush x:Key="ControlHoverStrokeBrush" Color="{StaticResource Gray550}" />
+      <!-- where one types or chooses: text boxes, combo boxes, the palette's field -->
+      <SolidColorBrush x:Key="InputBrush" Color="{StaticResource Gray950}" />
+      <SolidColorBrush x:Key="InputStrokeBrush" Color="{StaticResource Gray600}" />
+      <!-- text: what it says, what explains it, what is there but not the point -->
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource Gray50}" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource Gray250}" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource Gray300}" />
+      <!-- what does not count now: an undone step -->
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#66FFFFFF" />
+      <SolidColorBrush x:Key="LinkBrush" Color="{StaticResource Blue300}" />
+      <!-- what went wrong, and a badge or card of an error -->
+      <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Coral300}" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="{StaticResource Coral200}" />
+      <SolidColorBrush x:Key="DangerSurfaceBrush" Color="{StaticResource Maroon800}" />
+      <SolidColorBrush x:Key="DangerOnSurfaceBrush" Color="{StaticResource Coral100}" />
+      <!-- what may be wrong: its icon, its text, and a badge or card of it -->
+      <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Amber500}" />
+      <SolidColorBrush x:Key="WarningTextBrush" Color="{StaticResource Amber300}" />
+      <SolidColorBrush x:Key="WarningSurfaceBrush" Color="{StaticResource Amber900}" />
+      <SolidColorBrush x:Key="WarningStrokeBrush" Color="{StaticResource Amber800}" />
+      <SolidColorBrush x:Key="WarningBadgeBrush" Color="{StaticResource Amber800}" />
+      <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="{StaticResource Amber100}" />
+      <!-- mass and energy (F-8): their icons before a unit's cost or a prop's reclaim, as the game colours them -->
+      <SolidColorBrush x:Key="MassBrush" Color="#FFA8D84A" />
+      <SolidColorBrush x:Key="EnergyBrush" Color="#FFF5D142" />
+      <!-- drawn over the map: the brush, the 3D camera, outlines and labels of markers -->
+      <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
+      <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
+      <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
+      <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
+      <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
+      <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
+      <!-- the ground a structure reserves, its skirt (U-12): a dashed line around placed structures in the Units mode and around the place tool's footprints -->
+      <SolidColorBrush x:Key="MapSkirtBrush" Color="#CC7FD6E6" />
+      <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
+      <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
+      <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <!-- the handles and outlines of the Select and Image tools of the sketch: a violet none of the sketch's six colours is, over a dark rim -->
+      <SolidColorBrush x:Key="MapSketchHandleBrush" Color="#FFC04DFF" />
+      <!-- walkability over the map (T-7): where units cannot go, and what changed since the time before -->
+      <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
+      <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
+      <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
+      <!-- the navigation mesh's regions (T-8): a colour per region in turn, as the Vault's pathing panel -->
+      <SolidColorBrush x:Key="MapRegion1Brush" Color="#8C3987E5" />
+      <SolidColorBrush x:Key="MapRegion2Brush" Color="#8C199E70" />
+      <SolidColorBrush x:Key="MapRegion3Brush" Color="#8CD95926" />
+      <SolidColorBrush x:Key="MapRegion4Brush" Color="#8C9085E9" />
+      <SolidColorBrush x:Key="MapRegion5Brush" Color="#8CC98500" />
+      <SolidColorBrush x:Key="MapRegion6Brush" Color="#8CD55181" />
+      <SolidColorBrush x:Key="MapRegion7Brush" Color="#8C008300" />
+      <SolidColorBrush x:Key="MapRegion8Brush" Color="#8CE66767" />
+      <!-- the chosen connected region -->
+      <SolidColorBrush x:Key="MapRegionChosenBrush" Color="#D0FFD23F" />
+      <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
+      <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
+      <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
+      <!-- the Grid overlay's lines (V-3), faint so the terrain shows through -->
+      <SolidColorBrush x:Key="MapGridLineBrush" Color="#4DFFFFFF" />
+      <!-- decals in the top view (V-3): a faint outline of each, turned as it lies -->
+      <SolidColorBrush x:Key="MapDecalBrush" Color="#59F2C46B" />
+      <!-- lines between parts of the window, and between the groups of a panel -->
+      <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
+      <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
+      <!-- the chosen mode, tool, overlay or list item; the same under the mouse -->
+      <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue900}" />
+      <SolidColorBrush x:Key="SelectedHoverBrush" Color="{StaticResource Blue850}" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="{StaticResource Blue500}" />
+      <SolidColorBrush x:Key="OnSelectedBrush" Color="#FFFFFFFF" />
+      <!-- the outline of what is not built yet -->
+      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="{StaticResource Gray550}" />
+      <!-- behind a dialog over the window -->
+      <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
+      <!-- the guided tour: the dimming over the window and the ring around what a step points at -->
+      <SolidColorBrush x:Key="TourScrimBrush" Color="#B3000000" />
+      <SolidColorBrush x:Key="TourRingBrush" Color="{StaticResource Blue300}" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray200}" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray100}" />
+      <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray150}" />
+      <SolidColorBrush x:Key="ControlBrush" Color="#FFFAFAFA" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="#FFD0D0D0" />
+      <SolidColorBrush x:Key="ControlRaisedBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="ControlHoverBrush" Color="#FFF0F0F0" />
+      <SolidColorBrush x:Key="ControlHoverStrokeBrush" Color="#FFB8B8B8" />
+      <SolidColorBrush x:Key="InputBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="InputStrokeBrush" Color="#FFC4C4C4" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF1A1A1A" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF3D3D3D" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF5C5C5C" />
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#66000000" />
+      <SolidColorBrush x:Key="LinkBrush" Color="#FF005FB8" />
+      <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Red700}" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="{StaticResource Red700}" />
+      <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FFFDE7E4" />
+      <SolidColorBrush x:Key="DangerOnSurfaceBrush" Color="#FF8A1F14" />
+      <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Amber700}" />
+      <SolidColorBrush x:Key="WarningTextBrush" Color="#FF7A5208" />
+      <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#FFFFF4DD" />
+      <SolidColorBrush x:Key="WarningStrokeBrush" Color="#FFE8C27A" />
+      <SolidColorBrush x:Key="WarningBadgeBrush" Color="#FFFFE2B0" />
+      <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="#FF5A3A00" />
+      <SolidColorBrush x:Key="MassBrush" Color="#FF5E8C10" />
+      <SolidColorBrush x:Key="EnergyBrush" Color="#FFB08600" />
+      <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
+      <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
+      <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
+      <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
+      <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
+      <!-- the ground a structure reserves, its skirt (U-12): a dashed line around placed structures in the Units mode and around the place tool's footprints -->
+      <SolidColorBrush x:Key="MapSkirtBrush" Color="#CC7FD6E6" />
+      <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
+      <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
+      <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <!-- the handles and outlines of the Select and Image tools of the sketch: a violet none of the sketch's six colours is, over a dark rim -->
+      <SolidColorBrush x:Key="MapSketchHandleBrush" Color="#FFC04DFF" />
+      <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
+      <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
+      <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
+      <!-- the navigation mesh's regions (T-8): a colour per region in turn, as the Vault's pathing panel -->
+      <SolidColorBrush x:Key="MapRegion1Brush" Color="#8C3987E5" />
+      <SolidColorBrush x:Key="MapRegion2Brush" Color="#8C199E70" />
+      <SolidColorBrush x:Key="MapRegion3Brush" Color="#8CD95926" />
+      <SolidColorBrush x:Key="MapRegion4Brush" Color="#8C9085E9" />
+      <SolidColorBrush x:Key="MapRegion5Brush" Color="#8CC98500" />
+      <SolidColorBrush x:Key="MapRegion6Brush" Color="#8CD55181" />
+      <SolidColorBrush x:Key="MapRegion7Brush" Color="#8C008300" />
+      <SolidColorBrush x:Key="MapRegion8Brush" Color="#8CE66767" />
+      <!-- the chosen connected region -->
+      <SolidColorBrush x:Key="MapRegionChosenBrush" Color="#D0FFD23F" />
+      <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
+      <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
+      <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
+      <!-- the Grid overlay's lines (V-3), faint so the terrain shows through -->
+      <SolidColorBrush x:Key="MapGridLineBrush" Color="#4DFFFFFF" />
+      <!-- decals in the top view (V-3): a faint outline of each, turned as it lies -->
+      <SolidColorBrush x:Key="MapDecalBrush" Color="#59F2C46B" />
+      <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
+      <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
+      <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />
+      <SolidColorBrush x:Key="SelectedHoverBrush" Color="#FFB8D8F2" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="{StaticResource AccentColor}" />
+      <SolidColorBrush x:Key="OnSelectedBrush" Color="#FF0A2540" />
+      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FFB0B0B0" />
+      <SolidColorBrush x:Key="ScrimBrush" Color="#66000000" />
+      <SolidColorBrush x:Key="TourScrimBrush" Color="#80000000" />
+      <SolidColorBrush x:Key="TourRingBrush" Color="{StaticResource Blue500}" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- type: IBM Plex Sans for the text, IBM Plex Mono for numbers, coordinates and shortcuts (Assets/Fonts, EditorFonts) -->
+  <FontFamily x:Key="SansFontFamily">fonts:Editor#IBM Plex Sans, $Default</FontFamily>
+  <FontFamily x:Key="MonoFontFamily">fonts:Editor#IBM Plex Mono, $Default</FontFamily>
+  <!-- the sketch's labels in a hand-written style: Caveat (SIL Open Font License, Assets/Fonts/Caveat-OFL.txt), else a handwriting system font -->
+  <FontFamily x:Key="HandFontFamily">fonts:Editor#Caveat, Segoe Print, Bradley Hand, Comic Sans MS, cursive, $Default</FontFamily>
+  <x:Double x:Key="FontSizeSmall">11</x:Double>
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeBody">13</x:Double>
+  <x:Double x:Key="FontSizeHeading">14</x:Double>
+  <x:Double x:Key="FontSizeTitle">26</x:Double>
+  <!-- the numbers on spawns in the top view -->
+  <x:Double x:Key="FontSizeMapLabel">11</x:Double>
+  <!-- the label editor of the sketch (N-4): the text box over the top view, as wide as it is, and the size of its letters in the hand font -->
+  <x:Double x:Key="LabelEditorWidth">220</x:Double>
+  <x:Double x:Key="FontSizeLabelEditor">18</x:Double>
+  <!-- the space between the letters of a group's label in capitals -->
+  <x:Double x:Key="OverlineLetterSpacing">0.7</x:Double>
+
+  <!-- distances, on a grid of 2 -->
+  <x:Double x:Key="SpaceTiny">2</x:Double>
+  <x:Double x:Key="SpaceSmall">4</x:Double>
+  <x:Double x:Key="SpaceMedium">8</x:Double>
+  <x:Double x:Key="SpaceRow">14</x:Double>
+  <x:Double x:Key="SpaceLarge">16</x:Double>
+  <Thickness x:Key="PagePadding">32</Thickness>
+  <Thickness x:Key="PanelPadding">12</Thickness>
+  <!-- the parts of a side panel: its head, then its groups, a line apart -->
+  <Thickness x:Key="PanelHeadPadding">14,12,14,10</Thickness>
+  <Thickness x:Key="GroupPadding">14,8,14,12</Thickness>
+  <Thickness x:Key="BarPadding">12,4</Thickness>
+  <!-- before a heading that starts a new part of a panel or page -->
+  <Thickness x:Key="SectionGap">0,12,0,0</Thickness>
+  <Thickness x:Key="InlineGap">8,0,0,0</Thickness>
+  <Thickness x:Key="ListGap">0,2</Thickness>
+  <Thickness x:Key="ListItemPadding">8,6</Thickness>
+  <Thickness x:Key="MenuTitleGap">4,0,12,0</Thickness>
+
+  <!-- widths and heights -->
+  <x:Double x:Key="SidePanelWidth">240</x:Double>
+  <x:Double x:Key="RailWidth">52</x:Double>
+  <x:Double x:Key="RailButtonSize">40</x:Double>
+  <x:Double x:Key="RailDividerWidth">28</x:Double>
+  <Thickness x:Key="RailDividerGap">0,6</Thickness>
+  <x:Double x:Key="ModePanelWidth">280</x:Double>
+  <x:Double x:Key="InspectorWidth">300</x:Double>
+  <x:Double x:Key="DockHeight">190</x:Double>
+  <!-- the dock while it shows the asset shelf: two rows of tiles and more -->
+  <x:Double x:Key="DockTallHeight">290</x:Double>
+  <x:Double x:Key="AssetFacetsWidth">180</x:Double>
+  <x:Double x:Key="AssetSearchWidth">320</x:Double>
+  <x:Double x:Key="AssetSearchMinWidth">180</x:Double>
+  <x:Double x:Key="AssetPreviewHeight">200</x:Double>
+  <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
+  <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>
+  <!-- how far above its tile a tile's tool tip shows (negative is up) -->
+  <x:Double x:Key="TileTooltipOffset">-4</x:Double>
+  <x:Double x:Key="FactLabelWidth">90</x:Double>
+  <Thickness x:Key="TilePadding">4</Thickness>
+  <!-- the room right of and under each tile of the shelf -->
+  <Thickness x:Key="TileGap">0,0,8,8</Thickness>
+  <Thickness x:Key="ShelfPadding">12,8</Thickness>
+  <Thickness x:Key="BadgeGap">4</Thickness>
+  <x:Double x:Key="MenuBarHeight">36</x:Double>
+  <x:Double x:Key="ToolbarHeight">40</x:Double>
+  <!-- the tool's name before its options, and the box of the options that do not fit (under More) -->
+  <Thickness x:Key="ToolNameGap">0,0,14,0</Thickness>
+  <Thickness x:Key="ToolOverflowPadding">8,6,8,6</Thickness>
+  <x:Double x:Key="ToolButtonHeight">30</x:Double>
+  <Thickness x:Key="ToolButtonPadding">4,0</Thickness>
+  <!-- an entry of a mode panel's list (every list mode): the panel says what there is, the inspector edits the chosen one;
+       its detail beside its title when both fit, else under it (Controls/PartEntryText), so an entry grows past its height -->
+  <x:Double x:Key="PartEntryHeight">28</x:Double>
+  <x:Double x:Key="PartEntryPreviewHeight">40</x:Double>
+  <x:Double x:Key="PartEntryDetailGap">10</x:Double>
+  <Thickness x:Key="PartEntryPadding">8,4</Thickness>
+  <!-- the chosen generated result's picture in the inspector -->
+  <x:Double x:Key="ProceduralPictureSize">128</x:Double>
+  <x:Double x:Key="ActionButtonHeight">28</x:Double>
+  <!-- the guided tour: the ring's line, how far it lies from the target, its corners; the card's width, its distance from the target and from the window's edge -->
+  <x:Double x:Key="TourRingThickness">2</x:Double>
+  <x:Double x:Key="TourHolePadding">4</x:Double>
+  <x:Double x:Key="TourHoleRadius">6</x:Double>
+  <x:Double x:Key="TourCardWidth">320</x:Double>
+  <x:Double x:Key="TourCardGap">14</x:Double>
+  <x:Double x:Key="TourCardEdge">12</x:Double>
+  <x:Double x:Key="TourOfferWidth">300</x:Double>
+  <!-- where the first-start offer lies: from the window's right edge and above the status bar (29 pixels high) -->
+  <Thickness x:Key="TourOfferMargin">0,0,12,44</Thickness>
+  <x:Double x:Key="ChipHeight">24</x:Double>
+  <!-- a chip in the status bar (the switch of regenerating on their own): as high as the bar's text line allows -->
+  <x:Double x:Key="StatusChipHeight">20</x:Double>
+  <x:Double x:Key="ToolSliderWidth">120</x:Double>
+  <!-- the picture of the prop the place tool places, in the tool's options -->
+  <x:Double x:Key="ToolThumbnailSize">30</x:Double>
+  <!-- a unit's icon in the corner of its tile (U-1) -->
+  <x:Double x:Key="UnitIconBadgeSize">26</x:Double>
+  <!-- a slot of the Units mode's palette (U-8): its key, the unit's icon or the preset's name -->
+  <x:Double x:Key="PaletteSlotHeight">56</x:Double>
+  <!-- the room above a slot's name for its key badge, so that the digit never sits on the text -->
+  <Thickness x:Key="PaletteSlotNameInset">0,16,0,0</Thickness>
+  <Thickness x:Key="PaletteSlotGap">0,0,4,4</Thickness>
+  <Thickness x:Key="PaletteSlotPadding">2</Thickness>
+  <!-- the icon of a unit placed last, on its chip -->
+  <x:Double x:Key="ChipIconSize">16</x:Double>
+  <Thickness x:Key="ChipIconGap">0,0,6,0</Thickness>
+  <x:Double x:Key="ToolNumberWidth">56</x:Double>
+  <!-- a number typed in the tool options (a height, a slope) -->
+  <x:Double x:Key="ToolFieldWidth">52</x:Double>
+  <!-- a choice of many long names in the tool options (a terrain type) -->
+  <x:Double x:Key="ToolChoiceWidth">180</x:Double>
+  <!-- the small picture of an ImagePreview: a layer of a stack, a mask -->
+  <x:Double x:Key="ImagePreviewSize">32</x:Double>
+  <Thickness x:Key="ImagePreviewGap">0,0,8,0</Thickness>
+  <!-- a colour of the map's data (a terrain type's) in a legend or list -->
+  <x:Double x:Key="SwatchSize">12</x:Double>
+  <x:Double x:Key="TabHeight">30</x:Double>
+  <x:Double x:Key="SegmentHeight">28</x:Double>
+  <Thickness x:Key="TabPadding">12,0</Thickness>
+  <Thickness x:Key="TabStripPadding">8,0</Thickness>
+  <x:Double x:Key="IconSize">18</x:Double>
+  <x:Double x:Key="IconSizeSmall">14</x:Double>
+  <!-- mass and energy (EconomyAmount): the space after an icon, and after the mass before the energy's icon -->
+  <Thickness x:Key="EconomyIconGap">0,0,1,0</Thickness>
+  <Thickness x:Key="EconomyValueGap">0,0,4,0</Thickness>
+  <Thickness x:Key="EconomyTextGap">0,0,4,0</Thickness>
+  <Thickness x:Key="EconomySuffixGap">4,0,0,0</Thickness>
+  <x:Double x:Key="SearchFieldWidth">300</x:Double>
+  <x:Double x:Key="SearchFieldHeight">26</x:Double>
+  <Thickness x:Key="SearchFieldPadding">10,0</Thickness>
+  <x:Double x:Key="ToolbarDividerHeight">20</x:Double>
+  <Thickness x:Key="ToolbarDividerGap">4,0</Thickness>
+  <x:Double x:Key="PaletteWidth">640</x:Double>
+  <x:Double x:Key="PaletteListHeight">360</x:Double>
+  <!-- the picker of an asset (concept C2): wide enough for the facets and six tiles a row -->
+  <x:Double x:Key="PickerWidth">920</x:Double>
+  <x:Double x:Key="PickerListHeight">420</x:Double>
+  <!-- a question over the window (unsaved changes, confirmations) -->
+  <x:Double x:Key="QuestionWidth">460</x:Double>
+  <x:Double x:Key="PopoverWidth">400</x:Double>
+  <!-- the name of a field in the popover: shorter than a card's, so that the chips have the room -->
+  <x:Double x:Key="PopoverLabelWidth">64</x:Double>
+  <Thickness x:Key="PopoverOffset">8</Thickness>
+  <Thickness x:Key="DialogPadding">14,10</Thickness>
+  <Thickness x:Key="DividerGap">8,4</Thickness>
+  <Thickness x:Key="DividerTop">0,1,0,0</Thickness>
+  <Thickness x:Key="DividerBottom">0,0,0,1</Thickness>
+  <Thickness x:Key="DividerLeft">1,0,0,0</Thickness>
+  <Thickness x:Key="DividerRight">0,0,1,0</Thickness>
+  <Thickness x:Key="ChipPadding">10,0</Thickness>
+  <Thickness x:Key="BadgePadding">6,0</Thickness>
+  <Thickness x:Key="CardPadding">8</Thickness>
+  <Thickness x:Key="RailPadding">0,8</Thickness>
+  <CornerRadius x:Key="ControlRadius">4</CornerRadius>
+  <CornerRadius x:Key="RailButtonRadius">6</CornerRadius>
+  <CornerRadius x:Key="ChipRadius">12</CornerRadius>
+  <CornerRadius x:Key="BadgeRadius">8</CornerRadius>
+  <CornerRadius x:Key="DialogRadius">8</CornerRadius>
+  <x:Double x:Key="PageWidth">720</x:Double>
+  <x:Double x:Key="NarrowPageWidth">640</x:Double>
+  <!-- the fields of the map's settings (M-1, W-1, L-1, S-2): a number beside its slider, a colour's swatch, the map's preview -->
+  <x:Double x:Key="SettingNumberWidth">64</x:Double>
+  <x:Double x:Key="SettingSwatchSize">18</x:Double>
+  <x:Double x:Key="MapPreviewSize">200</x:Double>
+  <x:Double x:Key="SettingTextHeight">64</x:Double>
+  <Thickness x:Key="SwatchGap">0,0,8,0</Thickness>
+  <x:Double x:Key="SettingListHeight">160</x:Double>
+  <!-- the window's layout (V-4): the splitters between the panels and views, the least a view or panel keeps -->
+  <x:Double x:Key="LayoutSplitterSize">5</x:Double>
+  <x:Double x:Key="LayoutPanelMinWidth">120</x:Double>
+  <x:Double x:Key="LayoutViewMinWidth">200</x:Double>
+  <x:Double x:Key="LayoutDockMinHeight">120</x:Double>
+  <!-- the toolbar's buttons (F-1) -->
+  <x:Double x:Key="ToolbarButtonSize">26</x:Double>
+  <Thickness x:Key="ToolbarButtonPadding">6,0</Thickness>
+  <!-- version control (F-18): the history of commits and the files of the chosen one -->
+  <x:Double x:Key="VersionHistoryHeight">180</x:Double>
+  <x:Double x:Key="VersionFilesHeight">110</x:Double>
+  <x:Double x:Key="VersionDialogWidth">760</x:Double>
+  <!-- the wider pages (keyboard shortcuts, workspace settings): their width and the most the shortcuts' list takes before it scrolls -->
+  <x:Double x:Key="PluginsDialogWidth">760</x:Double>
+  <x:Double x:Key="PluginsListHeight">480</x:Double>
+  <!-- the keys' column of the keyboard shortcuts page -->
+  <x:Double x:Key="ShortcutKeysWidth">170</x:Double>
+  <!-- the workspace settings page's folders and assets, without scrolling at 1280 by 800 -->
+  <x:Double x:Key="WorkspaceSettingsListHeight">560</x:Double>
+  <!-- room at the right of the Workspace settings page's list for its scroll bar, so the On export boxes stay whole -->
+  <Thickness x:Key="WorkspaceSettingsListInset">0,0,16,0</Thickness>
+  <!-- the curve inspector's table of points (T-4): the most it takes before it scrolls, its compact fields and rows -->
+  <x:Double x:Key="CurveNodeListHeight">320</x:Double>
+  <Thickness x:Key="CurveNodeFieldPadding">4,2</Thickness>
+  <Thickness x:Key="CurveNodeFieldGap">0,0,4,2</Thickness>
+  <Thickness x:Key="CurveNodeRowPadding">4,4</Thickness>
+</ResourceDictionary>

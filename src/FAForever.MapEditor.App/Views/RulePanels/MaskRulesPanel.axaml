@@ -1,0 +1,66 @@
+<!-- The rules of a rules layer (K-2), under the stack of a mask (the Masks mode's inspector) or a stratum (the Paint mode's): the
+     rules in order, each with its fields and buttons to move and remove it; a kind to add; how the generated masks stand,
+     Generate, and the preview in the top view. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.RulePanels.MaskRulesPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack" DataContext="{Binding MaskRules}" x:DataType="vm:MaskRulesViewModel">
+      <TextBlock Classes="overline" Text="{Binding Source=Mask rules, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !IsEditing}"
+                 Text="Choose a rules layer in the stack above to make it from slope, height, distance to water, other layers and noise." />
+      <StackPanel Classes="stack" IsVisible="{Binding IsEditing}">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Close" Command="{Binding CloseCommand}" AutomationProperties.Name="Close the rules of the mask" />
+          <TextBlock Classes="heading" Text="{Binding Heading}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </DockPanel>
+        <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !HasRules}"
+                   Text="No rules yet: this layer makes nothing until a rule is added. The rules run in order, each combining with what the ones before made, and the layer shows what they make at once." />
+        <ItemsControl ItemsSource="{Binding Rules}" AutomationProperties.Name="Rules of the mask">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MaskRuleItem">
+              <Border Classes="panel">
+                <StackPanel Classes="stack">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="beside" Content="×" Command="{Binding RemoveCommand}"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Remove the rule {0}'}" />
+                    <Button DockPanel.Dock="Right" Classes="beside" Content="↓" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Move the rule {0} down'}" />
+                    <Button DockPanel.Dock="Right" Classes="beside" Content="↑" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Move the rule {0} up'}" />
+                    <TextBlock Classes="label" Text="{Binding Title}" VerticalAlignment="Center" ToolTip.Tip="{Binding Help}" />
+                  </DockPanel>
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Help}" />
+                  <controls:SettingList DataContext="{Binding Settings}" ShowsTitle="False" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Add rule" Command="{Binding AddCommand}" AutomationProperties.Name="Add a rule of the kind chosen" />
+          <ComboBox ItemsSource="{x:Static vm:MaskRulesViewModel.Kinds}" SelectedItem="{Binding NewKind}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Kind of rule to add"
+                    AutomationProperties.HelpText="Slope, height, distance to water, a layer and noise make a value; blur, grow, shrink, threshold and invert change what the rules before made" />
+        </DockPanel>
+        <CheckBox Content="Preview in the top view" IsChecked="{Binding ShowPreview}"
+                  AutomationProperties.HelpText="The top view shows what the rules make before they are generated into the mask" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Generate"
+                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="generate.masks"
+                  AutomationProperties.Name="Generate the masks from their rules"
+                  AutomationProperties.HelpText="Makes every mask with rules and puts it in the map: one step of undo" />
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Status}" VerticalAlignment="Center" AutomationProperties.Name="How the masks from rules stand" />
+        </DockPanel>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

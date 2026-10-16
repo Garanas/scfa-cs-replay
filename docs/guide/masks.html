@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masks: where things may happen</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>Masks: where things may happen</h1>
+<p>Make a mask of your own, paint it, build it from layers and rules, and see where it is used.</p>
+<section class="step" id="welcome">
+<h2>1. Masks</h2>
+<p>A mask is a picture of the map that says where something may happen: where rivers go, where forests grow, what to erode. Height layers, strata and prop rules read masks. Ten steps.</p>
+</section>
+<section class="step" id="tools">
+<h2>2. The mask brush</h2>
+<img src="images/masks/02-tools.webp" alt="The mask brush">
+<p>The mask brush paints the chosen mask. It is the one tool of the mode.</p>
+</section>
+<section class="step" id="list">
+<h2>3. The list of masks</h2>
+<img src="images/masks/03-list.webp" alt="The list of masks">
+<p>Each mask has a small picture that follows your strokes, and its size. Choose one to paint it and to edit it in the inspector. Under the list: a name field, Add a mask, Rename, Duplicate, Delete, and Show it over the terrain.</p>
+</section>
+<section class="step" id="add-mask">
+<h2>4. Try it: add a mask</h2>
+<img src="images/masks/04-add-mask.webp" alt="Try it: add a mask">
+<p>Type a name if you like, then click Add a mask. A mask starts empty. Half the map&#39;s size makes a coarser mask, which is enough for most uses.</p>
+<p class="done">The new mask is in the list and chosen. Delete removes it again, and so does undo.</p>
+<img src="images/masks/04-add-mask-after.webp" alt="Try it: add a mask, after the step">
+</section>
+<section class="step" id="options">
+<h2>5. The brush&#39;s settings</h2>
+<img src="images/masks/05-options.webp" alt="The brush&#39;s settings">
+<p>The chosen mask&#39;s name, the brush shape and how its edge fades, the radius and the strength, and Erase, which takes the mask away instead of adding it.</p>
+</section>
+<section class="step" id="paint">
+<h2>6. Try it: paint a mask</h2>
+<img src="images/masks/06-paint.webp" alt="Try it: paint a mask">
+<p>Press the left mouse in the top view and drag over the map. The painted part shows in colour over the terrain. Each stroke is one step of undo. A mask has to be chosen in the list first; add one if the list is empty.</p>
+<p class="done">The painted part shows in colour. Ctrl+Z takes the stroke back.</p>
+<img src="images/masks/06-paint-after.webp" alt="Try it: paint a mask, after the step">
+</section>
+<section class="step" id="show-it">
+<h2>7. Seeing the mask</h2>
+<img src="images/masks/07-show-it.webp" alt="Seeing the mask">
+<p>Show it over the terrain keeps the chosen mask visible, also when another tool is active. The chip Mask above the views does the same.</p>
+</section>
+<section class="step" id="stack">
+<h2>8. A mask is a stack of layers</h2>
+<img src="images/masks/08-stack.webp" alt="A mask is a stack of layers">
+<p>The inspector lists the layers of the chosen mask. A layer can be painted, an image, another mask, a stratum&#39;s mask, or rules. Each has a way of combining with the layers below, a strength and a clip. Up, Down and Remove arrange them. A rules layer builds a mask without painting: it follows the terrain by slope, height, distance from the water or noise, so grass on flat ground needs no brush.</p>
+</section>
+<section class="step" id="used">
+<h2>9. Where masks are used</h2>
+<p>A height layer takes a mask as its clip, so it works only there. A stratum&#39;s layer can read a mask, and props can be placed by rules from one. Masks are for your tools: the game never gets them.</p>
+</section>
+<section class="step" id="end">
+<h2>10. That is the Masks mode</h2>
+<p>Next: the Paint mode, where strata give the terrain its textures. Help, Tours lists it.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

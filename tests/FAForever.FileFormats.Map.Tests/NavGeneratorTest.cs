@@ -59,6 +59,18 @@ namespace FAForever.FileFormats.Map.Tests
         }
 
         [TestMethod]
+        [DataRow(0.75f, false)]
+        [DataRow(95f / 128, true)]
+        public void SaysWhetherAnOgridIsFlat(float step, bool flat)
+        {
+            ScmapHeightmap heightmap = Heightmap((x, _) => x >= 32 ? 10 + step : 10);
+
+            Assert.AreEqual(flat, NavGenerator.IsFlat(heightmap, 31, 5), "the ogrid with the step on its side");
+            Assert.IsTrue(NavGenerator.IsFlat(heightmap, 30, 5));
+            Assert.IsTrue(NavGenerator.IsFlat(heightmap, 32, 5));
+        }
+
+        [TestMethod]
         [DataRow(0.75f, 2)]
         [DataRow(95f / 128, 1)]
         public void ACliffSplitsTheLand(float step, int labels)

@@ -9,6 +9,16 @@ namespace FAForever.FileFormats.Map
     /// </summary>
     public sealed record MapScenario
     {
+        /// <summary>
+        /// The keys of <see cref="Raw"/> that a property holds; the others, such as
+        /// <c>norushoffsetX_ARMY_1</c>, have none.
+        /// </summary>
+        public static IReadOnlySet<string> TypedKeys { get; } = new HashSet<string>
+        {
+            "name", "description", "preview", "map_version", "AdaptiveMap", "type", "starts", "size",
+            "reclaim", "map", "save", "script", "norushradius", "Configurations",
+        };
+
         public required LuaData.Table Raw { get; init; }
 
         public required string Name { get; init; }
@@ -68,19 +78,30 @@ namespace FAForever.FileFormats.Map
 
         /// <summary>
         /// The armies players can take in the <c>standard</c> configuration (or the first), in order:
-        /// <c>ARMY_1</c>, <c>ARMY_2</c>, ...
+        /// <c>ARMY_1</c>, <c>ARMY_2</c>, ... The game's lobby takes them from the first team, <c>FFA</c>;
+        /// teams after it (which a map editor may write) repeat some of them. A configuration whose
+        /// first team is no <c>FFA</c> has the armies of all its teams.
         /// </summary>
         public IReadOnlyList<string> PlayerArmies =>
-            (Configurations.FirstOrDefault(c => c.Name == "standard") ?? Configurations.FirstOrDefault())?
-                .Teams.SelectMany(team => team.Armies).ToList() ?? [];
+            (Configurations.FirstOrDefault(c => c.Name == "standard") ?? Configurations.FirstOrDefault()) is MapConfiguration configuration
+                ? configuration.Teams.Count > 0 && configuration.Teams[0].Name == "FFA"
+                    ? [.. configuration.Teams[0].Armies]
+                    : [.. configuration.Teams.SelectMany(team => team.Armies).Distinct(StringComparer.Ordinal)]
+                : [];
     }
 
     /// <summary>
     /// A configuration of a scenario: its teams and the custom properties.
     /// </summary>
     /// <param name="CustomProperties">The <c>customprops</c>, e.g. <c>ExtraArmies</c>.</param>
-    public sealed record MapConfiguration(string Name, IReadOnlyList<MapTeam> Teams, IReadOnlyDictionary<string, string> CustomProperties)
+    /// <param name="Raw">The configuration's table, with the keys that have no property (e.g. <c>factions</c>).</param>
+    public sealed record MapConfiguration(string Name, IReadOnlyList<MapTeam> Teams, IReadOnlyDictionary<string, string> CustomProperties, LuaData.Table Raw)
     {
+        /// <summary>
+        /// The keys of <see cref="Raw"/> that a property holds.
+        /// </summary>
+        public static IReadOnlySet<string> TypedKeys { get; } = new HashSet<string> { "teams", "customprops" };
+
         /// <summary>
         /// The armies that no player takes, e.g. <c>ARMY_9</c> and <c>NEUTRAL_CIVILIAN</c>
         /// (<c>customprops.ExtraArmies</c>, separated by spaces).
@@ -136,7 +157,8 @@ namespace FAForever.FileFormats.Map
                     .Select(configuration => new MapConfiguration(
                         configuration.Key,
                         configuration.Value.List("teams", team => new MapTeam(team.String("name") ?? "", team.Strings("armies"))),
-                        configuration.Value.StringDictionary("customprops")))
+                        configuration.Value.StringDictionary("customprops"),
+                        configuration.Value.Table))
                     .ToList(),
             };
         }

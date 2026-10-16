@@ -86,7 +86,13 @@ namespace FAForever.FileFormats.Map
         /// <param name="waterElevation">The height of the water surface; null for a map without water.</param>
         /// <param name="terrainTypes">The terrain type code of every ogrid, row by row.</param>
         /// <param name="markers">The markers; the mass and hydrocarbon ones are assigned to labels.</param>
-        public static MapNavigation Generate(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, IReadOnlyList<MapMarker> markers, MapArea? playableArea = null)
+        /// <param name="forcedOpen">Per ogrid, row by row, whether it counts as flat and on a terrain
+        /// type that does not block, whatever the heights and types say: a map editor's marks of
+        /// where units must be able to pass; null for none. The game itself has no such thing.</param>
+        /// <param name="cancel">Stops the generation between its steps (a map editor that wants a newer one).</param>
+        /// <exception cref="OperationCanceledException"><paramref name="cancel"/> was cancelled.</exception>
+        public static MapNavigation Generate(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, IReadOnlyList<MapMarker> markers, MapArea? playableArea = null,
+            bool[]? forcedOpen = null, CancellationToken cancel = default)
         {
             int width = heightmap.Width;
             int height = heightmap.Height;
@@ -99,7 +105,13 @@ namespace FAForever.FileFormats.Map
             int threshold = GetCompressionThreshold(mapSize);
             int treeSize = mapSize / LabelCompressionTreesPerAxis;
 
-            Caches caches = PopulateCaches(heightmap, waterElevation, terrainTypes, playableArea);
+            if (forcedOpen is not null && forcedOpen.Length != width * height)
+            {
+                throw new ArgumentException($"Expected {width * height} ogrids forced open or not, got {forcedOpen.Length}", nameof(forcedOpen));
+            }
+            cancel.ThrowIfCancellationRequested();
+            Caches caches = PopulateCaches(heightmap, waterElevation, terrainTypes, playableArea, forcedOpen);
+            cancel.ThrowIfCancellationRequested();
             bool hasWater = Array.Exists(caches.Depth, depth => depth > 0);
 
             LayerBuilder land = new LayerBuilder(NavLayer.Land, width, height, Pathable(caches, LandRule));
@@ -114,6 +126,7 @@ namespace FAForever.FileFormats.Map
                 int blockSize = Math.Min(layer.Layer == NavLayer.Water ? 2 * threshold : threshold, treeSize / 2);
                 ApplyCompression(layer.Pathable, width, height, blockSize);
                 layer.GenerateLabels();
+                cancel.ThrowIfCancellationRequested();
             }
 
             // GenerateMarkerMetadata: only the land layer, and on maps with water the hover and amphibious layers
@@ -155,7 +168,7 @@ namespace FAForever.FileFormats.Map
         /// </summary>
         private sealed record Caches(bool[] Flat, float[] Depth, bool[] Open);
 
-        private static Caches PopulateCaches(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, MapArea? playableArea)
+        private static Caches PopulateCaches(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, MapArea? playableArea, bool[]? forcedOpen = null)
         {
             int width = heightmap.Width;
             int height = heightmap.Height;
@@ -191,11 +204,7 @@ namespace FAForever.FileFormats.Map
                     int bottomRight = bottomLeft + 1;
                     int cell = z * width + x;
 
-                    flat[cell] =
-                        MathF.Abs(terrain[topLeft] - terrain[topRight]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[bottomLeft] - terrain[bottomRight]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[topLeft] - terrain[bottomLeft]) < MaxHeightDifference &&
-                        MathF.Abs(terrain[topRight] - terrain[bottomRight]) < MaxHeightDifference;
+                    flat[cell] = IsFlat(terrain[topLeft], terrain[topRight], terrain[bottomLeft], terrain[bottomRight]);
 
                     averageDepth[cell] = (depth[topLeft] + depth[bottomLeft] + depth[topRight] + depth[bottomRight]) * 0.25f;
 
@@ -207,11 +216,36 @@ namespace FAForever.FileFormats.Map
                     bool playable = tlx <= ax && brx >= ax && tlz <= az && brz >= az;
                     bool blocking = ax < width && az < height && TerrainTypes.Get(terrainTypes[az * width + ax]).Blocking;
                     open[cell] = playable && !blocking;
+                    if (forcedOpen is not null && forcedOpen[cell])
+                    {
+                        flat[cell] = true;
+                        open[cell] = playable;
+                    }
                 }
             }
 
             return new Caches(flat, averageDepth, open);
         }
+
+        /// <summary>
+        /// Whether land units can cross an ogrid by its slope (<c>PopulateCaches</c>): every side's
+        /// height difference is under <see cref="MaxHeightDifference"/>. Water and terrain types do not
+        /// count; an ogrid that is not flat is a cliff to land and amphibious units.
+        /// </summary>
+        public static bool IsFlat(ScmapHeightmap heightmap, int x, int z)
+        {
+            int stride = heightmap.Width + 1;
+            int topLeft = z * stride + x;
+            float scale = heightmap.Scale;
+            ushort[] samples = heightmap.Samples;
+            return IsFlat(samples[topLeft] * scale, samples[topLeft + 1] * scale, samples[topLeft + stride] * scale, samples[topLeft + stride + 1] * scale);
+        }
+
+        private static bool IsFlat(float topLeft, float topRight, float bottomLeft, float bottomRight) =>
+            MathF.Abs(topLeft - topRight) < MaxHeightDifference &&
+            MathF.Abs(bottomLeft - bottomRight) < MaxHeightDifference &&
+            MathF.Abs(topLeft - bottomLeft) < MaxHeightDifference &&
+            MathF.Abs(topRight - bottomRight) < MaxHeightDifference;
 
         private delegate bool PathingRule(bool flat, float depth, bool open);
 

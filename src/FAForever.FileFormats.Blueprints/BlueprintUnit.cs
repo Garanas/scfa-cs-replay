@@ -356,6 +356,25 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? SkirtSizeZ { get; init; }
 
+        /// <summary>
+        /// Where the skirt starts, from the footprint's corner (negative: it reaches beyond it).
+        /// </summary>
+        public double? SkirtOffsetX { get; init; }
+
+        public double? SkirtOffsetZ { get; init; }
+
+        /// <summary>
+        /// How much the ground under the skirt may rise and fall for the structure to be built, in game
+        /// units; the engine's default, 1, when absent.
+        /// </summary>
+        public double? MaxGroundVariation { get; init; }
+
+        /// <summary>
+        /// Whether the structure levels the ground under its skirt when built (then the edge around
+        /// the skirt is what the engine checks for flatness).
+        /// </summary>
+        public bool? FlattenSkirt { get; init; }
+
         internal static BlueprintUnitPhysics Read(LuaTableReader t) => new BlueprintUnitPhysics
         {
             Raw = t.Table,
@@ -375,6 +394,10 @@ namespace FAForever.FileFormats.Blueprints
             WaterSpeedMultiplier = t.Number("WaterSpeedMultiplier"),
             SkirtSizeX = t.Number("SkirtSizeX"),
             SkirtSizeZ = t.Number("SkirtSizeZ"),
+            SkirtOffsetX = t.Number("SkirtOffsetX"),
+            SkirtOffsetZ = t.Number("SkirtOffsetZ"),
+            MaxGroundVariation = t.Number("MaxGroundVariation"),
+            FlattenSkirt = t.Bool("FlattenSkirt"),
         };
     }
 

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>faf-map-editor</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="LuaCSharp" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Silk.NET.OpenGL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- IBM Plex Sans and Mono, under the SIL Open Font License (Assets/Fonts/LICENSE.txt) -->
+    <AvaloniaResource Include="Assets\Fonts\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the example plugins, written into a workspace's plugins folder once (Plugins/ExamplePlugins.cs) -->
+    <EmbeddedResource Include="Plugins\Examples\**\*.lua;Plugins\Examples\**\*.json" LogicalName="Examples/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Tours\*.tour.json" LogicalName="Tours/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FAForever.MapEditor.Project\FAForever.MapEditor.Project.csproj" />
+  </ItemGroup>
+
+</Project>

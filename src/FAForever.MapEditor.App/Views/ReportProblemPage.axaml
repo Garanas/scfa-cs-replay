@@ -1,0 +1,44 @@
+<!-- Reporting a problem (F-17): what went wrong, whether the map's project goes along, then a folder for the zip. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.ReportProblemPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Report a problem" />
+            <TextBlock Classes="caption" Text="{Binding Report.Contents}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="label" Text="What went wrong" />
+            <TextBox x:Name="Description" Classes="reportdescription" Text="{Binding Report.Description}" AcceptsReturn="True" TextWrapping="Wrap"
+                     PlaceholderText="What you did, what you expected and what happened instead"
+                     AutomationProperties.Name="What went wrong" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <CheckBox IsChecked="{Binding Report.IncludeProject}" IsEnabled="{Binding Report.CanIncludeProject}" Content="Include the open map's project" />
+            <TextBlock Classes="caption" Text="{Binding Report.ProjectNote}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
+              <Button Content="Cancel" Command="{Binding Report.CloseCommand}" />
+              <Button Classes="accent" Content="Make the report..." Command="{Binding Report.MakeCommand}"
+                      ToolTip.Tip="Asks for a folder, writes the zip there and shows it" />
+            </StackPanel>
+            <TextBlock Classes="error" Text="{Binding Report.Error}" IsVisible="{Binding Report.Error, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       VerticalAlignment="Center" AutomationProperties.Name="Report error" />
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

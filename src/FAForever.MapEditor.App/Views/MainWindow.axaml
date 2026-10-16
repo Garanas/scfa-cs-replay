@@ -1,0 +1,215 @@
+<!--
+  The editor's window (concept A of the UI design): the menu, the rail of modes, the mode's panel,
+  the tool's options, the views with their overlays, the dock, the inspector and the status bar;
+  over them the pages of the start and the command palette. The menus and shortcuts are made from
+  the controller's commands (MainWindow.axaml.cs).
+-->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+        xmlns:controls="using:FAForever.MapEditor.App.Controls"
+        xmlns:views="using:FAForever.MapEditor.App.Views"
+        xmlns:sketchviews="using:FAForever.MapEditor.App.Views.SketchPanels"
+        x:Class="FAForever.MapEditor.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding Title}"
+        Width="1280" Height="800">
+
+  <Grid>
+    <DockPanel IsVisible="{Binding Setup.IsReady}">
+      <Border x:Name="MenuBarBorder" DockPanel.Dock="Top" Classes="menubar">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="mapname" Text="{Binding MapName}" IsVisible="{Binding HasMap}" AutomationProperties.Name="Map" />
+          <Button DockPanel.Dock="Right" Classes="search" Command="{Binding RunCommand}" CommandParameter="view.palette"
+                  AutomationProperties.Name="Command palette">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="Ctrl K" />
+              <StackPanel>
+                <Path Classes="icon small" Data="{StaticResource Icon.Search}" />
+                <TextBlock Text="Run a command" />
+              </StackPanel>
+            </DockPanel>
+          </Button>
+          <!-- the toolbar of commands (F-1), made from the registry as the menus are -->
+          <ItemsControl DockPanel.Dock="Right" x:Name="Toolbar" ItemsSource="{Binding Layout.Toolbar}" IsVisible="{Binding Layout.ShowToolbar}"
+                        AutomationProperties.Name="Toolbar">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Classes="toolbarrow" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ToolbarItem">
+                <Button Classes="toolbarbutton" Classes.icononly="{Binding HasIcon}" IsEnabled="{Binding CanRun}"
+                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Id}"
+                        ToolTip.Tip="{Binding Tip}" AutomationProperties.Name="{Binding Title}">
+                  <Button.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Remove from the toolbar" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RemoveFromToolbarCommand}" CommandParameter="{Binding Id}" />
+                      <MenuItem Header="Hide the toolbar" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="view.toolbar" />
+                    </ContextMenu>
+                  </Button.ContextMenu>
+                  <Panel>
+                    <Path Classes="icon small" Data="{Binding Icon, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding HasIcon}" />
+                    <TextBlock Text="{Binding Title}" IsVisible="{Binding !HasIcon}" />
+                  </Panel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Menu x:Name="MainMenu" />
+        </DockPanel>
+      </Border>
+
+      <Border x:Name="StatusBarBorder" DockPanel.Dock="Bottom" Classes="bar">
+        <DockPanel>
+          <TextBlock x:Name="CursorText" DockPanel.Dock="Left" Classes="mono" AutomationProperties.Name="Place under the mouse" />
+          <!-- regenerating on their own (Q5): the editor's switch, with what waits or runs (MainViewModel.AutoRegenerate), at the
+               status bar's end beside what is out of date, so the overlays' chips above the views keep their room -->
+          <ToggleButton DockPanel.Dock="Right" Classes="chip autoregenerate" IsChecked="{Binding RegenerateOnTheirOwn, Mode=OneWay}"
+                        Command="{Binding RunCommand}" CommandParameter="generate.automatic"
+                        ToolTip.Tip="{Binding AutoRegenerateTip}"
+                        AutomationProperties.Name="Regenerate results on their own" AutomationProperties.HelpText="{Binding AutoRegenerateTip}">
+            <StackPanel Classes="inline">
+              <Path Classes="icon small" Data="{StaticResource Icon.Procedural}" />
+              <TextBlock Text="{Binding AutoRegenerateText}" AutomationProperties.Name="What regenerates on its own now" />
+            </StackPanel>
+          </ToggleButton>
+          <TextBlock DockPanel.Dock="Right" Classes="warning" Margin="{StaticResource InlineGap}" Text="{Binding Generation.Summary}"
+                     IsVisible="{Binding Generation.HasStale}" AutomationProperties.Name="Generated results out of date"
+                     ToolTip.Tip="Generate, Everything out of date makes them again" />
+          <TextBlock DockPanel.Dock="Right" Classes="secondary mono" Margin="{StaticResource InlineGap}" Text="{Binding SelectionStatus}"
+                     IsVisible="{Binding Selection.HasAny}" AutomationProperties.Name="Selection and its size" />
+          <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Mode and tool">
+            <Run Text="{Binding SelectedMode.Definition.Title}" /><Run Text=" · " /><Run Text="{Binding ActiveTool.Definition.Title}" />
+          </TextBlock>
+          <TextBlock Text="{Binding Status}" Margin="{StaticResource InlineGap}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+      </Border>
+
+      <views:ModeRail DockPanel.Dock="Left" />
+
+      <!-- the panels and the views (V-4): the left side, the views with the bottom under them and the right
+           side, each side with a splitter that resizes it. The mode's panel lies on the left, the inspector on
+           the right and the dock at the bottom until they are moved (or float in a window of their own):
+           MainWindow.axaml.cs puts each panel in its place and lays the columns and rows out from the layout
+           the user's settings remember -->
+      <Grid x:Name="Shell" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+        <Grid x:Name="LeftSide" Grid.Column="0">
+          <views:ModePanel x:Name="ModePanelView" />
+        </Grid>
+        <GridSplitter x:Name="ModePanelSplitter" Grid.Column="1" Classes="layoutsplitter" ResizeDirection="Columns"
+                      AutomationProperties.Name="Resize the mode panel" />
+
+        <DockPanel Grid.Column="2">
+          <views:ToolOptions DockPanel.Dock="Top" ZIndex="2" />
+
+          <!-- which view, and what it shows over the terrain, in one row of a fixed height: the symmetry and the
+               overlays' chips (made by MainWindow from the model's overlays) in a controls:ToolRow, what does not fit
+               behind its More, over the views; the tabs only choose: both views stay in the tree, so the 3D view keeps
+               its textures on the graphics card -->
+          <Border x:Name="ViewsBarBorder" DockPanel.Dock="Top" Classes="toolbar views" ZIndex="1">
+            <DockPanel>
+              <!-- in the order of MapViewTab -->
+              <TabControl x:Name="Views" DockPanel.Dock="Left" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
+                <TabItem Header="Top" />
+                <TabItem Header="3D" />
+                <TabItem Header="Side by side" />
+              </TabControl>
+              <Border DockPanel.Dock="Left" Classes="barseparator" />
+              <controls:ToolRow x:Name="ViewOptions" Classes="toolrow" AutomationProperties.Name="Shown over the terrain">
+                <!-- short, so that the overlays' chips keep room beside it at 1280 pixels: the list names each symmetry in full -->
+                <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
+                          AutomationProperties.Name="Symmetry" ToolTip.Tip="{Binding Symmetry.Chosen.Title, StringFormat='Symmetry: {0}'}"
+                          AutomationProperties.HelpText="The symmetry edits are mirrored by; the views show its guides">
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate x:DataType="vm:SymmetryChoice">
+                      <StackPanel Classes="inline">
+                        <Path Classes="icon small" Data="{StaticResource Icon.Symmetry}" />
+                        <TextBlock Text="{Binding Short}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+                <ToggleButton Classes="chip" Content="Mirror" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
+                              AutomationProperties.Name="Mirror edits" ToolTip.Tip="Mirror edits by the symmetry"
+                              AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
+                <!-- only where it changes something: a map whose playable area is not the whole map -->
+                <ToggleButton Classes="chip" Content="Playable area" IsVisible="{Binding Symmetry.OffersAround}" IsChecked="{Binding Symmetry.IsAroundPlayableArea}"
+                              AutomationProperties.Name="Symmetry around the playable area" ToolTip.Tip="{Binding Symmetry.AroundText, StringFormat='The symmetry is around {0}'}"
+                              AutomationProperties.HelpText="On, the symmetry turns and mirrors around the playable area as it is now; off, around the whole map" />
+              </controls:ToolRow>
+            </DockPanel>
+          </Border>
+
+          <Grid x:Name="Middle" RowDefinitions="*,Auto,Auto">
+            <!-- the views: one of them, or both side by side (MainWindow.ShowChosenView) -->
+            <Grid x:Name="Maps" ColumnDefinitions="*,Auto,*">
+              <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
+                                       AutomationProperties.HelpText="The left mouse uses the tool; right or middle moves; the wheel zooms; alt and a click sends the 3D camera there; after a click the active tool takes keys (the Select tool: Q, E, the arrows, Escape; a brush: [ and ] the radius, shift with them the strength); control and the wheel change a brush's radius" />
+              <!-- over the top view (MainWindow.ShowChosenView gives it the view's columns): the Select by popover (U-10) and the
+                   chips of the selections stored under the digits, along the bottom -->
+              <Grid x:Name="TopOverlays" Grid.Column="0">
+                <views:SelectByPopover DataContext="{Binding SelectBy}" />
+                <!-- the text box of a label being written (N-4), where the label goes -->
+                <sketchviews:LabelEditor DataContext="{Binding Sketch}" />
+                <ItemsControl Classes="storedchips" ItemsSource="{Binding StoredSelections.Chips}" IsVisible="{Binding StoredSelections.HasChips}"
+                              AutomationProperties.Name="Stored selections">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StoredSelectionChip">
+                      <Button Classes="chip" Classes.on="{Binding IsCurrent}" Classes.gone="{Binding IsGone}" Content="{Binding Text}" Command="{Binding RecallCommand}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+              <GridSplitter x:Name="ViewsSplitter" Grid.Column="1" Classes="layoutsplitter" ResizeDirection="Columns" IsVisible="False"
+                            AutomationProperties.Name="Resize the views" />
+              <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
+                                        AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
+              <!-- over the 3D view (MainWindow.ShowChosenView gives it the view's column): the text box of a label begun there -->
+              <Grid x:Name="ThreeDOverlays" IsVisible="False">
+                <sketchviews:LabelEditor DataContext="{Binding Sketch}" ThreeD="True" />
+              </Grid>
+            </Grid>
+            <GridSplitter x:Name="DockSplitter" Grid.Row="1" Classes="layoutsplitter" ResizeDirection="Rows"
+                          AutomationProperties.Name="Resize the dock" />
+            <Grid x:Name="BottomSide" Grid.Row="2">
+              <views:Dock x:Name="DockView" />
+            </Grid>
+          </Grid>
+        </DockPanel>
+
+        <GridSplitter x:Name="InspectorSplitter" Grid.Column="3" Classes="layoutsplitter" ResizeDirection="Columns"
+                      AutomationProperties.Name="Resize the inspector" />
+        <Grid x:Name="RightSide" Grid.Column="4">
+          <views:Inspector x:Name="InspectorView" />
+        </Grid>
+      </Grid>
+    </DockPanel>
+
+    <views:SetupPage IsVisible="{Binding Setup.IsSettingUp}" />
+    <views:UpdateAssetsPage IsVisible="{Binding Setup.IsAskingToUpdate}" />
+    <views:ConvertingPage IsVisible="{Binding Setup.IsConverting}" />
+    <views:CommandPalette x:Name="Palette" IsVisible="{Binding Palette.IsOpen}" />
+    <Panel IsVisible="{Binding Picker.IsOpen}">
+      <views:AssetPicker x:Name="Picker" DataContext="{Binding Picker}" />
+    </Panel>
+    <views:DiagnosticsPage x:Name="DiagnosticsPageView" IsVisible="{Binding Diagnostics.IsOpen}" />
+    <views:VersionControlPage x:Name="VersionControlPageView" IsVisible="{Binding VersionControl.IsOpen}" />
+    <views:ReportProblemPage x:Name="ReportProblemPageView" IsVisible="{Binding Report.IsOpen}" />
+    <views:NewMapPage x:Name="NewMapPageView" IsVisible="{Binding NewMapPage.IsOpen}" />
+    <views:ShortcutsPage x:Name="ShortcutsPageView" IsVisible="{Binding Shortcuts.IsOpen}" />
+    <views:WorkspaceSettingsPage x:Name="WorkspaceSettingsPageView" IsVisible="{Binding WorkspaceSettings.IsOpen}" />
+    <views:ToursPage x:Name="ToursPageView" IsVisible="{Binding Tour.IsOpen}" />
+    <!-- the guided tour (H-1): dims the window but the question below, rings what a step points at -->
+    <views:TourOverlay x:Name="TourLayer" />
+    <!-- the questions over everything: one may come from a page (New map asks about unsaved changes) -->
+    <views:QuestionDialog x:Name="Question" DataContext="{Binding Question}" IsVisible="{Binding IsOpen}" />
+  </Grid>
+</Window>

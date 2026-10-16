@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A tour of the window</title>
+<style>
+:root { color-scheme: dark; --bg: #14171c; --panel: #1d2128; --line: #2e343d; --text: #e3e7ed; --muted: #9aa3b0; --link: #6cb8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 .5rem; }
+a { color: var(--link); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; margin: .75rem 0; }
+.step { border-top: 1px solid var(--line); padding-top: .5rem; }
+.more, .meta, .done { color: var(--muted); }
+.done { border-left: 3px solid var(--link); padding-left: .75rem; }
+nav { margin-bottom: 1.5rem; }
+ul.tours { list-style: none; padding: 0; }
+ul.tours li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: .5rem 0; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">All tours</a></nav>
+<h1>A tour of the window</h1>
+<p>The parts of the editor&#39;s window, in about two minutes.</p>
+<img src="images/window/00-overview.webp" alt="A tour of the window: an overview of the window, its parts numbered by the steps">
+<section class="step" id="welcome">
+<h2>1. A tour of the window</h2>
+<p>Twelve steps, about two minutes. Back and Next go through them; Escape ends the tour, and Help, Tours starts it again.</p>
+</section>
+<section class="step" id="modes">
+<h2>2. The modes</h2>
+<img src="images/window/02-modes.webp" alt="The modes">
+<p>Each mode is one kind of work: the map&#39;s settings, sketches to draft it, the shape of the terrain, its paint and masks, water, lighting, markers, props, decals and units. F1 to F12 choose them; Procedural and Plugins sit at the bottom.</p>
+</section>
+<section class="step" id="panel">
+<h2>3. The mode&#39;s panel</h2>
+<img src="images/window/03-panel.webp" alt="The mode&#39;s panel">
+<p>What the mode has: its tools first, then what it works on, the height layers here. Choose an entry to edit it in the inspector.</p>
+</section>
+<section class="step" id="options">
+<h2>4. The tool&#39;s settings</h2>
+<img src="images/window/04-options.webp" alt="The tool&#39;s settings">
+<p>The active tool&#39;s settings in one row, the most used first. What does not fit the window lies behind More.</p>
+<p class="more">Brush settings are kept per tool. The keys [ and ] make a brush smaller and larger.</p>
+</section>
+<section class="step" id="views">
+<h2>5. What the views show</h2>
+<img src="images/window/05-views.webp" alt="What the views show">
+<p>Top, 3D or both side by side, the map&#39;s symmetry, and a chip for each overlay: markers, path nodes, the 3D camera, and more behind More.</p>
+</section>
+<section class="step" id="top-view">
+<h2>6. The top view</h2>
+<img src="images/window/06-top-view.webp" alt="The top view">
+<p>The map from above. The left mouse uses the tool, the right or middle mouse moves the map, the wheel zooms.</p>
+</section>
+<section class="step" id="try-3d">
+<h2>7. Try it: the 3D view</h2>
+<img src="images/window/07-try-3d.webp" alt="Try it: the 3D view">
+<p>Click 3D, or press Ctrl+2.</p>
+<p class="done">That is the 3D view. The wheel zooms towards the mouse, the middle mouse moves, space and the mouse turn the view. Both views share the camera.</p>
+<img src="images/window/07-try-3d-after.webp" alt="Try it: the 3D view, after the step">
+</section>
+<section class="step" id="dock">
+<h2>8. The dock</h2>
+<img src="images/window/08-dock.webp" alt="The dock">
+<p>The problems the checks found, the history of undo steps, the workspace&#39;s assets to drag onto the map, and the Console.</p>
+</section>
+<section class="step" id="inspector">
+<h2>9. The inspector</h2>
+<img src="images/window/09-inspector.webp" alt="The inspector">
+<p>Edits what you chose last: an entry of the panel, things on the map, or an asset on the shelf.</p>
+</section>
+<section class="step" id="status">
+<h2>10. The status bar</h2>
+<img src="images/window/10-status.webp" alt="The status bar">
+<p>What the last operation did, the mode and tool, what is out of date, and the switch that makes results again on their own.</p>
+</section>
+<section class="step" id="palette">
+<h2>11. Every operation is a command</h2>
+<img src="images/window/11-palette.webp" alt="Every operation is a command">
+<p>Ctrl+K finds any of them by name, with its shortcut. The menus hold the same commands.</p>
+</section>
+<section class="step" id="end">
+<h2>12. That is the window</h2>
+<p>Next: the tours of the modes, one for sketching a draft and one for each of Terrain, Masks, Paint, Markers, Units and Procedural. Help, Tours lists them and starts this one again.</p>
+</section>
+<p class="meta">Made with the map editor 1.0.0+0b2734474d350fcba68c3bdae8a6574fef65815c on 2026-10-13, window 1280 by 800, dark theme.</p>
+</main>
+</body>
+</html>

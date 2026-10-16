@@ -11,7 +11,9 @@ namespace FAForever.FileFormats.Replay
         /// <summary>
         /// Examples are attack, reclaim and repair commands.
         /// </summary>
-        /// <param name="EntityId"></param>
+        /// <param name="EntityId">The targeted entity. Its family (<see cref="ReplayEntityId.GetFamily"/>)
+        /// says what it is: an own or allied unit, a prop (reclaim), or a recon blip (an enemy as the
+        /// player saw it on radar or in vision; attack, capture, overcharge).</param>
         public record Entity(int EntityId) : CommandTarget;
 
         /// <summary>

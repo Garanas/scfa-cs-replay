@@ -1,0 +1,61 @@
+{
+  "id": "xsb0101",
+  "name": "Land Factory",
+  "faction": "Seraphim",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CONSTRUCTION",
+    "DRAGBUILD",
+    "FACTORY",
+    "LAND",
+    "PRODUCTFA",
+    "RALLYPOINT",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "SHOWQUEUE",
+    "SIZE16",
+    "SORTCONSTRUCTION",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_factory1_land",
+  "buildIcon": "land",
+  "size": {
+    "x": 3.1,
+    "y": 0.8,
+    "z": 3.6
+  },
+  "footprint": {
+    "sizeX": 5,
+    "sizeZ": 5
+  },
+  "uniformScale": 0.05,
+  "health": 3500,
+  "massCost": 240,
+  "energyCost": 2100,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/xsb0101/xsb0101_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb0101/xsb0101_albedo.png",
+      "normals": "/units/xsb0101/xsb0101_normalsts.png",
+      "specular": "/units/xsb0101/xsb0101_specteam.png"
+    },
+    {
+      "cutoff": 500,
+      "mesh": "/units/xsb0101/xsb0101_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb0101/xsb0101_lod1_albedo.png",
+      "normals": "/units/xsb0101/xsb0101_normalsts.png",
+      "specular": "/units/xsb0101/xsb0101_lod1_specteam.png"
+    }
+  ]
+}

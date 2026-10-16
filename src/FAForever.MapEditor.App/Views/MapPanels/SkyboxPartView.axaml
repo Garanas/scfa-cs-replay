@@ -1,0 +1,62 @@
+<!-- The Lighting panel's Skybox entry (L-1): what the skybox holds, what the 3D view shows of it (the sky cube map made
+     from it, with Generate and use and Regenerate on its own), then its dome, sky objects, cirrus and cirrus layers
+     (lighting.setSkybox, lighting.setCirrusLayer; always four layers); without one, Add (made from the lighting) and Read a preset. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.SkyboxPartView"
+             x:DataType="vm:SkyboxPart">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="caption" Text="{Binding Summary}" AutomationProperties.Name="What the skybox holds" />
+        <TextBlock Classes="caption warning" Text="{Binding VersionNote}" IsVisible="{Binding VersionNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Content="Write as version 60" Command="{Binding WriteAsVersion60Command}"
+                IsVisible="{Binding CanWriteAsVersion60}"
+                AutomationProperties.HelpText="The map's .scmap then stores this skybox and the game draws it (the Map mode's Information, File version)" />
+        <WrapPanel Classes="chips">
+          <Button Content="Add a skybox" Command="{Binding AddCommand}" IsVisible="{Binding HasNoSkybox}"
+                  AutomationProperties.HelpText="A plain dome made from the lighting: the horizon in the fog's colour, a deeper blue overhead" />
+          <Button Content="Read a preset..." Command="{Binding ImportCommand}"
+                  AutomationProperties.Name="Read a skybox preset"
+                  AutomationProperties.HelpText="A skybox the FAF map editor saved (.scmskybox or .json); it takes the place of the map's" />
+          <Button Content="Remove the skybox" Command="{Binding RemoveCommand}" IsVisible="{Binding HasSkybox}"
+                  AutomationProperties.HelpText="The sky cube map is then made from the lighting" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+    <StackPanel IsVisible="{Binding HasSkybox}">
+      <!-- what the 3D view shows of it: the sky cube map made from it, made again on Generate -->
+      <Border Classes="group">
+        <StackPanel Classes="stack">
+          <TextBlock Classes="heading" Text="In the 3D view" />
+          <TextBlock Classes="caption" Classes.warning="{Binding InViewNeedsGenerate}" Text="{Binding InViewLine}"
+                     AutomationProperties.Name="What the 3D view shows of the skybox" />
+          <Button Content="Generate and use" Command="{Binding GenerateAndUseCommand}"
+                  AutomationProperties.Name="Generate the sky cube map from the skybox and use it"
+                  AutomationProperties.HelpText="Makes the sky cube map from the skybox and the map, and makes it the sky's, the units' and the water's cube map, so the 3D view shows it" />
+          <controls:SettingList DataContext="{Binding InView}" ShowsTitle="False" />
+        </StackPanel>
+      </Border>
+      <Border Classes="group">
+        <controls:SettingList DataContext="{Binding Dome}" ShowsTitle="True" />
+      </Border>
+      <Border Classes="group">
+        <controls:SettingList DataContext="{Binding SkyObjects}" ShowsTitle="True" />
+      </Border>
+      <Border Classes="group">
+        <controls:SettingList DataContext="{Binding Cirrus}" ShowsTitle="True" />
+      </Border>
+      <ItemsControl ItemsSource="{Binding CirrusLayers}" AutomationProperties.Name="Cirrus layers">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SettingGroup">
+            <Border Classes="group">
+              <controls:SettingList ShowsTitle="True" />
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

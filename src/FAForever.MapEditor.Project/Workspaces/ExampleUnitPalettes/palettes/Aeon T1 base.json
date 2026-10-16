@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Aeon T1 base",
+  "settings": {
+    "slots": [
+      {
+        "unit": "uab0101"
+      },
+      {
+        "unit": "uab0102"
+      },
+      {
+        "unit": "uab1103"
+      },
+      {
+        "unit": "uab1101"
+      },
+      {
+        "unit": "uab1105"
+      },
+      {
+        "unit": "uab5101"
+      },
+      {
+        "unit": "uab2101"
+      },
+      {
+        "unit": "uab3101"
+      },
+      {
+        "unit": "uab0103"
+      },
+      {
+        "unit": "uab1106"
+      }
+    ]
+  }
+}

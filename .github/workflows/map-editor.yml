@@ -1,0 +1,111 @@
+# Builds the map editor as one standalone executable per system (the .NET runtime and every native
+# library inside it, nothing to install) on every push to main, keeps each as a workflow artifact,
+# and starts the Linux build on a virtual display to check that it runs and draws a map in 3D.
+
+name: Map editor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            exe: faf-map-editor.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: faf-map-editor
+          - os: macos-latest
+            rid: osx-arm64
+            exe: faf-map-editor
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v7
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    # self-contained single file: the runtime, Avalonia's Skia (and ANGLE on Windows) and
+    # Magick.NET's native libraries are packed into the executable and unpacked by itself on first
+    # start; not trimmed (automation and MediatR use reflection). The commit goes into the
+    # editor's version (EditorStamp, the files the export writes).
+    - name: Publish
+      shell: pwsh
+      run: >
+        dotnet publish src/FAForever.MapEditor.App
+        -c Release -r ${{ matrix.rid }} --self-contained true
+        -p:PublishSingleFile=true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:EnableCompressionInSingleFile=true
+        -p:DebugType=None -p:DebugSymbols=false
+        -p:SourceRevisionId=${{ github.sha }}
+        -o publish
+
+    # the editor starts without a workspace, shows its setup page, answers automation and closes
+    - name: Start it on a virtual display (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq xvfb libice6 libsm6 libfontconfig1 libgl1 libegl1 libgl1-mesa-dri
+        Xvfb :99 -screen 0 1280x800x24 > /dev/null 2>&1 &
+        sleep 2
+        DISPLAY=:99 timeout 300 bash tools/editor-smoke.sh "publish/${{ matrix.exe }}" smoke
+
+    # then a map of the tests in the 3D view, on Mesa's software OpenGL (a workspace with empty assets)
+    - name: Draw a map in 3D on the virtual display (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        DISPLAY=:99 timeout 300 bash tools/editor-smoke-3d.sh "publish/${{ matrix.exe }}" smoke3d tests/FAForever.FileFormats.Map.Tests/assets/maps/HardFFA.v0001
+
+    - name: Keep what the start showed (Linux)
+      if: always() && runner.os == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        name: faf-map-editor-smoke-linux
+        path: |
+          smoke/window.png
+          smoke/state.json
+          smoke/ui.json
+          smoke/editor.log
+          smoke3d/view3d.png
+          smoke3d/window.png
+          smoke3d/state.json
+          smoke3d/editor.log
+        if-no-files-found: ignore
+        retention-days: 14
+
+    # the executable carries the stage and the commit in its name too (faf-map-editor-beta-<commit>.exe),
+    # so builds kept side by side stay apart once downloaded; the editor never reads its own file name.
+    # The stage is the version's suffix (Directory.Build.props), left out for a release.
+    - name: Name the artifact and the executable
+      id: name
+      shell: pwsh
+      run: |
+        $short = "${{ github.sha }}".Substring(0, 7)
+        $stage = (dotnet msbuild src/FAForever.MapEditor.App -getProperty:VersionSuffix).Trim()
+        $name = if ($stage) { "faf-map-editor-$stage" } else { "faf-map-editor" }
+        $exe = "$name-$short" + [System.IO.Path]::GetExtension("${{ matrix.exe }}")
+        Move-Item "publish/${{ matrix.exe }}" "publish/$exe"
+        "artifact=$name-${{ matrix.rid }}-$short" >> $env:GITHUB_OUTPUT
+        "exe=$exe" >> $env:GITHUB_OUTPUT
+
+    # an artifact is a zip that drops the executable bit: Linux and macOS get a tar that keeps it
+    - name: Pack (Linux and macOS)
+      if: runner.os != 'Windows'
+      run: tar -czf "publish/${{ steps.name.outputs.artifact }}.tar.gz" -C publish "${{ steps.name.outputs.exe }}"
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.name.outputs.artifact }}
+        # the executable alone (on Windows) or its tar: symbol files some native packages bring along are left out
+        path: ${{ runner.os == 'Windows' && format('publish/{0}', steps.name.outputs.exe) || format('publish/{0}.tar.gz', steps.name.outputs.artifact) }}
+        if-no-files-found: error
+        retention-days: 90

@@ -1,0 +1,121 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran relay station",
+  "settings": {
+    "group": {
+      "name": "Cybran relay station",
+      "units": [
+        {
+          "blueprint": "urc1301",
+          "x": 11.476013,
+          "y": 0,
+          "z": -7.7207947,
+          "heading": -0.942
+        },
+        {
+          "blueprint": "urc1302",
+          "x": -6.208496,
+          "y": 0,
+          "z": 21.030914,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1902",
+          "x": -7.9066772,
+          "y": 0,
+          "z": 10.760101,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1302",
+          "x": 9.83667,
+          "y": 0,
+          "z": 16.507507,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1302",
+          "x": -14.055786,
+          "y": 0,
+          "z": 7.2018127,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 1.300415,
+          "y": 0,
+          "z": 15.887207,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1302",
+          "x": -7.763489,
+          "y": 0,
+          "z": -0.56970215,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1302",
+          "x": 13.9938965,
+          "y": 0,
+          "z": -21.43399,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 5.078125,
+          "y": 0,
+          "z": -18.734192,
+          "heading": -0.818
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 9.887024,
+          "y": 0,
+          "z": 7.885315,
+          "heading": -2.054
+        },
+        {
+          "blueprint": "urc1302",
+          "x": 0.022399902,
+          "y": 0,
+          "z": 6.3226013,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1902",
+          "x": 3.263977,
+          "y": 0,
+          "z": 1.7633057,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1302",
+          "x": 15.004822,
+          "y": 0,
+          "z": 0.5133972,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -0.34631348,
+          "y": 0,
+          "z": -7.4776917,
+          "heading": -0.834
+        },
+        {
+          "blueprint": "urc1302",
+          "x": -8.676392,
+          "y": 0,
+          "z": -16.68631,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 15,
+    "role": "civilian",
+    "source": "dddx_rpg_survival.v0178, army ARMY_SURVIVAL_ALLY, group INITIAL"
+  }
+}

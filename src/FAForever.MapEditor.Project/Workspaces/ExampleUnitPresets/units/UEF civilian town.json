@@ -1,0 +1,310 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF civilian town",
+  "settings": {
+    "group": {
+      "name": "UEF civilian town",
+      "units": [
+        {
+          "blueprint": "uec1101",
+          "x": -7.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -7.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1301",
+          "x": -1.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 23.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": 26.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -19.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 35.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 15.5,
+          "y": 0,
+          "z": -29.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -30.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 15.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -29.5,
+          "y": 0,
+          "z": 28.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 19.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 31.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -7.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1301",
+          "x": -7.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 23.5,
+          "y": 0,
+          "z": -39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -3.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 0.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -7.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1301",
+          "x": 15.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": -2.356
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 29.5,
+          "y": 0,
+          "z": -39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -19.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 27.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -19.5,
+          "y": 0,
+          "z": 28.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 23.5,
+          "y": 0,
+          "z": -29.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 16.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 15.5,
+          "y": 0,
+          "z": 31.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -30.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -19.5,
+          "y": 0,
+          "z": 38.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 15.5,
+          "y": 0,
+          "z": 35.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -7.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -29.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -7.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": 16.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 0.5,
+          "y": 0,
+          "z": 39.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 15.5,
+          "y": 0,
+          "z": -39.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 42,
+    "role": "civilian",
+    "source": "X1CA_001, army Civilians, group M2/M2_Civilian_South_City"
+  }
+}

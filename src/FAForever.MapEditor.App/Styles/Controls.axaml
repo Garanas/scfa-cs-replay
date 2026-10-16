@@ -1,0 +1,37 @@
+<!-- The looks of the editor's own controls. -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="using:FAForever.MapEditor.App.Controls">
+
+  <ControlTheme x:Key="{x:Type controls:Section}" TargetType="controls:Section">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Classes="stack">
+          <TextBlock Classes="heading" Text="{TemplateBinding Header}" />
+          <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+  <!-- mass and energy after their icons, at the text's size (F-8): a unit's cost, a prop's reclaim -->
+  <ControlTheme x:Key="{x:Type controls:EconomyAmount}" TargetType="controls:EconomyAmount">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <WrapPanel Orientation="Horizontal">
+          <TextBlock Classes="economytext economyprefix" Text="{TemplateBinding Prefix}" IsVisible="{TemplateBinding Prefix, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <!-- the mass and the energy each in a part of its own: in a narrow tile the energy goes to the next line -->
+          <StackPanel Orientation="Horizontal" IsVisible="{TemplateBinding ShowsValues}">
+            <Path Classes="economyicon economymass" Data="{DynamicResource Icon.Mass}" Width="{TemplateBinding FontSize}" Height="{TemplateBinding FontSize}" />
+            <TextBlock Classes="economytext economyvalue" Text="{TemplateBinding MassText}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" IsVisible="{TemplateBinding ShowsValues}">
+            <Path Classes="economyicon economyenergy" Data="{DynamicResource Icon.Energy}" Width="{TemplateBinding FontSize}" Height="{TemplateBinding FontSize}" />
+            <TextBlock Classes="economytext" Text="{TemplateBinding EnergyText}" />
+          </StackPanel>
+          <TextBlock Classes="economytext" Text="{TemplateBinding EmptyText}" IsVisible="{TemplateBinding ShowsEmpty}" />
+          <TextBlock Classes="economytext economysuffix" Text="{TemplateBinding Suffix}" IsVisible="{TemplateBinding Suffix, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </WrapPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+</ResourceDictionary>
