@@ -563,8 +563,8 @@ filter components inherit `PlayerUrlComponent`, which writes with `replace: true
 | `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31), the data (wave 32) |
 | `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31), the data (wave 32) |
 | `page` | lists | Page number | 1 | wave 32 |
-| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32) |
-| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32) |
+| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32, Matches tab done) |
+| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32, Army tab done) |
 | `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31), the data (wave 32) |
 | `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31), the data (wave 32) |
 | `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one | the controls and the data (wave 32) |
@@ -574,6 +574,8 @@ Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `ar
 (a select) and `TextFilter` (a search field written on change), each bound to one query parameter by its
 `Query` parameter. Chips and fields are 44 px high. `NextStepNote` is the one quiet line of a page whose
 data is not there yet.
+
+The Matches tab (`MatchesTab`, helpers in `Features/Players/Matches/`: `MatchUrl` reads the address into `MatchFilters`, `MatchFormat` words the numbers and builds the chart rows, `MatchPlayers` lists the other players of a game) loads twice: every game of the filtered period for the tiles and charts (keyed on the filters without `sort` and `page`, so a page turn loads only the table) and one page of 25 for the table. The Army tab (`ArmyTab`, `Features/Players/Army/`: `ArmyFormat`, `AchievementFilter`, `StackedBar`, `BuiltLostPanel`) loads the counters and achievements once per player; `show` only filters the grid. A table inside an `overflow-x-auto` box needs `relative` on the box, or its `sr-only` cells (absolute) widen the page.
 
 ### Chart components and the gallery
 
