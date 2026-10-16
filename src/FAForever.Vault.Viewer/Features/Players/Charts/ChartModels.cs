@@ -22,7 +22,11 @@ public sealed record ColumnItem(string Label, double Value, string? TopLabel = n
 public sealed record HistogramBin(string Label, double Value, int Sign, string? TopLabel = null, string? Title = null);
 
 /// <summary>A row of a <see cref="Dumbbell"/>: two values on one track.</summary>
-public sealed record DumbbellRow(string Label, double A, double B, string AText, string BText, string? GapText = null);
+public sealed record DumbbellRow(string Label, double A, double B, string AText, string BText, string? GapText = null)
+{
+    /// <summary>How the gap reads from the first player's view; a marker beside the gap text (the text says it too).</summary>
+    public DeltaTone GapTone { get; init; }
+}
 
 /// <summary>An entry of a <see cref="Legend"/>.</summary>
 public sealed record LegendItem(string Label, ChartColor Color = ChartColor.Primary, LegendKind Kind = LegendKind.Swatch, double Opacity = 1, string? CssColor = null);

@@ -1,6 +1,8 @@
 @page "/players"
 @inherits UrlStateComponent
+@using FAForever.Vault.Viewer.Services.Players
 @inject AuthService Auth
+@inject IPlayersApi Api
 
 @* The entry to the Players pages (the Players tab in the header), like the Maps tab: a search for a
    player and a card for the rankings, the leagues and the comparison. The cards draw no data; the
@@ -29,13 +31,53 @@
                 <label for="player-search" class="mb-1 block text-sm font-medium text-ink-muted">Find a player</label>
                 <div class="flex gap-2">
                     <input id="player-search" type="search" class="input-field min-h-11 flex-1" placeholder="A name, now or in the past"
-                           autocomplete="off" @bind="text" @bind:event="oninput" />
+                           autocomplete="off" value="@text" @onchange="TextChanged" />
                     <button type="submit" class="btn-primary min-h-11">Search</button>
                 </div>
             </form>
-            @if (Searched is { Length: > 0 } searched)
+            @if (needsLogin)
             {
-                <NextStepNote Text="@($"The results for “{searched}” arrive in the next step. The search will look at current names and at former names.")" />
+                <PlayersLoginGate What="the search results" />
+            }
+            else if (Searched is { Length: > 0 } searched)
+            {
+                <section class="mt-6 max-w-2xl" aria-label="Search results" aria-busy="@(isLoading ? "true" : "false")">
+                    @if (error is not null)
+                    {
+                        <div class="card" role="alert">
+                            <p class="font-semibold">The search did not work</p>
+                            <p class="mt-1 text-sm text-ink-muted">@error</p>
+                        </div>
+                    }
+                    else if (hits is null)
+                    {
+                        <div class="card animate-pulse text-center text-sm text-ink-muted">Searching&hellip;</div>
+                    }
+                    else if (hits.Count == 0)
+                    {
+                        <div class="card text-sm text-ink-muted">No player called &ldquo;@searched&rdquo;. Check the spelling, or try a shorter part of the name.</div>
+                    }
+                    else
+                    {
+                        <ul class="card divide-y divide-edge p-0 transition-opacity @(isLoading ? "opacity-50" : "")">
+                            @foreach (PlayerSearchHit hit in hits)
+                            {
+                                <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                                    <a href="@PlayerLinks.Profile(hit.Id)" class="inline-flex min-h-11 items-center font-semibold text-ink transition hover:text-primary">@hit.Login</a>
+                                    @if (hit.ClanTag is { Length: > 0 } tag)
+                                    {
+                                        <span class="badge" title="Clan tag">[@tag]</span>
+                                    }
+                                    @if (hit.MatchedFormerName is { Length: > 0 } former)
+                                    {
+                                        <span class="text-sm text-ink-muted">formerly @former</span>
+                                    }
+                                    <a href="@PlayerLinks.CompareWith(hit.Id)" class="ml-auto text-sm text-ink-muted transition hover:text-primary">Compare</a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
             }
             else
             {
@@ -102,14 +144,88 @@
 
     private string text = "";
 
+    private IReadOnlyList<PlayerSearchHit>? hits;
+    private string? loadedQuery;
+    private bool isLoading;
+    private bool needsLogin;
+    private string? error;
+    private CancellationTokenSource? cancellation;
+
     /// <summary>The search text in the address; the result list is shown from it.</summary>
     private string? Searched => UrlQuery.Get(Navigation, "q") is { Length: > 0 } q ? q : null;
 
-    protected override void OnParametersSet() => text = Searched ?? "";
+    protected override void OnParametersSet()
+    {
+        text = Searched ?? "";
+        if (Searched == loadedQuery)
+        {
+            return;
+        }
+
+        loadedQuery = Searched;
+        if (Searched is null)
+        {
+            cancellation?.Cancel();
+            hits = null;
+            error = null;
+            isLoading = false;
+            return;
+        }
+
+        _ = SearchAsync(Searched);
+    }
+
+    private void TextChanged(ChangeEventArgs e) => text = e.Value?.ToString() ?? "";
 
     private void Submit()
     {
         string trimmed = text.Trim();
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("q", trimmed.Length == 0 ? null : trimmed), replace: true);
+    }
+
+    private async Task SearchAsync(string query)
+    {
+        cancellation?.Cancel();
+        CancellationTokenSource mine = new();
+        cancellation = mine;
+        isLoading = true;
+        error = null;
+        needsLogin = false;
+        StateHasChanged();
+        try
+        {
+            IReadOnlyList<PlayerSearchHit> found = await Api.FindPlayersAsync(query, mine.Token);
+            if (!mine.IsCancellationRequested)
+            {
+                hits = found;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer search or a navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            needsLogin = true;
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(cancellation, mine))
+            {
+                cancellation = null;
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        cancellation?.Cancel();
     }
 }
