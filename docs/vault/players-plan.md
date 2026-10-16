@@ -179,7 +179,7 @@ reports after each wave. Agents run on Sonnet. Build and test with `--artifacts-
   of the owner's server (which serves `feature/players` from `D:\wt\players` during this work).
   Pages are checked with the sample API (decision 7) on the agent's own port. For checks with real
   data the owner signs in once in the Chromium that `login.cjs` opens (a persistent profile in
-  `D:\wtefrowser-profile`, CDP on `127.0.0.1:9333`); the session lives in that tab's
+  `D:\wt\ref\browser-profile`, CDP on `127.0.0.1:9333`); the session lives in that tab's
   sessionStorage, so the tab stays open and an agent drives that same tab through
   `chromium.connectOverCDP('http://127.0.0.1:9333')` instead of opening a new one.
 - Every agent reports a "Tooling" section: whether it could test its work (tests, the sample API,
