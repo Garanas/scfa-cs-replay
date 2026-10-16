@@ -9,7 +9,7 @@ namespace FAForever.Vault.Viewer.Services;
 /// </summary>
 public static class BuildInfo
 {
-    public const string Repository = "https://github.com/Garanas/scfa-cs-replay";
+    public const string Repository = "https://github.com/Garanas/faf-workshop";
 
     /// <summary>The full commit hash, or null when the build did not know it.</summary>
     public static string? Commit { get; } = ReadCommit();

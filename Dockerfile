@@ -1,9 +1,9 @@
 # The hosted viewer: FAForever.Vault.Server serving the Blazor WebAssembly app (FAForever.Vault.Viewer)
-# plus its OAuth token proxy. Built in CI and pushed to ghcr.io/garanas/scfa-cs-replay; the server
+# plus its OAuth token proxy. Built in CI and pushed to ghcr.io/garanas/faf-workshop; the server
 # that runs it is configured in github.com/Garanas/jipwijnia-vps.
 #
-#   docker build -t scfa-cs-replay .
-#   docker run --rm -p 8080:8080 scfa-cs-replay      # http://localhost:8080
+#   docker build -t faf-workshop .
+#   docker run --rm -p 8080:8080 faf-workshop      # http://localhost:8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src

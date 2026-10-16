@@ -15,7 +15,7 @@
 #       notify:
 #         runs-on: ubuntu-latest
 #         steps:
-#           - run: gh api repos/Garanas/scfa-cs-replay/dispatches -f event_type=fa-release -f "client_payload[version]=$TAG"
+#           - run: gh api repos/Garanas/faf-workshop/dispatches -f event_type=fa-release -f "client_payload[version]=$TAG"
 #             env:
 #               GH_TOKEN: ${{ secrets.VAULT_DISPATCH_TOKEN }}
 #               TAG: ${{ github.event.release.tag_name }}

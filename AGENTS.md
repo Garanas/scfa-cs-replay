@@ -1,4 +1,4 @@
-# Agent guide: scfa-cs-replay
+# Agent guide: faf-workshop
 
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
@@ -77,13 +77,13 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 - The server **must** run on `http://127.0.0.1:5080` in development: the development OAuth client only
   accepts loopback redirect URIs, and `wwwroot/appsettings.json` pins `RedirectUri` to that origin.
 - Deployment: a container image (`Dockerfile`: the Server with the Viewer) is built and pushed to
-  `ghcr.io/garanas/scfa-cs-replay` on every push to the `deploy/production` branch; releasing is
+  `ghcr.io/garanas/faf-workshop` on every push to the `deploy/production` branch; releasing is
   `git push origin main:deploy/production`; pushes to `main` build no image
   (`.github/workflows/docker.yml`, after the tests); its `deploy` job then has the VPS pull the image
   over SSH (environment `production`). It runs behind Traefik at https://vault.jipwijnia.nl.
   Everything about the server (compose stack, setup script, deploy key, runbook) lives in a
   separate public repository, [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps); try
-  the image locally with `docker build -t scfa-cs-replay . && docker run --rm -p 8080:8080 scfa-cs-replay`.
+  the image locally with `docker build -t faf-workshop . && docker run --rm -p 8080:8080 faf-workshop`.
   The map editor is built on every push to `main` too (`.github/workflows/map-editor.yml`, also
   run by hand): one standalone executable each for Windows (`win-x64`), Linux (`linux-x64`) and
   macOS (`osx-arm64`), self-contained and single file (the runtime and native libraries inside,
