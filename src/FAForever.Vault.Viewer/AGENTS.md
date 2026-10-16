@@ -529,6 +529,18 @@ chosen faction (`NotFoundMessages.cs`, four or five per faction), with the icon 
   different one. The choice is not in the URL: the page has no state worth sharing.
 - The unit ids must be in the icon atlas (a missing one shows the placeholder icon).
 
+## Home page
+
+`Pages/Home.razor` (`/`) opens a replay (an id or link, a file), then shows one map and one unit under
+"Look around", then About. The map and the unit come from `Features/Home/HomeExamples.cs`: a fixed
+set of each, one picked at random on every visit (`Random.Shared`, not in the URL: the page has no
+state worth sharing). Nothing is fetched for them but the map's preview and the unit's icon, so the
+facts are written down in the set: a map's name, size, players and author as the vault has them
+(check a new one on its map page, signed in, for the author), a unit's health and cost of the release
+the comment names (check a new one in `wwwroot/data/units/`). An experimental's description leaves
+out the word "Experimental", which its tech says. Every map must be in the vault and every unit in
+the icon atlas.
+
 ## Units landing page
 
 `Pages/Units.razor` (`/units`, the Units tab in the header) is an entry page like About: a card for

@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject NavigationManager Navigation
 @inject LocalReplayLoader Opener
+@using FAForever.Vault.Viewer.Features.Home
 @using FAForever.Vault.Viewer.Features.Units
 @inject IJSRuntime JS
 
@@ -9,8 +10,8 @@
 
 @* The front door: open a replay first, then a map and a unit to look at, then what the site is.
    Same writing style as the About pages: simple English, short sentences, no hyphens, underscores
-   or dashes in the visible text. The map and the unit are fixed examples, nothing is fetched for
-   them but the map's preview and the unit's icon. *@
+   or dashes in the visible text. The map and the unit are picked at random from a fixed set on
+   every visit (HomeExamples); nothing is fetched for them but the map's preview and the unit's icon. *@
 
 <section class="py-10 text-center sm:py-14">
     <h1 class="mx-auto max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">
@@ -65,19 +66,19 @@
 <section class="mx-auto mt-14 max-w-4xl" aria-labelledby="home-explore">
     <h2 id="home-explore" class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Look around</h2>
     <div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <a href="@MapLinks.Map(ExampleMapFolder)" class="@CardClass">
+        <a href="@MapLinks.Map(map.Folder)" class="@CardClass">
             @* The preview fills the panel twice: blurred behind, whole in front. The vault's previews
                have a thin black frame, which the slight zoom of the front one cuts off. *@
             <div class="relative -mx-4 -mt-4 flex h-64 items-center justify-center overflow-hidden border-b border-edge bg-raised sm:-mx-6 sm:-mt-6 sm:h-72" aria-hidden="true">
-                <img src="@MapPreviews.Url(ExampleMapFolder)" alt="" loading="lazy"
+                <img src="@MapPreviews.Url(map.Folder)" alt="" loading="lazy"
                      class="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-2xl" />
                 <span class="relative aspect-square h-[85%] overflow-hidden rounded-lg shadow-xl ring-1 ring-black/20 transition duration-500 group-hover:scale-105">
-                    <img src="@MapPreviews.Url(ExampleMapFolder)" alt="" loading="lazy" class="h-full w-full scale-[1.04] object-cover" />
+                    <img src="@MapPreviews.Url(map.Folder)" alt="" loading="lazy" class="h-full w-full scale-[1.04] object-cover" />
                 </span>
             </div>
             <p class="mt-6 font-display text-sm font-bold tracking-[0.2em] text-primary">MAPS</p>
-            <h3 class="mt-1 text-2xl font-bold text-ink">Gateway and Rose</h3>
-            <p class="mt-1 font-mono text-sm text-primary">@MapSizes.Kilometres(1024) · 8 players · by biass</p>
+            <h3 class="mt-1 text-2xl font-bold text-ink">@map.Name</h3>
+            <p class="mt-1 font-mono text-sm text-primary">@MapSizes.Kilometres(map.Size) · @map.Players players · by @map.Author</p>
             <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
                 Every map in the vault has a page of its own. See its terrain, where the mass is, how units can
                 move across it and how much there is to reclaim.
@@ -87,14 +88,14 @@
             </p>
         </a>
 
-        <a href="@ExampleUnitLink" class="@CardClass">
-            @* Its numbers in release 3837, as decoration: its history shows the current ones. *@
+        <a href="@UnitLinks.History([unit.BlueprintId])" class="@CardClass">
+            @* Its numbers in one release, as decoration: its history shows the current ones. *@
             <div class="-mx-4 -mt-4 flex h-64 flex-col items-center justify-center gap-5 border-b border-edge bg-raised sm:-mx-6 sm:-mt-6 sm:h-72" aria-hidden="true">
                 <span class="rounded-lg border border-edge bg-surface p-1.5 transition duration-500 group-hover:scale-110 group-hover:border-primary">
-                    <UnitIcon BlueprintId="@ExampleUnitId" Size="96" Title="" />
+                    <UnitIcon BlueprintId="@unit.BlueprintId" Size="96" Title="" />
                 </span>
                 <span class="flex gap-2 font-mono text-sm">
-                    @foreach ((string label, string value) in ExampleUnitStats)
+                    @foreach ((string label, string value) in unit.Stats)
                     {
                         <span class="flex flex-col items-center rounded-md border border-edge bg-surface px-3 py-1.5">
                             <span class="text-xs text-ink-muted">@label</span>
@@ -104,8 +105,8 @@
                 </span>
             </div>
             <p class="mt-6 font-display text-sm font-bold tracking-[0.2em] text-primary">UNITS</p>
-            <h3 class="mt-1 text-2xl font-bold text-ink">Loyalist</h3>
-            <p class="mt-1 font-mono text-sm text-primary">Cybran · Tech 3 · Siege Assault Bot</p>
+            <h3 class="mt-1 text-2xl font-bold text-ink">@unit.Name</h3>
+            <p class="mt-1 font-mono text-sm text-primary">@unit.Faction.DisplayName() · @unit.Tech · @unit.Description</p>
             <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
                 Every unit of every FAF release. Follow how its cost, health and weapons changed over
                 the years, release by release.
@@ -135,14 +136,9 @@
 @code {
     private const int ExampleReplayId = 25692731;
 
-    private const string ExampleMapFolder = "gateway_and_rose.v0002";
-
-    private const string ExampleUnitId = "url0303";
-
-    private static readonly string ExampleUnitLink = UnitLinks.History([ExampleUnitId]);
-
-    private static readonly (string Label, string Value)[] ExampleUnitStats =
-        [("Health", "3000"), ("Mass", "480"), ("Energy", "5250")];
+    // Picked once per visit: a new instance of the page is a new pick.
+    private readonly ExampleMap map = HomeExamples.PickMap();
+    private readonly ExampleUnit unit = HomeExamples.PickUnit();
 
     private const string CardClass = "card group relative flex flex-col overflow-hidden transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]";
 
