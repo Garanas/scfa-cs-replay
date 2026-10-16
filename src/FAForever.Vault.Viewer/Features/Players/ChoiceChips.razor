@@ -2,7 +2,7 @@
 
 @* One choice among a few as chips, kept in one query parameter (the default stays out of the URL).
    Period presets, boards and the achievement filter all use it. *@
-<fieldset class="min-w-0">
+<fieldset class="min-w-0" role="group" aria-label="@Label">
     <legend class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">@Label</legend>
     <div class="flex flex-wrap gap-1.5">
         @foreach (ChoiceOption option in Options)

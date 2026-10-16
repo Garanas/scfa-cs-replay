@@ -33,7 +33,9 @@ faf-map editor stroke points=[[10,10],[50,50]]              # ...commands like t
 ## Web app
 
 The repository also ships a web app to search, inspect and analyse replays, and to browse the
-units of the base game and of every game version since 3603 (the Units tab, from `wwwroot/data/units/`):
+units of the base game and of every game version since 3603 (the Units tab, from `wwwroot/data/units/`),
+to read a player's rating history, games and factions, the leaderboards and the leagues, and to compare two
+players (the Players section, from the FAForever API once signed in):
 
 - `src/FAForever.Vault.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
   faction colour themes, light and dark) that parses replays entirely in the browser.

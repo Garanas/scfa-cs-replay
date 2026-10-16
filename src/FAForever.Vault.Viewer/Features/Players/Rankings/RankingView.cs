@@ -55,6 +55,70 @@ public static class RankingView
         PageSize = PageSize,
     };
 
+    /// <summary>
+    /// The address parameters that hold a value the page does not read as given: an unknown board
+    /// (not in <paramref name="knownBoards"/>), a "settled" other than 0, an unknown "played in", a
+    /// page that is not a number above 1. The page drops them from the address.
+    /// </summary>
+    public static IReadOnlyList<string> StaleParameters(string? board, string? settled, string? active, string? page, IEnumerable<string> knownBoards)
+    {
+        List<string> stale = [];
+        if (board is not null && !knownBoards.Contains(board))
+        {
+            stale.Add("board");
+        }
+
+        if (settled is not null && settled != "0")
+        {
+            stale.Add("settled");
+        }
+
+        if (active is not null && (!PlayerFilters.Activity.Any(option => option.Token == active) || active == DefaultActivity))
+        {
+            stale.Add("active");
+        }
+
+        if (page is not null && PageNumber(page) <= 1)
+        {
+            stale.Add("page");
+        }
+
+        return stale;
+    }
+
+    /// <summary>The last page of a result: from the page count when the API gave one, else from the total.</summary>
+    public static int LastPage(int? totalPages, int? totalRecords, int pageSize)
+        => Math.Max(1, totalPages ?? (totalRecords is { } total ? (total + Math.Max(pageSize, 1) - 1) / Math.Max(pageSize, 1) : 1));
+
+    /// <summary>
+    /// The line under the table. Unfiltered: the ranks shown out of the board's players. With a name
+    /// filter the ranks mean nothing next to a count of matches, so it says how many players match and
+    /// which of those are on the page.
+    /// </summary>
+    public static string RangeText(int itemCount, int firstRank, int lastRank, int page, int pageSize, int? total, string? name)
+    {
+        string Count(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            string matches = total is { } found ? $"{Count(found)} {(found == 1 ? "player matches" : "players match")} \"{name.Trim()}\"" : $"Players matching \"{name.Trim()}\"";
+            if (itemCount == 0)
+            {
+                return matches;
+            }
+
+            int first = (page - 1) * pageSize + 1;
+            return $"{matches}, showing {Count(first)} to {Count(first + itemCount - 1)}";
+        }
+
+        if (itemCount == 0)
+        {
+            return "No ranks to show";
+        }
+
+        string range = $"Ranks {Count(firstRank)} to {Count(lastRank)}";
+        return total is { } all ? $"{range} of {Count(all)}" : range;
+    }
+
     /// <summary>The page of the table that holds a rank (rank 1 to 50 is page 1).</summary>
     public static int PageOfRank(int rank, int pageSize = PageSize) => Math.Max(rank - 1, 0) / Math.Max(pageSize, 1) + 1;
 

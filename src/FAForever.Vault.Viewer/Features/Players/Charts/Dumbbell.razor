@@ -2,23 +2,23 @@
 @* Two values on one track per row, joined by a bar: the gap between two players is the difference.
    The first value is viz-1, the second viz-2, named in the legend above. The values are written at
    the end of the row, first then second. *@
-<div>
+<div class="@@container">
     <div class="mb-3">
         <Legend Items="legend" />
     </div>
-    <div class="grid grid-cols-[minmax(0,6rem)_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3.5 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto]" role="list" aria-label="@AriaLabel">
+    <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 @@md:grid-cols-[minmax(0,9rem)_minmax(8rem,1fr)_auto] @@md:gap-y-3.5" role="list" aria-label="@AriaLabel">
         @foreach (DumbbellRow row in Rows)
         {
-            <div class="contents" role="listitem">
-                <div class="min-w-0 truncate text-sm text-ink">@row.Label</div>
-                <div class="relative mx-1.5 h-4">
+            <div class="col-span-full grid grid-cols-subgrid items-center" role="listitem">
+                <div class="min-w-0 truncate text-sm text-ink ">@row.Label</div>
+                <div class="relative col-span-2 row-start-2 mx-1.5 mb-2.5 h-4 min-w-[8rem] @@md:col-span-1 @@md:col-start-2 @@md:row-start-1 @@md:mb-0">
                     <div class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-edge"></div>
                     <div class="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-ink-faint"
                          style="left:@At(Math.Min(row.A, row.B))%;width:@Span(row)%"></div>
                     <span class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-viz-1 ring-2 ring-surface" style="left:@At(row.A)%"></span>
                     <span class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-viz-2 ring-2 ring-surface" style="left:@At(row.B)%"></span>
                 </div>
-                <div class="text-right text-sm text-ink-muted">
+                <div class="text-right text-sm text-ink-muted @@md:col-start-3 @@md:row-start-1">
                     @row.AText &middot; @row.BText
                     @if (row.GapText is { Length: > 0 })
                     {
