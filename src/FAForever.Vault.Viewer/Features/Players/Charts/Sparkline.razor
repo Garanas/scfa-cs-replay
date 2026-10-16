@@ -1,0 +1,53 @@
+@using System.Globalization
+@* A line without axes: a trend at a glance, with a dot on the last value. Pixel sized, so nothing stretches. *@
+<svg width="@Width" height="@Height" viewBox="0 0 @Width @Height" class="block max-w-full overflow-visible" role="img" aria-label="@AriaLabel">
+    @if (path.Length > 0)
+    {
+        <path d="@path" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" class="@ChartColors.Stroke(Color)" />
+        <circle cx="@endX" cy="@endY" r="3" class="@ChartColors.Fill(Color)" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<double> Values { get; set; }
+
+    [Parameter] public int Width { get; set; } = 96;
+
+    [Parameter] public int Height { get; set; } = 28;
+
+    [Parameter] public ChartColor Color { get; set; } = ChartColor.Primary;
+
+    [Parameter] public string AriaLabel { get; set; } = "Trend";
+
+    private string path = "";
+    private string endX = "0";
+    private string endY = "0";
+
+    protected override void OnParametersSet()
+    {
+        path = "";
+        if (Values.Count < 2)
+        {
+            return;
+        }
+
+        const int pad = 4;
+        double min = Values.Min(), max = Values.Max();
+        double range = max - min > 0 ? max - min : 1;
+        static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+        var parts = new List<string>(Values.Count);
+        for (int i = 0; i < Values.Count; i++)
+        {
+            double x = pad + i * (Width - 2 * pad) / (double)(Values.Count - 1);
+            double y = pad + (max - Values[i]) / range * (Height - 2 * pad);
+            parts.Add((i == 0 ? "M" : "L") + F(x) + " " + F(y));
+            if (i == Values.Count - 1)
+            {
+                endX = F(x);
+                endY = F(y);
+            }
+        }
+
+        path = string.Join(' ', parts);
+    }
+}

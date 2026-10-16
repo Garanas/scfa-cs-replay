@@ -1,0 +1,15 @@
+@* The Overview tab of a profile: the rating of one board over a period, then the cards of every
+   board, the clan, the name history and the achievements. A shell: it draws the filter row and
+   waits for its data. *@
+<section aria-label="Overview">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <ChoiceSelect Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="@PlayerFilters.DefaultBoard" />
+        <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+    </div>
+    <NextStepNote Text="The ratings, the rating chart and the recent games of this player arrive in the next step." />
+</section>
+
+@code {
+    /// <summary>The player's id; the data is fetched by it.</summary>
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+}

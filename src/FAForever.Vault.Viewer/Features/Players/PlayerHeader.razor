@@ -1,0 +1,70 @@
+@using System.Globalization
+@* The top of a profile: the name (or "Player {id}" until it is known), the clan, the id, since when
+   the account exists and the names it had. The actions (share, compare) come in as content, on the
+   right, and wrap below the name on narrow screens. *@
+<header class="flex flex-wrap items-start gap-x-6 gap-y-4 border-b border-edge pb-6">
+    <div class="flex min-w-0 flex-1 basis-72 items-start gap-4">
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-edge bg-raised font-display text-2xl font-bold text-primary sm:h-16 sm:w-16" aria-hidden="true">@Initial</span>
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <h1 class="break-words font-display text-3xl font-bold leading-tight">@(Name ?? $"Player {Id}")</h1>
+                @if (ClanTag is { Length: > 0 })
+                {
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-edge bg-raised px-2.5 py-0.5 text-sm font-semibold">
+                        @ClanTag
+                        @if (ClanName is { Length: > 0 })
+                        {
+                            <span class="font-normal text-ink-muted">@ClanName</span>
+                        }
+                    </span>
+                }
+            </div>
+            <p class="mt-1.5 flex flex-wrap gap-x-2 text-sm text-ink-muted">
+                @if (Name is not null)
+                {
+                    <span>Player @Id</span>
+                }
+                @if (MemberSince is { } since)
+                {
+                    <span>@(Name is not null ? "· " : "")Member since @since.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture)</span>
+                }
+            </p>
+            @if (FormerNames is { Count: > 0 })
+            {
+                <p class="mt-1 text-sm text-ink-muted">
+                    Formerly
+                    @for (int i = 0; i < FormerNames.Count; i++)
+                    {
+                        FormerName former = FormerNames[i];
+                        <span>@(i > 0 ? ", " : "")<span class="text-ink">@former.Name</span>@(former.Until is { } until ? $" until {until.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture)}" : "")</span>
+                    }
+                </p>
+            }
+        </div>
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="flex flex-wrap items-center gap-2">@Actions</div>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired] public int Id { get; set; }
+
+    /// <summary>The current name; null until it is known.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    [Parameter] public string? ClanTag { get; set; }
+
+    [Parameter] public string? ClanName { get; set; }
+
+    [Parameter] public DateTimeOffset? MemberSince { get; set; }
+
+    /// <summary>Earlier names, newest first, each with when it stopped being the name.</summary>
+    [Parameter] public IReadOnlyList<FormerName>? FormerNames { get; set; }
+
+    /// <summary>Buttons on the right: share, compare.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    private string Initial => Name is { Length: > 0 } name ? name[..1].ToUpperInvariant() : "#";
+}

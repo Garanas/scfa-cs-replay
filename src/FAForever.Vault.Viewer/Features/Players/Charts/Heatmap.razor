@@ -1,0 +1,68 @@
+@using System.Globalization
+@* Rows by columns in one hue: more is the same colour at a higher opacity (steps of the scale in
+   the legend). Row and column labels are HTML; blank a column label to leave it out. Each cell has
+   a title for the exact number. *@
+<div role="img" aria-label="@AriaLabel">
+    <div class="grid items-center gap-0.5" style="grid-template-columns:auto repeat(@ColumnLabels.Count, minmax(0, 1fr))">
+        @for (int r = 0; r < Values.Count; r++)
+        {
+            <div class="pr-2 text-xs text-ink-muted">@RowLabels[r]</div>
+            @for (int c = 0; c < ColumnLabels.Count; c++)
+            {
+                double value = c < Values[r].Count ? Values[r][c] : 0;
+                <div class="h-6 rounded-[3px] bg-primary" style="opacity:@Opacity(value)" title="@Title(r, c, value)"></div>
+            }
+        }
+        <div></div>
+        @foreach (string label in ColumnLabels)
+        {
+            <div class="relative mt-1 h-4 text-xs text-ink-muted"><span class="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">@label</span></div>
+        }
+    </div>
+    <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+        <span>@LowLabel</span>
+        <span class="flex gap-0.5" aria-hidden="true">
+            @for (int step = 0; step <= Steps; step++)
+            {
+                <span class="h-2.5 w-5 rounded-[3px] bg-primary" style="opacity:@StepOpacity(step)"></span>
+            }
+        </span>
+        <span>@HighLabel</span>
+    </div>
+</div>
+
+@code {
+    private const int Steps = 4;
+
+    [Parameter, EditorRequired] public required IReadOnlyList<IReadOnlyList<double>> Values { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<string> RowLabels { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<string> ColumnLabels { get; set; }
+
+    /// <summary>The value of the darkest cell; default the largest.</summary>
+    [Parameter] public double? Max { get; set; }
+
+    /// <summary>The text of a cell's title; default "row, column: value".</summary>
+    [Parameter] public Func<int, int, double, string>? CellTitle { get; set; }
+
+    [Parameter] public string LowLabel { get; set; } = "Fewer";
+
+    [Parameter] public string HighLabel { get; set; } = "More";
+
+    [Parameter] public string AriaLabel { get; set; } = "Heatmap";
+
+    private double max;
+
+    protected override void OnParametersSet()
+        => max = Max ?? (Values.Count == 0 ? 0 : Values.Max(row => row.Count == 0 ? 0 : row.Max()));
+
+    private string Opacity(double value)
+        => (value <= 0 || max <= 0 ? 0.06 : 0.15 + 0.85 * Math.Clamp(value / max, 0, 1)).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string StepOpacity(int step)
+        => (step == 0 ? 0.06 : 0.15 + 0.85 * step / Steps).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private string Title(int row, int column, double value)
+        => CellTitle?.Invoke(row, column, value) ?? $"{RowLabels[row]}, {ColumnLabels[column]}: {value.ToString("N0", CultureInfo.InvariantCulture)}";
+}

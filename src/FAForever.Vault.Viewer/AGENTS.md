@@ -529,6 +529,73 @@ chosen faction (`NotFoundMessages.cs`, four or five per faction), with the icon 
   different one. The choice is not in the URL: the page has no state worth sharing.
 - The unit ids must be in the icon atlas (a missing one shows the placeholder icon).
 
+## Players tab
+
+The Players tab is built like the Maps tab: `Pages/Players.razor` (`/players`) is an entry page with a
+search and a card per page below it, and each page links back ("← Players"). The plan is
+[`docs/vault/players-plan.md`](../../docs/vault/players-plan.md) (data, stories, decisions). Paths, the
+`tab` values and the helpers that build a link are in `Features/Players/PlayerLinks.cs`; the choices of
+the filter rows are in `Features/Players/PlayerFilters.cs`.
+
+| Page | Path | What |
+|---|---|---|
+| `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
+| `Pages/PlayerPage.razor` | `players/{id}` | A profile: `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). |
+| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time. |
+| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season: players per subdivision, the standings. |
+| `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
+
+A profile is addressed by the numeric id, never by name. The pages below `players/` other than a profile
+share `PlayersSectionTabs` (Rankings, Leagues, Compare).
+
+**Every Players page needs a signed in user** (the API refuses anonymous calls): signed out, a page shows
+`PlayersLoginGate` in place of its content (the landing page only in place of the search). Nothing is
+fetched anonymously, and the server never calls the API (its link preview cards are fixed; a profile gets
+one generic card).
+
+The URL parameters (defaults stay out of the URL; every page with state inherits `UrlStateComponent`, the
+filter components inherit `PlayerUrlComponent`, which writes with `replace: true` and drops `page`):
+
+| Parameter | Page | Meaning | Default when absent | Implemented |
+|---|---|---|---|---|
+| `q` | landing, rankings | Search text; on rankings, part of a name in the table | none | the field (wave 31), the results (wave 32) |
+| `tab` | profile | `rating`, `matches`, `army` | Overview | wave 31 |
+| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games, wave 32) | the control (wave 31), the data (wave 32) |
+| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` | the control (wave 31), the data (wave 32) |
+| `page` | lists | Page number | 1 | wave 32 |
+| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter | the controls (wave 31), `sort` and the data (wave 32) |
+| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all | the control (wave 31), the data (wave 32) |
+| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only | the control (wave 31) |
+| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` | the control (wave 31) |
+| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the latest season | wave 32 |
+| `a`, `b` | compare | Player ids | none | wave 32 |
+
+Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`), `ChoiceSelect`
+(a select) and `TextFilter` (a search field written on change), each bound to one query parameter by its
+`Query` parameter. Chips and fields are 44 px high. `NextStepNote` is the one quiet line of a page whose
+data is not there yet.
+
+### Chart components and the gallery
+
+The charts are in `Features/Players/Charts/`, take plain data (records in `ChartModels.cs`, no API types)
+and use only semantic tokens. The rules (plan, decision 4): the player's own series in `primary`, two
+players in `viz-1` and `viz-2`, magnitudes in one hue, good and bad changes in `viz-3` and `viz-8` with a
+sign or a word (never colour alone), text never wears a series colour, a legend for two or more series,
+selective labels (never a number on every point), `tabular-nums` only in tables and axes, no borders
+around marks, 2 px between bars. Tailwind only sees class names that appear literally in a `.razor` or
+`.cs` file: pick colours through `ChartColor` and `ChartColors`, never build a class from a number.
+
+| Component | What |
+|---|---|
+| `LineChart` | Over time; measures its width (`fafReplay.observeWidth`, a ResizeObserver) and draws at pixel size; optional wash, step line, marked point, second line, vertical marks, second panel on the same time axis; crosshair and tooltip (`RenderFragment<LinePoint>`) on pointer or arrow keys |
+| `BarRows`, `ColumnChart`, `Histogram`, `Heatmap`, `Dumbbell` | HTML and CSS (no measuring) |
+| `Sparkline`, `ScoreMeter`, `StatTile`, `Legend` | Small parts |
+
+`Pages/ChartGallery.razor` (`/dev/charts`) is the visual test bench: every component in every variant with
+fixed demo data. It renders only when `IWebAssemblyHostEnvironment.IsDevelopment()` (the 404 page
+otherwise) and is linked nowhere. Check a change to a chart there in both modes at 1440 and 390 px. A new
+chart or variant gets an entry in the gallery.
+
 ## Home page
 
 `Pages/Home.razor` (`/`) opens a replay (an id or link, a file), then shows one map and one unit under

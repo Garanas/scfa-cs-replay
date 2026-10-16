@@ -1,0 +1,63 @@
+@using System.Globalization
+@* Columns side by side (2 px apart), the category below and a selective label on top (only items
+   that carry a TopLabel). Columns start at a flat baseline and are rounded by 4 px at the data end.
+   Marker draws a hairline across the chart at one value (50 %). The text is HTML, so it keeps its
+   size at every width. *@
+<div role="img" aria-label="@AriaLabel">
+    <div class="relative" style="height:@(Height)px">
+        <div class="absolute inset-x-0 bottom-0 flex items-end gap-0.5 border-b border-edge" style="height:@(Height)px">
+            @foreach (ColumnItem item in Items)
+            {
+                <div class="flex h-full min-w-0 flex-1 flex-col items-center justify-end" title="@item.Title">
+                    @if (item.TopLabel is { Length: > 0 })
+                    {
+                        <span class="mb-1 whitespace-nowrap text-xs text-ink-muted">@item.TopLabel</span>
+                    }
+                    <div class="w-full rounded-t-[4px] @ChartColors.Bg(item.Color)" style="height:@BarHeight(item.Value)px"></div>
+                </div>
+            }
+        </div>
+        @if (Marker is { } marker && max > 0)
+        {
+            <div class="pointer-events-none absolute inset-x-0 border-t border-ink-faint" style="bottom:@(BarHeightOf(marker))px">
+                @if (MarkerLabel is { Length: > 0 })
+                {
+                    <span class="absolute right-0 -top-4 text-xs text-ink-faint">@MarkerLabel</span>
+                }
+            </div>
+        }
+    </div>
+    <div class="mt-1.5 flex gap-0.5 text-xs text-ink-muted" aria-hidden="true">
+        @foreach (ColumnItem item in Items)
+        {
+            <div class="min-w-0 flex-1 truncate text-center">@item.Label</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<ColumnItem> Items { get; set; }
+
+    /// <summary>The height of the plot in pixels (the labels come on top of it and below).</summary>
+    [Parameter] public int Height { get; set; } = 160;
+
+    /// <summary>The value a full column stands for; default the largest.</summary>
+    [Parameter] public double? Max { get; set; }
+
+    [Parameter] public double? Marker { get; set; }
+
+    [Parameter] public string? MarkerLabel { get; set; }
+
+    [Parameter] public string AriaLabel { get; set; } = "Columns";
+
+    private const int TopRoom = 20;
+
+    private double max;
+
+    protected override void OnParametersSet()
+        => max = Max ?? (Items.Count == 0 ? 0 : Items.Max(item => item.Value));
+
+    private double BarHeightOf(double value) => max <= 0 ? 0 : Math.Clamp(value / max, 0, 1) * (Height - TopRoom);
+
+    private string BarHeight(double value) => BarHeightOf(value).ToString("0.#", CultureInfo.InvariantCulture);
+}

@@ -1,0 +1,43 @@
+@page "/players/leagues"
+@inherits UrlStateComponent
+
+@* The leagues: a league and a season, the players per subdivision, the standings of one subdivision.
+   A shell: the league, season and subdivision lists come from the API. *@
+
+<PageTitle>Leagues · Vault of FAForever</PageTitle>
+
+<a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
+<div class="mt-2 flex items-start justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold">Leagues</h1>
+        <p class="mt-1 text-sm text-ink-muted">The divisions of each season and who stands where.</p>
+    </div>
+    <ShareButton Title="Leagues on Vault of FAForever" Class="btn-secondary min-h-11 shrink-0 gap-1.5 px-3" />
+</div>
+
+<div class="mt-6">
+    <PlayersSectionTabs Active="Leagues" />
+</div>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <PlayersLoginGate What="the leagues" />
+    </NotAuthorized>
+    <Authorized>
+        <div class="card mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block min-w-0 text-sm">
+                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">League</span>
+                <select class="input-field min-h-11" disabled>
+                    <option>Ladder 1v1</option>
+                </select>
+            </label>
+            <label class="block min-w-0 text-sm">
+                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Season</span>
+                <select class="input-field min-h-11" disabled>
+                    <option>Latest season</option>
+                </select>
+            </label>
+        </div>
+        <NextStepNote Text="The leagues, seasons and standings arrive in the next step." />
+    </Authorized>
+</AuthorizeView>

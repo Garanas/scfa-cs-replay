@@ -1,0 +1,53 @@
+@page "/players/rankings"
+@inherits UrlStateComponent
+
+@* The leaderboards: a board at a time, its table in pages of 50, the rating histogram. A shell. *@
+
+<PageTitle>Rankings · Vault of FAForever</PageTitle>
+
+<a href="@PlayerLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Players</a>
+<div class="mt-2 flex items-start justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold">Rankings</h1>
+        <p class="mt-1 text-sm text-ink-muted">The best players of each leaderboard, by rating.</p>
+    </div>
+    <ShareButton Title="@ShareTitle" Class="btn-secondary min-h-11 shrink-0 gap-1.5 px-3" />
+</div>
+
+<div class="mt-6">
+    <PlayersSectionTabs Active="Rankings" />
+</div>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <PlayersLoginGate What="the rankings" />
+    </NotAuthorized>
+    <Authorized>
+        <div class="card mt-6 grid grid-cols-1 gap-4">
+            <ChoiceChips Label="Leaderboard" Query="board" Options="PlayerFilters.Boards" Default="ladder_1v1" />
+            <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-end">
+                <ChoiceSelect Label="Played in" Query="active" Options="PlayerFilters.Activity" Default="90d" />
+                <TextFilter Label="Find in the ranking" Query="q" Placeholder="Part of a name" />
+                <label class="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-muted">
+                    <input type="checkbox" class="h-4 w-4 accent-primary" checked="@settledOnly" @onchange="ToggleSettled" />
+                    Settled ratings only (σ below 100)
+                </label>
+            </div>
+        </div>
+        <NextStepNote Text="The ranking table and the rating histogram arrive in the next step." />
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private bool settledOnly = true;
+
+    private string ShareTitle => "Rankings on Vault of FAForever";
+
+    protected override void OnParametersSet() => settledOnly = UrlQuery.Get(Navigation, "settled") != "0";
+
+    private void ToggleSettled()
+    {
+        var parameters = new Dictionary<string, object?> { ["settled"] = settledOnly ? "0" : null, ["page"] = null };
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), replace: true);
+    }
+}

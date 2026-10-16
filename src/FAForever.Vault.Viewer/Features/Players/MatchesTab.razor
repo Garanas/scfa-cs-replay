@@ -1,0 +1,28 @@
+@inherits PlayerUrlComponent
+
+@* The Matches tab: one filter row (period, mode, faction, result, map, with or against), then tiles,
+   win share by faction, game length and map, the weekday heatmap and the games table. A shell. *@
+<section aria-label="Matches">
+    <div class="card grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <ChoiceSelect Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+        <ChoiceSelect Label="Mode" Query="mode" Options="PlayerFilters.Modes" Default="all" />
+        <ChoiceSelect Label="Faction" Query="faction" Options="PlayerFilters.Factions" Default="any" />
+        <ChoiceSelect Label="Result" Query="result" Options="PlayerFilters.Results" Default="any" />
+        <TextFilter Label="Map" Query="map" Placeholder="Part of the map name" />
+        <TextFilter Label="With or against" Query="with" Placeholder="Player name" />
+        <div class="sm:col-span-2 lg:col-span-3 xl:col-span-6">
+            <button type="button" class="btn-secondary min-h-11" disabled="@(!AnyFilter)" @onclick="Reset">Reset filters</button>
+        </div>
+    </div>
+    <NextStepNote Text="The matches of this player arrive in the next step." />
+</section>
+
+@code {
+    private static readonly string[] Filters = ["period", "mode", "faction", "result", "map", "with", "sort"];
+
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+
+    private bool AnyFilter => Filters.Any(name => Read(name) is not null);
+
+    private void Reset() => Write(Filters.ToDictionary(name => name, _ => (string?)null));
+}

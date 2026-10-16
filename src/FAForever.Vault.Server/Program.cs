@@ -127,8 +127,9 @@ app.MapGet("/maps/{folder}", async (string folder, HttpContext context, IWebHost
     return Results.Content(html, "text/html; charset=utf-8");
 });
 
-// The unit pages get a card about the units in their address, the About pages a fixed one.
-foreach (string path in PageLinkPreview.Paths)
+// The unit pages get a card about the units in their address, the About pages a fixed one, a player's
+// profile (/players/{id}) one generic card.
+foreach (string path in PageLinkPreview.Paths.Append(PageLinkPreview.ProfileRoute))
 {
     app.MapGet(path, async (HttpContext context, PageLinkPreview preview, CancellationToken cancellationToken) =>
     {

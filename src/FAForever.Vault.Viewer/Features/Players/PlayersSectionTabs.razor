@@ -1,0 +1,24 @@
+@* The tab strip of the pages below Players that are not a profile: Rankings, Leagues and Compare.
+   Pages of their own, so the tabs are links. *@
+<nav class="tab-strip border-b border-edge pb-px" aria-label="Players sections">
+    @foreach ((string title, string path) in Sections)
+    {
+        bool active = title == Active;
+        <a href="@path" aria-current="@(active ? "page" : null)" class="@(active ? ActiveClass : TabClass) inline-flex min-h-11 items-center">@title</a>
+    }
+</nav>
+
+@code {
+    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
+
+    private static readonly (string Name, string Path)[] Sections =
+    [
+        ("Rankings", PlayerLinks.Rankings),
+        ("Leagues", PlayerLinks.Leagues),
+        ("Compare", PlayerLinks.Compare),
+    ];
+
+    /// <summary>The section of the page: "Rankings", "Leagues" or "Compare".</summary>
+    [Parameter, EditorRequired] public required string Active { get; set; }
+}

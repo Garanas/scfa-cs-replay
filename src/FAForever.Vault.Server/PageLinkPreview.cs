@@ -56,6 +56,14 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
             "Every game on FAF can be watched again. This page opens a replay and goes from loose bytes to build orders and APM, one step at a time."),
         ["/about/blueprints"] = new("Inside a blueprint",
             "Every unit in the game is described in a text file. This page opens the blueprint of the Fatboy and shows how a whole game is built from files like it."),
+        ["/players"] = new("Every player on FAF",
+            "Look up a player to see their ratings, games and factions. See who is on top, how the leagues stand, and how two players compare."),
+        ["/players/rankings"] = new("Rankings",
+            "The best players of each FAF leaderboard, by rating, with their games and wins."),
+        ["/players/leagues"] = new("Leagues",
+            "The divisions of each FAF league season, how many players sit in each, and the standings of every subdivision."),
+        ["/players/compare"] = new("Compare two players",
+            "Put two FAF players next to each other: ratings per leaderboard, the factions they play, and their games against each other."),
         ["/units"] = new("Every unit, in every version",
             "FAF changes the game with every release. Look up what a unit is today, and see how it got there."),
         ["/units/database"] = new("The unit database",
@@ -69,6 +77,21 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     {
         ["/about/blueprints"] = ("uel0401", "Fatboy"),
     };
+
+    /// <summary>
+    /// The card of every player profile (<c>/players/2049311</c>): one generic card, since the profile
+    /// is read from the FAF API, which answers signed in players only, and the server never calls it.
+    /// </summary>
+    private static readonly LinkPreviewCard ProfileCard = new("A player on FAF",
+        "Ratings, rating history, games and army statistics of a FAForever player.");
+
+    /// <summary>The route of a profile; Program.cs maps it next to <see cref="Paths"/>.</summary>
+    public const string ProfileRoute = "/players/{id:int}";
+
+    private static LinkPreviewCard? ProfileCardFor(string path) =>
+        path.StartsWith("/players/", StringComparison.OrdinalIgnoreCase) && int.TryParse(path.AsSpan("/players/".Length), NumberStyles.None, CultureInfo.InvariantCulture, out _)
+            ? ProfileCard
+            : null;
 
     /// <summary>The paths that get a card of their own; Program.cs maps each to <see cref="RenderAsync"/>.</summary>
     public static IEnumerable<string> Paths => FixedCards.Keys;
@@ -94,7 +117,7 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
             logger.LogWarning(exception, "No unit link preview for {Path}{Query}", path, request.QueryString);
         }
 
-        card ??= FixedCards.GetValueOrDefault(path);
+        card ??= FixedCards.GetValueOrDefault(path) ?? ProfileCardFor(path);
         if (card is null)
         {
             return html;
