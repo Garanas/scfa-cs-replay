@@ -220,6 +220,22 @@ public class MatchFormatTest
     }
 
     [TestMethod]
+    public void GamesWithoutAMapAreLeftOutOfTheMapRows()
+    {
+        PlayerMatch[] matches =
+        [
+            Game(1, "Wonder", MatchResult.Victory),
+            Game(2, null!, MatchResult.Defeat),
+            Game(3, null!, MatchResult.Victory),
+        ];
+
+        var rows = MatchFormat.MapRows(matches);
+
+        Assert.AreEqual(1, rows.Count);
+        Assert.AreEqual("Wonder", rows[0].Label);
+    }
+
+    [TestMethod]
     public void TheBusiestCellIsNamed()
     {
         // 2026-10-10 is a Saturday; 18:30 UTC is in the block 16 to 20.
@@ -349,7 +365,7 @@ public class ArmyAndAchievementsTest
 
         Assert.AreEqual(100, ArmyFormat.Games(army));
         Assert.AreEqual(0.5, ArmyFormat.WinShare(army)!.Value, 1e-9);
-        Assert.AreEqual("100 h", ArmyFormat.Hours(army.HoursPlayed));
+        Assert.AreEqual("100 h", ArmyFormat.Hours(army.HoursPlayed!.Value));
         Assert.AreEqual("60 min per game", ArmyFormat.AverageGame(army));
         Assert.AreEqual(1400, ArmyFormat.Built(army.ByCategory));
         Assert.AreEqual(350, ArmyFormat.Lost(army.ByCategory));

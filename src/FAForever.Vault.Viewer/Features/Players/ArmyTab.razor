@@ -50,7 +50,7 @@
         FactionPlays? main = ArmyFormat.MainFaction(summary.Factions);
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <InfoTile Label="Time in game" Value="@ArmyFormat.Hours(summary.HoursPlayed)" Sub="@ArmyFormat.AverageGame(summary)" />
+            <InfoTile Label="Time in game" Value="@ArmyFormat.HoursOrNotRecorded(summary.HoursPlayed)" Sub="@(summary.HoursPlayed is null ? ArmyFormat.HoursNotRecordedSub : ArmyFormat.AverageGame(summary))" />
             <InfoTile Label="Games with a faction recorded" Value="@MatchFormat.Count(games)" Sub="@(games > 0 ? $"{MatchFormat.Percent(ArmyFormat.WinShare(summary))} won" : null)" />
             <InfoTile Label="Units built" Value="@MatchFormat.Count(built)"
                       Sub="@($"{MatchFormat.Count(lost)} lost, {MatchFormat.Percent(ArmyFormat.LostShare(built, lost))}")" />
@@ -80,8 +80,15 @@
 
         <section class="card" aria-labelledby="a-modes">
             <h2 id="a-modes" class="text-[1rem] font-semibold text-ink">Where the games were played</h2>
-            <p class="mt-1 mb-4 text-sm text-ink-muted">Custom lobbies against matchmaker games.</p>
-            <StackedBar Segments="ArmyFormat.ModeSegments(summary)" AriaLabel="Custom games against matchmaker games" />
+            @if (ArmyFormat.HasModeCounters(summary))
+            {
+                <p class="mt-1 mb-4 text-sm text-ink-muted">Custom lobbies against matchmaker games.</p>
+                <StackedBar Segments="ArmyFormat.ModeSegments(summary)" AriaLabel="Custom games against matchmaker games" />
+            }
+            else
+            {
+                <p class="mt-1 text-sm text-ink-muted">The game stopped counting custom and matchmaker games apart</p>
+            }
         </section>
 
         <section class="card" aria-labelledby="a-units">

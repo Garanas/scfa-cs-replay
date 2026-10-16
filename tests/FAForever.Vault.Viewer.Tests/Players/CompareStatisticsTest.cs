@@ -18,6 +18,7 @@ public class CompareStatisticsTest
         {
             [PlayerEvents.LadderGamesPlayed] = ladder,
             [PlayerEvents.CustomGamesPlayed] = custom,
+            [PlayerEvents.UefPlays] = ladder + custom,
             [PlayerEvents.SecondsPlayed] = seconds,
             [PlayerEvents.AcusLost] = acus,
         });
@@ -56,8 +57,8 @@ public class CompareStatisticsTest
         Assert.AreEqual("100%", Row("Win share in the period").A);
         Assert.AreEqual("0%", Row("Win share in the period").B);
         Assert.AreEqual(Better.A, Row("Peak rating in the period").Better);
-        Assert.AreEqual(Better.A, Row("Games played in total").Better);
-        Assert.AreEqual("150", Row("Games played in total").A);
+        Assert.AreEqual(Better.A, Row("Games with a faction recorded").Better);
+        Assert.AreEqual("150", Row("Games with a faction recorded").A);
         Assert.AreEqual(Better.A, Row("Hours in game").Better);
         Assert.AreEqual(Better.B, Row("ACUs lost per game").Better);
         Assert.AreEqual("0.20", Row("ACUs lost per game").A);
@@ -73,6 +74,26 @@ public class CompareStatisticsTest
 
         Assert.IsTrue(rows.All(row => row.Better == Better.Neither));
         Assert.AreEqual("None", rows.Single(row => row.Label == "Win share in the period").A);
+    }
+
+    [TestMethod]
+    public void AbsentCountersGiveNotRecordedAndDivideByTheFactionGames()
+    {
+        PlayerEventCounts events = new(new Dictionary<string, long>
+        {
+            [PlayerEvents.UefPlays] = 60,
+            [PlayerEvents.CybranPlays] = 40,
+            [PlayerEvents.AcusLost] = 50,
+        });
+        PlayerFacts a = new([], events, 0);
+        IReadOnlyList<FactRow> rows = CompareStatistics.Facts(a, a, 40, Now);
+        FactRow Row(string label) => rows.Single(row => row.Label == label);
+
+        Assert.AreEqual("Not recorded", Row("Hours in game").A);
+        Assert.AreEqual("Not recorded", Row("Hours in game").B);
+        Assert.AreEqual(Better.Neither, Row("Hours in game").Better);
+        Assert.AreEqual("100", Row("Games with a faction recorded").A);
+        Assert.AreEqual("0.50", Row("ACUs lost per game").A);
     }
 
     [TestMethod]

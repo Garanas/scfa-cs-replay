@@ -1,4 +1,5 @@
 @page "/players/compare"
+@using FAForever.Vault.Viewer.Features.Players.Matches
 @inherits PlayerUrlComponent
 @using System.Globalization
 @using FAForever.Vault.Viewer.Features.Players.Compare
@@ -242,7 +243,7 @@
                                             HeadToHeadWinner winner = CompareStatistics.Winner(game);
                                             <tr class="border-b border-edge last:border-0">
                                                 <td class="py-2.5 pr-3 tabular-nums text-ink-muted max-sm:order-1 max-sm:p-0">@(game.StartTime?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "Unknown")</td>
-                                                <td class="list-table-wide px-3 py-2.5 max-sm:order-6 max-sm:p-0 max-sm:text-ink-muted">@(game.MapName ?? "Unknown map")</td>
+                                                <td class="list-table-wide px-3 py-2.5 max-sm:order-6 max-sm:p-0 max-sm:text-ink-muted" title="@(game.MapName is null ? game.GameName : null)">@(game.MapName ?? MatchFormat.MapNotInVault)</td>
                                                 <td class="px-3 py-2.5 max-sm:order-2 max-sm:p-0">
                                                     @if (winner == HeadToHeadWinner.None)
                                                     {
@@ -690,7 +691,7 @@
             HeadToHeadWinner.B => $"{d.B.Login} won",
             _ => "No winner",
         };
-        return $"{date}, {game.MapName ?? "unknown map"}: {who}";
+        return $"{date}, {game.MapName ?? MatchFormat.MapNotInVault.ToLowerInvariant()}: {who}";
     }
 
     private static string Length(TimeSpan? duration)

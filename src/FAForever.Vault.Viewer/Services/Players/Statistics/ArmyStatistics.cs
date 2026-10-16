@@ -17,19 +17,19 @@ public sealed record BuiltAndLost(string Label, long Built, long Lost);
 
 /// <summary>The army statistics of a player, from the lifetime counters.</summary>
 /// <param name="Factions">Games and wins per faction, in the game's order.</param>
-/// <param name="CustomGames">Custom games played.</param>
-/// <param name="LadderGames">Ladder games played.</param>
-/// <param name="HoursPlayed">Time in game, in hours.</param>
+/// <param name="CustomGames">Custom games played; null when the game no longer records them.</param>
+/// <param name="LadderGames">Ladder games played; null when the game no longer records them.</param>
+/// <param name="HoursPlayed">Time in game, in hours; null when the game no longer records it.</param>
 /// <param name="AcusLost">Commanders lost.</param>
-/// <param name="AcusLostPerGame">Commanders lost per game (custom and ladder); null without games.</param>
+/// <param name="AcusLostPerGame">Commanders lost per game (over the custom and ladder games, or the games with a faction recorded when those are not recorded); null without games.</param>
 /// <param name="ByCategory">Units built and lost: air, land and naval.</param>
 /// <param name="ByTech">Units built and lost: tech 1, 2, 3 and experimentals.</param>
 /// <param name="Engineers">Engineers built and lost.</param>
 public sealed record ArmySummary(
     IReadOnlyList<FactionPlays> Factions,
-    long CustomGames,
-    long LadderGames,
-    double HoursPlayed,
+    long? CustomGames,
+    long? LadderGames,
+    double? HoursPlayed,
     long AcusLost,
     double? AcusLostPerGame,
     IReadOnlyList<BuiltAndLost> ByCategory,
@@ -42,10 +42,13 @@ public static class ArmyStatistics
     /// <summary>The army statistics of the counters.</summary>
     public static ArmySummary Summarize(PlayerEventCounts counts)
     {
-        long custom = counts.Get(PlayerEvents.CustomGamesPlayed);
-        long ladder = counts.Get(PlayerEvents.LadderGamesPlayed);
+        long? custom = counts.TryGet(PlayerEvents.CustomGamesPlayed);
+        long? ladder = counts.TryGet(PlayerEvents.LadderGamesPlayed);
+        long? seconds = counts.TryGet(PlayerEvents.SecondsPlayed);
         long acus = counts.Get(PlayerEvents.AcusLost);
-        long games = custom + ladder;
+        long factionGames = counts.Get(PlayerEvents.UefPlays) + counts.Get(PlayerEvents.AeonPlays)
+            + counts.Get(PlayerEvents.CybranPlays) + counts.Get(PlayerEvents.SeraphimPlays);
+        long games = custom is null && ladder is null ? factionGames : (custom ?? 0) + (ladder ?? 0);
 
         return new ArmySummary(
             [
@@ -56,7 +59,7 @@ public static class ArmyStatistics
             ],
             custom,
             ladder,
-            counts.Get(PlayerEvents.SecondsPlayed) / 3600.0,
+            seconds / 3600.0,
             acus,
             games > 0 ? (double)acus / games : null,
             [

@@ -96,7 +96,7 @@
                         </section>
                         <section class="card" aria-labelledby="m-maps">
                             <h2 id="m-maps" class="text-[1rem] font-semibold text-ink">Maps, most played first</h2>
-                            <p class="mt-1 mb-4 text-sm text-ink-muted">The win share per map; a map name opens its page.</p>
+                            <p class="mt-1 mb-4 text-sm text-ink-muted">The win share per map; a map name opens its page. Games on a map not in the vault are left out.</p>
                             <BarRows Rows="data.MapRows" Max="100" Marker="50" AriaLabel="Win share by map" />
                         </section>
                         <section class="card" aria-labelledby="m-heat">
@@ -156,7 +156,7 @@
                                                 }
                                                 else
                                                 {
-                                                    <span class="block truncate">@(match.MapName ?? "Unknown map")</span>
+                                                    <span class="block truncate" title="@(match.MapName is null ? match.GameName : null)">@(match.MapName ?? MatchFormat.MapNotInVault)</span>
                                                 }
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">@MatchFormat.Mode(match.Board)</td>

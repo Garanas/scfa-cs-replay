@@ -1,3 +1,4 @@
+using FAForever.Vault.Viewer.Features.Players.Army;
 using FAForever.FileFormats.Blueprints;
 using FAForever.Vault.Viewer.Services.Players;
 using FAForever.Vault.Viewer.Services.Players.Statistics;
@@ -281,7 +282,7 @@ public class ArmyStatisticsTest
         Assert.AreEqual(0, summary.Factions[3].Wins);
         Assert.AreEqual(4, summary.CustomGames);
         Assert.AreEqual(6, summary.LadderGames);
-        Assert.AreEqual(2.0, summary.HoursPlayed, 1e-9);
+        Assert.AreEqual(2.0, summary.HoursPlayed!.Value, 1e-9);
         Assert.AreEqual(5, summary.AcusLost);
         Assert.AreEqual(0.5, summary.AcusLostPerGame!.Value, 1e-9);
 
@@ -300,7 +301,32 @@ public class ArmyStatisticsTest
         ArmySummary summary = ArmyStatistics.Summarize(Counts((PlayerEvents.AcusLost, 3)));
 
         Assert.IsNull(summary.AcusLostPerGame);
-        Assert.AreEqual(0, summary.HoursPlayed);
+        Assert.IsNull(summary.HoursPlayed);
+        Assert.IsNull(summary.CustomGames);
+        Assert.IsNull(summary.LadderGames);
+    }
+
+    [TestMethod]
+    public void AbsentCountersAreNullAndZeroIsKept()
+    {
+        PlayerEventCounts none = Counts((PlayerEvents.UefPlays, 30), (PlayerEvents.CybranPlays, 20), (PlayerEvents.AcusLost, 10));
+        Assert.IsFalse(none.Has(PlayerEvents.SecondsPlayed));
+        Assert.IsNull(none.TryGet(PlayerEvents.SecondsPlayed));
+
+        ArmySummary summary = ArmyStatistics.Summarize(none);
+        Assert.IsNull(summary.HoursPlayed);
+        Assert.IsNull(summary.CustomGames);
+        Assert.AreEqual(0.2, summary.AcusLostPerGame!.Value, 1e-9, "per faction game when the game counters are absent");
+        Assert.IsFalse(ArmyFormat.HasModeCounters(summary));
+        Assert.AreEqual("Not recorded", ArmyFormat.HoursOrNotRecorded(summary.HoursPlayed));
+        Assert.IsNull(ArmyFormat.AverageGame(summary));
+        Assert.AreEqual(8421, ArmyFormat.TotalGames(8421, summary), "the match list total wins");
+        Assert.AreEqual(50, ArmyFormat.TotalGames(null, summary));
+
+        PlayerEventCounts zero = Counts((PlayerEvents.SecondsPlayed, 0), (PlayerEvents.CustomGamesPlayed, 0));
+        Assert.IsTrue(zero.Has(PlayerEvents.SecondsPlayed));
+        Assert.AreEqual(0.0, ArmyStatistics.Summarize(zero).HoursPlayed);
+        Assert.AreEqual("0 h", ArmyFormat.HoursOrNotRecorded(0));
     }
 
     [TestMethod]

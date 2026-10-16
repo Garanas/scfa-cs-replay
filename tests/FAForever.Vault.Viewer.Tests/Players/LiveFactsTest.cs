@@ -1,3 +1,4 @@
+using FAForever.Vault.Viewer.Features.Players.Army;
 using System.Net;
 using System.Text.RegularExpressions;
 using FAForever.FileFormats.Blueprints;
@@ -262,12 +263,12 @@ public class LiveFactsTest
         IPlayersApi api = Create();
         PlayerEventCounts counts = await api.GetEventCountsAsync(SamplePlayersApi.SamplePlayerId, Token);
 
-        long custom = counts.Counts[PlayerEvents.CustomGamesPlayed];
-        long ladder = counts.Counts[PlayerEvents.LadderGamesPlayed];
         long byFaction = new[] { PlayerEvents.UefPlays, PlayerEvents.AeonPlays, PlayerEvents.CybranPlays, PlayerEvents.SeraphimPlays }.Sum(id => counts.Counts[id]);
+        ArmySummary army = ArmyStatistics.Summarize(counts);
 
-        Assert.AreEqual(3750, custom + ladder, "the overview and the compare count custom and ladder games");
-        Assert.AreEqual(custom + ladder, byFaction, "the army tab counts the plays of the four factions");
+        Assert.AreEqual(3750, byFaction, "the plays of the four factions are the one lifetime number");
+        Assert.AreEqual(3750, ArmyFormat.Games(army), "the army tab and the compare count the same games");
+        Assert.AreEqual(3750, ArmyFormat.TotalGames(null, army));
     }
 
     [TestMethod]

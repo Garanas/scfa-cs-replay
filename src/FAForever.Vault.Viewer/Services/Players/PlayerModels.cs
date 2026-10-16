@@ -206,6 +206,12 @@ public sealed record PlayerEventCounts(IReadOnlyDictionary<string, long> Counts)
 {
     /// <summary>The counter of an event; 0 when the player never triggered it.</summary>
     public long Get(string eventId) => Counts.TryGetValue(eventId.ToLowerInvariant(), out long count) ? count : 0;
+
+    /// <summary>Whether the player has a row for the event (the game server no longer records some of them).</summary>
+    public bool Has(string eventId) => Counts.ContainsKey(eventId.ToLowerInvariant());
+
+    /// <summary>The counter of an event; null when the player has no row for it.</summary>
+    public long? TryGet(string eventId) => Counts.TryGetValue(eventId.ToLowerInvariant(), out long count) ? count : null;
 }
 
 /// <summary>The kind of an achievement.</summary>

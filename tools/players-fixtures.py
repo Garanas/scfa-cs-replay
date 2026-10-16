@@ -414,11 +414,10 @@ write("ratings.json", doc.dump())
 # ---------------------------------------------------------------- events
 
 event_counts = {
-    "cfa449a6-655b-48d5-9a27-6044804fe35c": 1840, "4a929def-e347-45b4-b26d-4325a3115859": 1910, "d6a699b7-99bc-4a7f-b128-15e1e289a7b3": 2236,
+    "d6a699b7-99bc-4a7f-b128-15e1e289a7b3": 2236,
     "3ebb0c4d-5e92-4446-bf52-d17ba9c5cd3c": 61450, "225e9b2e-ae09-4ae1-a198-eca8780b0fcd": 38210,
     "ea123d7f-bb2e-4a71-bd31-88859f0c3c00": 188930, "a1a3fd33-abe2-4e56-800a-b72f4c925825": 121400,
     "b5265b42-1747-4ba1-936c-292202637ce6": 14320, "3a7b3667-0f79-4ac7-be63-ba841fd5ef05": 9110,
-    "cc791f00-343c-48d4-b5b3-8900b83209c0": 7_412_000,
     "a8ee4f40-1e30-447b-bc2c-b03065219795": 142_300, "3dd3ed78-ce78-4006-81fd-10926738fbf3": 98_700,
     "89d4f391-ed2d-4beb-a1ca-6b93db623c04": 63_900, "aebd750b-770b-4869-8e37-4d4cfdc480d0": 41_250,
     "92617974-8c1f-494d-ab86-65c2a95d1486": 17_480, "7f15c2be-80b7-4573-8f41-135f84773e0f": 10_990,
@@ -430,12 +429,13 @@ event_counts = {
     "fefcb392-848f-4836-9683-300b283bc308": 486, "15b6c19a-6084-4e82-ada9-6c30e282191f": 302,
 }
 EVENT_NAMES = {
-    "cfa449a6-655b-48d5-9a27-6044804fe35c": "CUSTOM_GAMES_PLAYED", "4a929def-e347-45b4-b26d-4325a3115859": "LADDER_GAMES_PLAYED",
-    "d6a699b7-99bc-4a7f-b128-15e1e289a7b3": "LOST_ACUS", "cc791f00-343c-48d4-b5b3-8900b83209c0": "SECONDS_PLAYED",
+    "d6a699b7-99bc-4a7f-b128-15e1e289a7b3": "LOST_ACUS",
 }
 FACTION_PLAYS = ["ad193982-e7ca-465c-80b0-5493f9739559", "1b900d26-90d2-43d0-a64e-ed90b74c3704", "96ccc66a-c5a0-4f48-acaa-888b00778b57", "fefcb392-848f-4836-9683-300b283bc308"]
-LIFETIME_GAMES = event_counts["cfa449a6-655b-48d5-9a27-6044804fe35c"] + event_counts["4a929def-e347-45b4-b26d-4325a3115859"]
-assert sum(event_counts[key] for key in FACTION_PLAYS) == LIFETIME_GAMES == 3750, "the overview, the army tab and the compare count the same games"
+# A real player has no rows for "Ranked 1v1 games played", "Custom games played" and "Seconds played" (the
+# game server stopped recording them), so the plays of the four factions are the one lifetime number.
+LIFETIME_GAMES = sum(event_counts[key] for key in FACTION_PLAYS)
+assert LIFETIME_GAMES == 3750, "the army tab and the compare count the same games"
 doc = Doc()
 for index, (event_id, count) in enumerate(event_counts.items()):
     doc.add(res("playerEvent", 900000 + index, {"currentCount": count}, {"player": ("player", PLAYER_ID), "event": ("event", event_id)}))

@@ -245,13 +245,20 @@ public class SamplePlayersApiTest
     {
         PlayerEventCounts counts = await Create().GetEventCountsAsync(SamplePlayersApi.SamplePlayerId, Token);
 
-        Assert.AreEqual(28, (counts.Counts).Count);
-        foreach (string id in PlayerEvents.All)
+        string[] unrecorded = [PlayerEvents.CustomGamesPlayed, PlayerEvents.LadderGamesPlayed, PlayerEvents.SecondsPlayed];
+        Assert.AreEqual(25, (counts.Counts).Count, "like a real player, the sample has no rows for three counters the game stopped recording");
+        foreach (string id in PlayerEvents.All.Except(unrecorded))
         {
             Assert.IsTrue(counts.Get(id) > 0, id);
         }
-        Assert.AreEqual(1840, counts.Get(PlayerEvents.CustomGamesPlayed));
-        Assert.AreEqual(1840, counts.Get(PlayerEvents.CustomGamesPlayed.ToUpperInvariant()), "ids are matched in any case");
+        foreach (string id in unrecorded)
+        {
+            Assert.IsFalse(counts.Has(id), id);
+            Assert.IsNull(counts.TryGet(id), id);
+        }
+        Assert.AreEqual(2236, counts.TryGet(PlayerEvents.AcusLost));
+        Assert.AreEqual(2236, counts.Get(PlayerEvents.AcusLost.ToUpperInvariant()), "ids are matched in any case");
+        Assert.IsTrue(counts.Has(PlayerEvents.AcusLost.ToUpperInvariant()));
         Assert.AreEqual(0, counts.Get("00000000-0000-0000-0000-000000000000"));
     }
 

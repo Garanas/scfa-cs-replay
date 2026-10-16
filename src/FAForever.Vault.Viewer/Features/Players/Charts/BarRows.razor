@@ -10,7 +10,7 @@
             <div class="min-w-0 text-sm">
                 @if (row.Href is not null)
                 {
-                    <a href="@row.Href" class="block truncate text-ink transition hover:text-primary">@row.Label</a>
+                    <a href="@row.Href" class="flex min-h-11 items-center text-ink transition hover:text-primary sm:block sm:min-h-0"><span class="block min-w-0 truncate">@row.Label</span></a>
                 }
                 else
                 {

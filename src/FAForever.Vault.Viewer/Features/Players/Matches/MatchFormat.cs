@@ -10,6 +10,9 @@ namespace FAForever.Vault.Viewer.Features.Players.Matches;
 /// <summary>How the Matches tab words its numbers, and the rows its charts are drawn from.</summary>
 public static class MatchFormat
 {
+    /// <summary>What a game without a vault map is called (generated maps and maps without a vault entry).</summary>
+    public const string MapNotInVault = "Map not in the vault";
+
     /// <summary>The minus sign (U+2212): a sign, not a hyphen.</summary>
     public const string Minus = "−";
 

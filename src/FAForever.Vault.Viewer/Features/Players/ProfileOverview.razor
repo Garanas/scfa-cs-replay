@@ -1,4 +1,6 @@
 @using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Army
 @using FAForever.Vault.Viewer.Features.Players.Profile
 @using FAForever.Vault.Viewer.Services.Players
 @using FAForever.Vault.Viewer.Services.Players.Statistics
@@ -219,8 +221,8 @@
         {
             BuiltAndLost experimentals = army.ByTech.First(group => group.Label == "Experimental");
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <InfoTile Label="Hours in game" Value="@ProfileFormat.Number(army.HoursPlayed)" Sub="@($"About {ProfileFormat.Number(army.HoursPlayed / 24)} days")" />
-                <InfoTile Label="Custom and ladder games recorded" Value="@ProfileFormat.Number(army.CustomGames + army.LadderGames)" Sub="@($"{ProfileFormat.Number(army.CustomGames)} custom, {ProfileFormat.Number(army.LadderGames)} ladder")" />
+                <InfoTile Label="Hours in game" Value="@(army.HoursPlayed is { } hours ? ProfileFormat.Number(hours) : "Not recorded")" Sub="@(army.HoursPlayed is { } h ? $"About {ProfileFormat.Number(h / 24)} days" : ArmyFormat.HoursNotRecordedSub)" />
+                <InfoTile Label="Games" Value="@ProfileFormat.Number(ArmyFormat.TotalGames(recentLoad?.Value?.TotalRecords, army))" Sub="@($"{ProfileFormat.Number(ArmyFormat.Games(army))} with a faction recorded")" />
                 <InfoTile Label="ACUs lost" Value="@ProfileFormat.Number(army.AcusLost)" Sub="@(army.AcusLostPerGame is { } perGame ? $"{perGame.ToString("0.00", CultureInfo.InvariantCulture)} per game" : null)" />
                 <InfoTile Label="Experimentals built" Value="@ProfileFormat.Number(experimentals.Built)" Sub="@($"{ProfileFormat.Number(experimentals.Lost)} lost")" />
             </div>
@@ -262,7 +264,7 @@
                             DeltaTone resultTone = ProfileFormat.Tone(match.Result);
                             <tr class="border-t border-edge">
                                 <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(match.StartTime)</td>
-                                <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0 max-sm:text-ink-muted" title="@match.MapName">@(match.MapName ?? "Unknown map")</td>
+                                <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0 max-sm:text-ink-muted" title="@(match.MapName ?? match.GameName)">@(match.MapName ?? MatchFormat.MapNotInVault)</td>
                                 <td class="whitespace-nowrap py-2 pr-4 max-sm:hidden">@ProfileFormat.ModeName(match.Board)</td>
                                 <td class="whitespace-nowrap py-2 pr-4 max-sm:order-4 max-sm:p-0">
                                     <span class="inline-flex items-center gap-1.5">

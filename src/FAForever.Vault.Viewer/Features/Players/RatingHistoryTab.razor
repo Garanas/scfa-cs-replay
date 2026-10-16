@@ -1,4 +1,5 @@
 @using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Matches
 @using FAForever.Vault.Viewer.Features.Players.Profile
 @using FAForever.Vault.Viewer.Services.Players
 @using FAForever.Vault.Viewer.Services.Players.Statistics
@@ -195,7 +196,7 @@
                                     DeltaTone rowTone = ProfileFormat.Tone(row.Change);
                                     <tr class="border-t border-edge">
                                         <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(row.Date)</td>
-                                        <td class="list-table-wide max-w-[12rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0" title="@row.MapName">@(row.MapName ?? "Unknown map")</td>
+                                        <td class="list-table-wide max-w-[12rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0" title="@row.MapName">@(row.MapName ?? MatchFormat.MapNotInVault)</td>
                                         <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-7 max-sm:max-w-none max-sm:p-0">
                                             @for (int i = 0; i < row.Opponents.Count && i < 2; i++)
                                             {

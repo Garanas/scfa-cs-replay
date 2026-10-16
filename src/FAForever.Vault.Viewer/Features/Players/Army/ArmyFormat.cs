@@ -19,6 +19,9 @@ public static class ArmyFormat
     /// <summary>The games over every faction.</summary>
     public static long Games(ArmySummary summary) => summary.Factions.Sum(faction => faction.Plays);
 
+    /// <summary>The games the Games tile shows: every game of the match list when it is known, else the games with a faction recorded.</summary>
+    public static long TotalGames(long? matchListTotal, ArmySummary summary) => matchListTotal ?? Games(summary);
+
     /// <summary>The share of the games won over every faction (0 to 1); null without games.</summary>
     public static double? WinShare(ArmySummary summary)
         => Games(summary) is > 0 and var games ? (double)summary.Factions.Sum(faction => faction.Wins) / games : null;
@@ -26,9 +29,18 @@ public static class ArmyFormat
     /// <summary>Hours with a thousands separator: 1,342 h.</summary>
     public static string Hours(double hours) => $"{hours.ToString("N0", CultureInfo.InvariantCulture)} h";
 
+    /// <summary>The hours tile's value: the hours, or "Not recorded" when the game no longer reports time played.</summary>
+    public static string HoursOrNotRecorded(double? hours) => hours is { } value ? Hours(value) : "Not recorded";
+
+    /// <summary>The sub text of a missing time played.</summary>
+    public const string HoursNotRecordedSub = "the game no longer reports time played";
+
+    /// <summary>Whether the game counts custom and matchmaker games apart for this player.</summary>
+    public static bool HasModeCounters(ArmySummary summary) => summary.CustomGames is not null || summary.LadderGames is not null;
+
     /// <summary>The average game in minutes (the time in game over the games), or null without games.</summary>
     public static string? AverageGame(ArmySummary summary)
-        => Games(summary) is > 0 and var games ? $"{(int)Math.Round(summary.HoursPlayed * 60 / games)} min per game" : null;
+        => summary.HoursPlayed is { } hours && Games(summary) is > 0 and var games ? $"{(int)Math.Round(hours * 60 / games)} min per game" : null;
 
     /// <summary>Units built or lost in all of the rows.</summary>
     public static long Built(IReadOnlyList<BuiltAndLost> rows) => rows.Sum(row => row.Built);
@@ -76,8 +88,8 @@ public static class ArmyFormat
     /// <summary>Custom games and matchmaker games as the two parts of one bar.</summary>
     public static IReadOnlyList<StackedSegment> ModeSegments(ArmySummary summary)
         => [
-            new($"Custom games", summary.CustomGames, ChartColor.Viz1),
-            new($"Matchmaker", summary.LadderGames, ChartColor.Viz2),
+            new($"Custom games", summary.CustomGames ?? 0, ChartColor.Viz1),
+            new($"Matchmaker", summary.LadderGames ?? 0, ChartColor.Viz2),
         ];
 
     /// <summary>
