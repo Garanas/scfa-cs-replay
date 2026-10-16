@@ -40,7 +40,7 @@ public static class HomeExamples
     /// </summary>
     public static readonly IReadOnlyList<ExampleMap> Maps =
     [
-        new("rainmakers_survival.v0065", "Rainmakers Survival", 1024, 3, "Jip"),
+        new("lily_pads.v0010", "Lily Pads", 1024, 9, "Jip"),
         new("gateway_and_rose.v0002", "Gateway and Rose", 1024, 8, "biass"),
         new("adaptive_moon.v0002", "Adaptive Moon", 1024, 12, "svenni_badbwoi"),
         new("project_tabula.v0006", "Project Tabula", 1024, 8, "IndexLibrorum"),
