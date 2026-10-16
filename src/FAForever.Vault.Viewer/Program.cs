@@ -35,7 +35,8 @@ builder.Services.AddScoped<FafApiClient>();
 
 // The Players pages: the real API, or recorded documents when appsettings.Sample.json is loaded
 // (ASPNETCORE_ENVIRONMENT=Sample on the server).
-if (builder.Configuration["Players:SampleData"] == "true")
+// A JSON true reads back as "True", so compare without case.
+if (string.Equals(builder.Configuration["Players:SampleData"], "true", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddScoped<IPlayersApi, SamplePlayersApi>();
 }

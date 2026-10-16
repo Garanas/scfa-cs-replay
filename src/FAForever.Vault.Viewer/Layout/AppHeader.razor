@@ -10,11 +10,12 @@
             <NavLink href="replays" class="nav-link" ActiveClass="active">Replays</NavLink>
             <NavLink href="maps" class="nav-link" ActiveClass="active">Maps</NavLink>
             <NavLink href="units" class="nav-link" ActiveClass="active">Units</NavLink>
-            <NavLink href="players" class="nav-link" ActiveClass="active">Players</NavLink>
         </nav>
 
         <div class="ml-auto flex items-center gap-2 sm:gap-3">
-            @* About sits apart from the main sections, with the settings on the right. *@
+            @* Players and About sit apart from the content sections, with the settings on the right.
+               Below lg they live in the menu, so the header fits between 640 and 1023 px. *@
+            <NavLink href="players" class="nav-link hidden lg:inline-flex" ActiveClass="active">Players</NavLink>
             <NavLink href="about" class="nav-link hidden lg:inline-flex" ActiveClass="active">About</NavLink>
 
             @* Narrow screens: the sections and the settings in a menu, a popover (Popover API). The

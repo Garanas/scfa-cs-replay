@@ -58,7 +58,7 @@ public sealed class AuthService(HttpClient http, IJSRuntime js, NavigationManage
 
         // Sample data (appsettings.Sample.json only): signed in as the sample player, so the Players
         // pages show. The token is a dummy: the sample API never sends it anywhere.
-        if (Session is null && configuration["Players:SampleData"] == "true")
+        if (Session is null && string.Equals(configuration["Players:SampleData"], "true", StringComparison.OrdinalIgnoreCase))
         {
             Session = new AuthSession
             {

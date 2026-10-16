@@ -47,6 +47,21 @@ WebApplication app = builder.Build();
 
 app.UseRateLimiter();
 
+// The Sample environment (recorded Players data, see docs/vault/players-plan.md): the app only ever
+// asks for appsettings.json, so the Sample settings are served under that name. Nothing of this
+// exists outside that environment.
+if (app.Environment.IsEnvironment("Sample"))
+{
+    app.Use((context, next) =>
+    {
+        if (context.Request.Path == "/appsettings.json")
+        {
+            context.Request.Path = "/appsettings.Sample.json";
+        }
+        return next(context);
+    });
+}
+
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
