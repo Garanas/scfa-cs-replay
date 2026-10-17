@@ -128,7 +128,7 @@ and so keeps those choices: refresh on `MapChanged`, forget on `AnotherMap`.
   italics in the menus; a tool with `Missing` shows it in the tool options and does nothing in
   the views (it has no class, so the left mouse goes nowhere); a `PlannedSection`
   shows a dashed box with its story. `CommandRegistryTest` checks that every story named
-  anywhere exists in `USER_STORIES.md`, that every request has a handler unless it is
+  anywhere exists in `docs/map-editor/user-stories.md`, that every request has a handler unless it is
   `[Incomplete]` (and then none), and that the menus hold each command once.
 - **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
   tools, panel sections and inspector sections. A mode remembers its last tool.

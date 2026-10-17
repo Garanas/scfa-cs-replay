@@ -1,6 +1,6 @@
 # Building the map editor in agent waves
 
-The map editor's user stories (`USER_STORIES.md`) were built by agents working in parallel, in
+The map editor's user stories (`user-stories.md`) were built by agents working in parallel, in
 eight waves, between the brushes work and 2026-10-10; then the owner looked the editor over and
 asked for a rework, built in five more waves (8 to 12) up to 2026-10-11. This page describes how the
 waves were run, what each one built, what the three QA walkthroughs found, and what is still open. The commits are on
@@ -76,7 +76,7 @@ files came from merge conflicts:
   (`SwatchSize`) and extension method (`RenameArmy`) with different meanings. New classes and
   tokens take a feature prefix.
 - **Append in shared files**, each agent its own block: `EditorModes.cs`, `Menus.cs`, the
-  automation state (one key per feature), `USER_STORIES.md`, the guides.
+  automation state (one key per feature), `user-stories.md`, the guides.
 - **New record parameters at the end, with defaults.** Two wave-4 branches each appended a
   parameter to `ObjectFrame`.
 - **Snapshots** are accepted by the main session at the merge, after looking at them.
@@ -167,7 +167,7 @@ and later waves were kept smaller (four agents, then three, then two).
 - **3A Lua plugins** (F-15, F-1, F-13, F-14): plugins with commands, problem checks, fields and
   event handlers, in a sandbox with time limits; everything one run changes is one undo step.
 - **3B Vault upload and wrecks** (M-8, U-5): uploading a map to the FAF vault (built, never run
-  against the real vault: the first real upload waits for the owner, see `TODO.md`), and units as
+  against the real vault: the first real upload waits for the owner, see `docs/TODO.md`), and units as
   wrecks.
 - **3C Gaps**: symmetry for scaling, turning, paste and duplicate; the brush outline at every
   mirrored place; the box selection, curves and path links in 3D; generating in dependency order;
@@ -503,11 +503,11 @@ maps round-trip through the editor's own reader and writer (98 vault maps), not 
 and plays them the same. To compare in the game, with two or three exported maps (Kaali, one with
 decals and a generated sky, one adaptive map):
 - the terrain, strata and the map-wide decals in Kaali's layout (albedo, normals, shadow);
-- the generated sky cube and the skybox (also in `TODO.md`), the water (Archsimkats Valley looks
+- the generated sky cube and the skybox (also in `docs/TODO.md`), the water (Archsimkats Valley looks
   milky in the editor), the textures converted to DDS;
 - the reclaim totals in the lobby, the adaptive scripts and optional groups, wrecks;
 - the markers: spawns, deposits, blank markers, chains, and the generated path networks the AI uses.
-- The first real upload to the vault with a real account (`TODO.md`).
+- The first real upload to the vault with a real account (`docs/TODO.md`).
 
 ### 2. CI and review
 - Neither `test.yml` nor `map-editor.yml` has run on this work: both run on `main` (the tests also
@@ -578,7 +578,7 @@ link, never the target).
 - **Ask for the tooling gaps.** The Tooling section of every report made the agents' friction
   visible, and building it (the shadow copy above all) made the later waves faster.
 - **Conflicts come from shared files and shared assumptions.** Most conflicts were in the same few
-  files (`EditorModes.cs`, `Menus.cs`, the automation state, `USER_STORIES.md`, the guides). The
+  files (`EditorModes.cs`, `Menus.cs`, the automation state, `user-stories.md`, the guides). The
   harder clashes compiled cleanly and only failed in the tests: one branch built the command another
   branch's tests used as their "not built yet" example, and a QA fix changed status texts that
   another branch's tests compared.

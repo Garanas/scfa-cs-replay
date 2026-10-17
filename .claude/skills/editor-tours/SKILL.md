@@ -185,4 +185,4 @@ moves of more than 8 pixels. `docs/guide/README.md` has the steps.
 - A shipped tour changed: its old hash in `EditorTours.Earlier`.
 - A new path, target kind or refused command: in `TourState`/`TourLocator`/`TourRefusals` with a test,
   and in the App guide's "Tours and the guide".
-- `USER_STORIES.md` H-1 says which tours exist.
+- `docs/map-editor/user-stories.md` H-1 says which tours exist.

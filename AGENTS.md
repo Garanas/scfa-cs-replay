@@ -169,7 +169,7 @@ OAuth clients (both public, PKCE):
   `launched_at` (unix seconds), `num_players`, `FeaturedMod`, …
 - The test workflow (`.github/workflows/test.yml`) runs on Linux: anything Windows-only
   (e.g. `tools/tailwindcss.exe`) must stay optional in the build.
-- `TODO.md` at the repo root tracks open items that need the project owner (OAuth client
+- `docs/TODO.md` tracks open items that need the project owner (OAuth client
   registration, live-login verification, …). Add to it when blocked instead of guessing.
 
 ## Editing files from a shell (agents)

@@ -30,7 +30,7 @@ design: what a built-in tool or command cannot do through those points, a plugin
   does not run code. The candidates are MoonSharp (a Lua interpreter in C#, no native files) and
   NLua or KeraLua (the real Lua, with a native library per platform). Check how each is
   maintained and how each limits a script (instructions or time) before choosing; this is the
-  owner's decision (`TODO.md`).
+  owner's decision (`docs/TODO.md`).
 - **Plugin commands without handlers of their own.** The container is built once at start, and a
   plugin is turned on later. Every plugin command is an entry of the registry that sends one
   request, `RunPluginCommand(Plugin, Id, Arguments)`, marked `[UndoStep]`; its one handler calls the

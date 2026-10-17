@@ -12,7 +12,7 @@ namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
     /// The controller's commands (user story F-1), and the bookkeeping of what is not built yet:
-    /// every story they name exists in <c>USER_STORIES.md</c>.
+    /// every story they name exists in <c>docs/map-editor/user-stories.md</c>.
     /// </summary>
     [TestClass]
     public sealed partial class CommandRegistryTest
@@ -28,7 +28,7 @@ namespace FAForever.MapEditor.App.Tests
 
         private static HashSet<string> Stories()
         {
-            string text = File.ReadAllText(Path.Combine(HeadlessApp.RepositoryFolder, "USER_STORIES.md"));
+            string text = File.ReadAllText(Path.Combine(HeadlessApp.RepositoryFolder, "docs", "map-editor", "user-stories.md"));
             return [.. StoryId().Matches(text).Select(match => match.Groups[1].Value)];
         }
 
@@ -52,8 +52,8 @@ namespace FAForever.MapEditor.App.Tests
 
             string[] unknown = [.. named.Where(entry => !stories.Contains(entry[(entry.LastIndexOf(' ') + 1)..]))];
 
-            Assert.IsTrue(stories.Count > 60, "USER_STORIES.md was read");
-            CollectionAssert.AreEqual(Array.Empty<string>(), unknown, "every story named in the editor is in USER_STORIES.md");
+            Assert.IsTrue(stories.Count > 60, "the user stories were read");
+            CollectionAssert.AreEqual(Array.Empty<string>(), unknown, "every story named in the editor is in the user stories");
         }
 
         [TestMethod]
@@ -67,7 +67,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(incomplete.Length >= planned, "the planned commands are found, and the tools not built yet");
             foreach (EditorCommand command in incomplete)
             {
-                Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");
+                Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in the user stories");
                 Assert.IsFalse(string.IsNullOrWhiteSpace(command.Incomplete.Missing), $"{command.Id} says what is missing");
             }
         }

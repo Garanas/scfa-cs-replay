@@ -5,7 +5,7 @@ namespace FAForever.Vault.Viewer.Services.Auth;
 ///
 /// Note: the current client id belongs to the official FAF desktop client and is registered
 /// with loopback redirect URIs only (no path). Development therefore runs on the fixed origin
-/// http://127.0.0.1:5080 and uses that exact origin as redirect URI. See TODO.md.
+/// http://127.0.0.1:5080 and uses that exact origin as redirect URI. See docs/TODO.md.
 /// </summary>
 public sealed class OAuthOptions
 {

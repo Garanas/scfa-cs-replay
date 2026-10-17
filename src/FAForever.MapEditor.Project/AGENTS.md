@@ -635,7 +635,7 @@ User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
   official FAF client's (`2e8808cf-...`, the repository's development client): in
   [gitops-stack](https://github.com/FAForever/gitops-stack/blob/main/apps/ory-hydra/values.yaml) it has
   `upload_map`, `redirectUri: http://127.0.0.1` (any port) and no secret. The Viewer's production
-  client lacks `upload_map` (TODO.md). The FAF client itself now signs in with the device flow.
+  client lacks `upload_map` (docs/TODO.md). The FAF client itself now signs in with the device flow.
 - Tests (`VaultUploadTest`, `FakeVaultServer`): the zip, the rules, the multipart request's parts
   and headers, the errors read back, and a sign-in against a fake token endpoint. Never the real vault.
 

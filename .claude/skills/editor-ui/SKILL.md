@@ -65,7 +65,7 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
   `BrushStroke`), and a `DataTemplate` for its settings in `Views/ToolOptions.axaml`, its root a
   `controls:ToolRow Classes="toolrow"` with the settings most used first (what does not fit at the
   window's width goes behind the row's More, over the views; the row never grows); the views
-  never name a tool. A part of a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
+  never name a tool. A part of a panel not built yet: a `PlannedSection`. Every story named must be in `docs/map-editor/user-stories.md`
   (`CommandRegistryTest`). Its state in automation's `state`.
 - Tests: the operation in `MainViewModelTest`; the mouse, keys and what the window shows in
   `MainWindowTest` (headless, `HeadlessApp.Run`). The 3D view needs a graphics card: check it in a

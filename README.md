@@ -92,7 +92,7 @@ faf-map pack theta_passage "<game>/maps" --watch            # pack again on ever
 ```
 
 [AGENTS.md](AGENTS.md) and the guides in each project hold the architecture, conventions and the
-FAForever endpoints the vault uses; [TODO.md](TODO.md) lists open items.
+FAForever endpoints the vault uses; [docs/TODO.md](docs/TODO.md) lists open items.
 
 ## Performance
 

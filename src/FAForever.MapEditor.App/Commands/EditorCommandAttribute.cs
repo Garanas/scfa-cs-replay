@@ -20,7 +20,7 @@ public sealed class EditorCommandAttribute(string id, string title) : Attribute
     public string? Gesture { get; init; }
 
     /// <summary>
-    /// The user story it serves, e.g. <c>T-4</c> (<c>USER_STORIES.md</c>).
+    /// The user story it serves, e.g. <c>T-4</c> (<c>docs/map-editor/user-stories.md</c>).
     /// </summary>
     public string? Story { get; init; }
 
