@@ -49,4 +49,22 @@ public sealed class ProfilePagesTest
         StringAssert.Contains(message, "NobodyHereXyz");
         Assert.IsFalse(message.Contains('-'));
     }
+
+    [TestMethod]
+    public void TheFirstPlayerDefaultsToTheSignedInUser()
+    {
+        Assert.AreEqual(2049311, CompareInput.FirstPlayer(null, 2049311));
+        Assert.AreEqual(100285, CompareInput.FirstPlayer(100285, 2049311));
+        Assert.IsNull(CompareInput.FirstPlayer(null, null));
+    }
+
+    [TestMethod]
+    [DataRow("2049311", 2049311)]
+    [DataRow("0", null)]
+    [DataRow("-4", null)]
+    [DataRow("abc", null)]
+    [DataRow("", null)]
+    [DataRow(null, null)]
+    public void ASessionUserIdIsParsed(string? userId, int? expected)
+        => Assert.AreEqual(expected, CompareInput.ParseUserId(userId));
 }

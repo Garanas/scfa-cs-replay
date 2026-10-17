@@ -10,6 +10,16 @@ public static class CompareInput
     public static string UnknownMessage(string name)
         => $"No player is called \u201C{name.Trim()}\u201D. Check the spelling, or search for the name on the Players page.";
 
+    /// <summary>
+    /// The first player: the one the address names, else the signed in user (none when signed out).
+    /// The address stays without it until a second player is chosen.
+    /// </summary>
+    public static int? FirstPlayer(int? fromAddress, int? signedIn) => fromAddress ?? signedIn;
+
+    /// <summary>The player id of a signed in user's session, none when absent or not a number.</summary>
+    public static int? ParseUserId(string? userId)
+        => int.TryParse(userId, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int id) && id > 0 ? id : null;
+
     /// <summary>True when both ids are given and are the same player.</summary>
     public static bool IsSamePlayer(int? a, int? b) => a is not null && a == b;
 

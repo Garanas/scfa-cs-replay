@@ -542,7 +542,7 @@ search and a card per page below it, and each page links back ("← Players"). T
 the filter rows are in `Features/Players/PlayerFilters.cs`. The Home page has a Players card, and the
 header's Players link sits beside About.
 
-The Compare page's name fields are `Features/Players/PlayerNameSearch.razor`, a combobox that suggests players while typing: 300 ms after the last keystroke (a newer keystroke cancels the wait and the request) it calls `FindPlayersAsync` for two characters or more and lists up to 8 (`PlayerNameSuggestions` in `PlayerNameSearch.cs`: an exact name first, then current names, then former names, a player once). A pick raises `OnPick` with the hit, so the page uses its id without a second lookup; Enter without a highlight raises `OnSubmit`. Use it for any new player name field.
+The Compare page's name fields and the landing page's "Find a player" field are `Features/Players/PlayerNameSearch.razor`, a combobox that suggests players while typing: 300 ms after the last keystroke (a newer keystroke cancels the wait and the request) it calls `FindPlayersAsync` for two characters or more and lists up to 8 (`PlayerNameSuggestions` in `PlayerNameSearch.cs`: an exact name first, then current names, then former names, a player once). A pick raises `OnPick` with the hit, so the page uses its id without a second lookup; Enter without a highlight raises `OnSubmit`. The list is absolutely positioned (`z-10`) under the input, so it overlays the content. On the landing page a pick opens `players/{id}` and Enter keeps the `q` result list. Use it for any new player name field.
 
 | Page | Path | What |
 |---|---|---|
@@ -550,7 +550,7 @@ The Compare page's name fields are `Features/Players/PlayerNameSearch.razor`, a 
 | `Pages/PlayerPage.razor` | `players/{id}` | A profile: loads the profile, `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). Their shaping, formatting and CSV logic is in `Features/Players/Profile/` (`ProfileFormat`, `ProfileSummaries`, `RatingChartData`, `RatingTooltip`, `Loadable`). |
 | `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time (six chips: global, ladder 1v1, 2v2, 3v3 and the two 4v4 boards), the table in pages of 50 with the signed in player's row pinned, "your position" and the histogram of every rating. The name filter runs on the server (`RankingQuery.Name`), so its line says how many players match. Pure parts in `Features/Players/Rankings/RankingView.cs`. |
 | `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision. The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
-| `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
+| `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. A missing `a` is the signed in user (not written to the address until a second player is picked). A head to head row is one link to its replay (covering anchor, the map link above it). |
 
 The Matches tab's Players column is one short line (`MatchPlayersLine`: "vs name", "3 with · 4 against", "n others") whose button opens a single player card (`Matches/PlayerCardHost.razor`, placed by `fafReplay.placeBeside` and watched by `watchPlayerCard`): it opens on hover after 150 ms, on focus and on click or tap, and closes on leaving, Escape (focus back on the button), a press outside, the focus leaving it or the row scrolling away.
 
@@ -577,7 +577,7 @@ writes with `replace: true` and drops `page`):
 | `settled` | rankings | `0` also shows ratings with σ above 100 | settled only |
 | `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` |
 | `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one |
-| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | none |
+| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | `a`: the signed in user; `b`: none |
 
 A value a page does not read as given is dropped from the address (`PlayerUrlComponent.DropFromAddress`,
 decided by `RankingView.StaleParameters` and `LeagueView.StaleParameters`): an unknown `board`, `league`,
