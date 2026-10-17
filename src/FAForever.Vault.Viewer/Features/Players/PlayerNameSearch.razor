@@ -1,0 +1,244 @@
+@using FAForever.Vault.Viewer.Services.Players
+@inject IPlayersApi Api
+@implements IDisposable
+
+@* A player name field that suggests players while typing: the search goes out 300 ms after the last
+   keystroke (a newer keystroke cancels the wait and the request), for two characters or more. The
+   ARIA combobox pattern: focus stays in the input, the highlight is aria-activedescendant. *@
+<div class="min-w-0 text-sm">
+    <label for="@InputId" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+        @if (Dot is { Length: > 0 })
+        {
+            <span class="h-2.5 w-2.5 rounded-full @Dot" aria-hidden="true"></span>
+        }
+        @Label
+    </label>
+    <div class="relative">
+        <input id="@InputId" type="text" role="combobox" class="input-field min-h-11 aria-invalid:border-viz-8" placeholder="@Placeholder" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-expanded="@(ListShown ? "true" : "false")" aria-controls="@ListId" aria-autocomplete="list"
+               aria-activedescendant="@(ListShown && active >= 0 ? OptionId(active) : null)"
+               aria-invalid="@(Invalid ? "true" : null)" aria-describedby="@(Message is null ? null : MessageId)"
+               value="@Value" @oninput="InputAsync" @onkeydown="KeyDown" @onblur="BlurAsync" @onfocus="Focused" />
+        @if (open && (suggestions.Count > 0 || Status is not null))
+        {
+            <div class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-edge bg-raised shadow-lg" @onmousedown:preventDefault>
+                @if (suggestions.Count > 0)
+                {
+                    <ul id="@ListId" role="listbox" aria-label="@($"{Label} suggestions")" class="transition-opacity @(searching ? "opacity-50" : "")">
+                        @for (int i = 0; i < suggestions.Count; i++)
+                        {
+                            int index = i;
+                            PlayerSearchHit hit = suggestions[i];
+                            <li id="@OptionId(i)" role="option" aria-selected="@(i == active ? "true" : "false")"
+                                class="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 px-3 py-2 @(i == active ? "bg-primary/10" : "hover:bg-primary/10")"
+                                @onclick="() => PickAsync(hit)" @onmouseover="() => active = index">
+                                <span class="font-semibold text-ink">@hit.Login</span>
+                                @if (hit.ClanTag is { Length: > 0 } tag)
+                                {
+                                    <span class="text-ink-muted">[@tag]</span>
+                                }
+                                @if (hit.MatchedFormerName is { Length: > 0 } former)
+                                {
+                                    <span class="text-ink-muted">formerly @former</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (Status is not null)
+                {
+                    <p class="px-3 py-3 text-ink-muted @(suggestions.Count > 0 ? "border-t border-edge" : "")" role="@(failed ? "alert" : "status")">@Status</p>
+                }
+            </div>
+        }
+    </div>
+    @if (Message is not null)
+    {
+        <p id="@MessageId" class="mt-1 text-sm text-ink" role="status">@Message</p>
+    }
+</div>
+
+@code {
+    private static int counter;
+
+    private readonly string generated = $"pns-{Interlocked.Increment(ref counter)}";
+    private IReadOnlyList<PlayerSearchHit> suggestions = [];
+    private CancellationTokenSource? pending;
+    private bool open, searching, failed, noMatch;
+    private int active = -1;
+    private string? searchedText;
+
+    /// <summary>The visible label above the field.</summary>
+    [Parameter, EditorRequired] public required string Label { get; set; }
+
+    /// <summary>The text in the field (two-way).</summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>A colour class (such as <c>bg-viz-1</c>) for the small dot before the label.</summary>
+    [Parameter] public string? Dot { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>The id of the input; generated when not given.</summary>
+    [Parameter] public string? Id { get; set; }
+
+    /// <summary>Raised when a suggestion is picked (clicked, or Enter on the highlighted one).</summary>
+    [Parameter] public EventCallback<PlayerSearchHit> OnPick { get; set; }
+
+    /// <summary>Raised when Enter is pressed with no suggestion highlighted, with the text of the field.</summary>
+    [Parameter] public EventCallback<string> OnSubmit { get; set; }
+
+    /// <summary>Raised when the search needs a login, so the page can show its gate.</summary>
+    [Parameter] public EventCallback OnNotAuthenticated { get; set; }
+
+    /// <summary>Marks the field invalid, with <see cref="Message"/> under it.</summary>
+    [Parameter] public bool Invalid { get; set; }
+
+    [Parameter] public string? Message { get; set; }
+
+    private string InputId => Id is { Length: > 0 } ? Id : generated;
+
+    private string ListId => $"{InputId}-list";
+
+    private string MessageId => $"{InputId}-message";
+
+    private string OptionId(int index) => $"{InputId}-option-{index}";
+
+    private bool ListShown => open && suggestions.Count > 0;
+
+    private string? Status => failed
+        ? "The FAForever API could not be reached. Try again."
+        : searching
+            ? "Searching…"
+            : noMatch ? $"No player called “{searchedText}”." : null;
+
+    private void Focused()
+    {
+        if (suggestions.Count > 0 && PlayerNameSuggestions.ShouldSearch(Value))
+        {
+            open = true;
+        }
+    }
+
+    private async Task InputAsync(ChangeEventArgs e)
+    {
+        string text = e.Value?.ToString() ?? string.Empty;
+        Value = text;
+        await ValueChanged.InvokeAsync(text);
+        Cancel();
+        active = -1;
+        failed = noMatch = false;
+        if (!PlayerNameSuggestions.ShouldSearch(text))
+        {
+            suggestions = [];
+            searching = false;
+            open = false;
+            return;
+        }
+
+        CancellationTokenSource mine = new();
+        pending = mine;
+        open = true;
+        searching = true;
+        try
+        {
+            await Task.Delay(PlayerNameSuggestions.Debounce, mine.Token);
+            IReadOnlyList<PlayerSearchHit> found = await Api.FindPlayersAsync(text.Trim(), mine.Token);
+            if (mine.IsCancellationRequested)
+            {
+                return;
+            }
+
+            searchedText = text.Trim();
+            suggestions = PlayerNameSuggestions.Arrange(text, found);
+            noMatch = suggestions.Count == 0;
+            searching = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke took over.
+        }
+        catch (NotAuthenticatedException)
+        {
+            searching = false;
+            await OnNotAuthenticated.InvokeAsync();
+        }
+        catch (HttpRequestException)
+        {
+            if (ReferenceEquals(pending, mine))
+            {
+                searching = false;
+                failed = true;
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(pending, mine))
+            {
+                pending = null;
+            }
+        }
+    }
+
+    private async Task KeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown" when suggestions.Count > 0:
+                open = true;
+                active = (active + 1) % suggestions.Count;
+                break;
+            case "ArrowUp" when suggestions.Count > 0:
+                open = true;
+                active = active <= 0 ? suggestions.Count - 1 : active - 1;
+                break;
+            case "Escape":
+                open = false;
+                active = -1;
+                break;
+            case "Enter":
+                if (ListShown && active >= 0 && active < suggestions.Count)
+                {
+                    await PickAsync(suggestions[active]);
+                }
+                else
+                {
+                    open = false;
+                    Cancel();
+                    searching = false;
+                    await OnSubmit.InvokeAsync(Value);
+                }
+
+                break;
+        }
+    }
+
+    private async Task PickAsync(PlayerSearchHit hit)
+    {
+        Cancel();
+        searching = false;
+        open = false;
+        active = -1;
+        suggestions = [];
+        Value = hit.Login;
+        await ValueChanged.InvokeAsync(hit.Login);
+        await OnPick.InvokeAsync(hit);
+    }
+
+    private async Task BlurAsync()
+    {
+        await Task.Delay(150);
+        open = false;
+        active = -1;
+    }
+
+    private void Cancel()
+    {
+        pending?.Cancel();
+        pending = null;
+    }
+
+    public void Dispose() => Cancel();
+}
