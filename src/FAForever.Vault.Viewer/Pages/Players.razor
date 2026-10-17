@@ -28,10 +28,11 @@
         </NotAuthorized>
         <Authorized>
             <form class="mt-8 max-w-2xl" role="search" @onsubmit="Submit" @onsubmit:preventDefault>
-                <label for="player-search" class="mb-1 block text-sm font-medium text-ink-muted">Find a player</label>
-                <div class="flex gap-2">
-                    <input id="player-search" type="search" class="input-field min-h-11 flex-1" placeholder="A name, now or in the past"
-                           autocomplete="off" value="@text" @onchange="TextChanged" />
+                <div class="flex items-end gap-2">
+                    <div class="min-w-0 flex-1">
+                        <PlayerNameSearch Id="player-search" Label="Find a player" Placeholder="A name, now or in the past"
+                                          @bind-Value="text" OnPick="PickAsync" OnNotAuthenticated="() => needsLogin = true" />
+                    </div>
                     <button type="submit" class="btn-primary min-h-11">Search</button>
                 </div>
             </form>
@@ -175,10 +176,24 @@
         _ = SearchAsync(Searched);
     }
 
-    private void TextChanged(ChangeEventArgs e) => text = e.Value?.ToString() ?? "";
+    private DateTimeOffset pickedAt = DateTimeOffset.MinValue;
+
+    /// <summary>A suggestion was picked: that player's profile opens.</summary>
+    private Task PickAsync(PlayerSearchHit hit)
+    {
+        pickedAt = DateTimeOffset.UtcNow;
+        Navigation.NavigateTo(PlayerLinks.Profile(hit.Id));
+        return Task.CompletedTask;
+    }
 
     private void Submit()
     {
+        // Enter on a highlighted suggestion picks it, and the form's own submit must not search the text too.
+        if (DateTimeOffset.UtcNow - pickedAt < TimeSpan.FromMilliseconds(500))
+        {
+            return;
+        }
+
         string trimmed = text.Trim();
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("q", trimmed.Length == 0 ? null : trimmed), replace: true);
     }
