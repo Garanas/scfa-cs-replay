@@ -7,10 +7,9 @@
 @inherits PlayerUrlComponent
 @inject IPlayersApi Api
 
-@* The Overview tab of a profile: one card per leaderboard, the rating of one board over a period
-   with the clan, the names and the achievements beside it, four lifetime tiles and the last games.
-   Each part loads on its own and shows a pulse until it is there. The board and the period are in
-   the address; picking a rating card sets the board. *@
+@* The Overview tab of a profile: one card per leaderboard (each a link to the Rating history tab on
+   that board), the clan, the names and the achievements side by side, three lifetime tiles and the
+   last games. Each part loads on its own and shows a pulse until it is there. *@
 <section aria-label="Overview" class="grid gap-6">
     <section aria-label="Ratings">
         @if (ratingsLoad is null)
@@ -39,9 +38,8 @@
                 @foreach (PlayerRating rating in ratingList)
                 {
                     string board = rating.Board.TechnicalName;
-                    bool active = board == activeBoard;
                     LeagueLine? league = leagueLoad?.Value is { } leagueData ? ProfileSummaries.LeagueOf(board, leagueData.Seasons, leagueData.Entries, DateTimeOffset.UtcNow) : null;
-                    <button type="button" aria-pressed="@(active ? "true" : "false")" class="@CardClass(active)" @onclick="() => SelectBoard(board)">
+                    <a href="@ProfileLinks.RatingTab(PlayerId, board)" class="@CardClass">
                         <span class="flex items-baseline justify-between gap-2">
                             <span class="text-sm font-semibold">@rating.Board.DisplayName</span>
                             <span class="text-xs text-ink-muted">@ProfileFormat.Number(rating.TotalGames) games</span>
@@ -84,127 +82,78 @@
                         {
                             <span class="mt-auto block pt-2"><span class="block border-t border-edge pt-2 text-xs text-ink-muted"><span class="font-semibold text-ink">@league.Title</span> · @league.Detail</span></span>
                         }
-                    </button>
+                        <span class="@(league is null ? "mt-auto pt-3" : "mt-2") flex items-center justify-between gap-2 text-xs text-ink-muted">
+                            <span>Rating history</span>
+                            <svg viewBox="0 0 16 16" class="h-3 w-3 shrink-0 fill-none stroke-current" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+                        </span>
+                    </a>
                 }
             </div>
         }
     </section>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section class="card min-w-0" aria-labelledby="ov-chart-title">
-            <h2 id="ov-chart-title" class="text-lg font-semibold text-ink">Rating over time</h2>
-            <p class="mt-1 text-sm text-ink-muted">@ChartSubtitle</p>
-            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] sm:items-end">
-                @if (ratingList.Count > 0)
-                {
-                    <ChoiceSelect Label="Leaderboard" Query="board" Options="boardOptions" Default="@(defaultBoard ?? PlayerFilters.DefaultBoard)" />
-                }
-                <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
-            </div>
-
-            <div class="mt-5 min-w-0 transition-opacity @(chartLoading && chart is not null ? "opacity-50" : "")" aria-live="polite" aria-busy="@(chartLoading ? "true" : "false")">
-                @if (chart is null)
-                {
-                    @if (ratingsLoad is { Error: not null } || (ratingsLoad is not null && ratingList.Count == 0))
-                    {
-                        <p class="text-sm text-ink-muted">There is no rating to draw.</p>
-                    }
-                    else
-                    {
-                        <div class="h-72 animate-pulse rounded-xl border border-edge bg-raised"></div>
-                    }
-                }
-                else if (chart.Load.Error is { } chartError)
-                {
-                    <div role="alert">
-                        <p class="font-semibold">The rating history could not be loaded</p>
-                        <p class="mt-1 text-sm text-ink-muted">@chartError</p>
-                    </div>
-                }
-                else if (chart.Points.Count == 0)
-                {
-                    <p class="py-10 text-center text-sm text-ink-muted">No rated games on @Leaderboards.DisplayName(chart.Board) in this period.</p>
-                }
-                else
-                {
-                    <LineChart Points="chart.Points" Area="true" Name="Rating" AriaLabel="@($"Rating on {Leaderboards.DisplayName(chart.Board)} over time")">
-                        <Tooltip Context="point">
-                            <RatingTooltip Point="point" />
-                        </Tooltip>
-                    </LineChart>
-                }
-            </div>
-            @if (chartLoading)
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3" aria-label="About this player">
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Clan</h2>
+            @if (Profile?.Clan is { } clan)
             {
-                <p class="mt-2 text-xs text-ink-muted" role="status">Loading rated games@(chartProgress > 0 ? $", {chartProgress.ToString("N0", CultureInfo.InvariantCulture)} so far" : "")&hellip;</p>
+                <p class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 font-semibold">@clan.Tag</span>
+                    <span class="text-ink-muted">@clan.Name</span>
+                </p>
             }
-            <p class="mt-4 text-xs text-ink-muted">Rating is μ − 3σ, as the game and the FAF client show it. Hover or tap for a game.</p>
-            <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@RatingTabLink">Full history and table view</a></p>
+            else
+            {
+                <p class="mt-2 text-sm text-ink-muted">Not in a clan.</p>
+            }
         </section>
 
-        <aside class="grid content-start gap-4" aria-label="About this player">
-            <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold text-ink">Clan</h2>
-                @if (Profile?.Clan is { } clan)
-                {
-                    <p class="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                        <span class="inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 font-semibold">@clan.Tag</span>
-                        <span class="text-ink-muted">@clan.Name</span>
-                    </p>
-                }
-                else
-                {
-                    <p class="mt-2 text-sm text-ink-muted">Not in a clan.</p>
-                }
-            </section>
-
-            <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold text-ink">Name history</h2>
-                @if (Profile is not null)
-                {
-                    <ul class="mt-2 grid gap-1.5 text-sm">
-                        @foreach (NameSpan span in ProfileSummaries.NameHistory(Profile))
-                        {
-                            <li class="flex flex-wrap items-baseline justify-between gap-x-3">
-                                <span class="@(span.IsCurrent ? "font-semibold" : "")">@span.Name</span>
-                                <span class="text-xs text-ink-muted">@span.Span</span>
-                            </li>
-                        }
-                    </ul>
-                }
-            </section>
-
-            <section class="card p-4 sm:p-4">
-                <h2 class="text-sm font-semibold text-ink">Achievements</h2>
-                @if (achievementsLoad is null)
-                {
-                    <div class="mt-2 h-16 animate-pulse rounded-md bg-raised"></div>
-                }
-                else if (achievementsLoad.Error is { } achievementsError)
-                {
-                    <p class="mt-2 text-sm text-ink-muted" role="alert">@achievementsError</p>
-                }
-                else if (achievementsLoad.Value is { } summary)
-                {
-                    <p class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-semibold text-ink">@summary.Unlocked</span>
-                        <span class="text-sm text-ink-muted">of @summary.Total unlocked · @ProfileFormat.Number(summary.ExperiencePoints) XP</span>
-                    </p>
-                    @if (summary.Rarest is { } rarest)
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Name history</h2>
+            @if (Profile is not null)
+            {
+                <ul class="mt-2 grid gap-1.5 text-sm">
+                    @foreach (NameSpan span in ProfileSummaries.NameHistory(Profile))
                     {
-                        <p class="mt-1 text-sm text-ink-muted">Rarest: <span class="text-ink">@rarest.Name</span>, held by @rarest.UnlockersPercent.ToString("0.#", CultureInfo.InvariantCulture)% of players</p>
+                        <li class="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <span class="@(span.IsCurrent ? "font-semibold" : "")">@span.Name</span>
+                            <span class="text-xs text-ink-muted">@span.Span</span>
+                        </li>
                     }
-                    <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Army)">All achievements</a></p>
+                </ul>
+            }
+        </section>
+
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Achievements</h2>
+            @if (achievementsLoad is null)
+            {
+                <div class="mt-2 h-16 animate-pulse rounded-md bg-raised"></div>
+            }
+            else if (achievementsLoad.Error is { } achievementsError)
+            {
+                <p class="mt-2 text-sm text-ink-muted" role="alert">@achievementsError</p>
+            }
+            else if (achievementsLoad.Value is { } summary)
+            {
+                <p class="mt-2 flex items-baseline gap-2">
+                    <span class="text-2xl font-semibold text-ink">@summary.Unlocked</span>
+                    <span class="text-sm text-ink-muted">of @summary.Total unlocked · @ProfileFormat.Number(summary.ExperiencePoints) XP</span>
+                </p>
+                @if (summary.Rarest is { } rarest)
+                {
+                    <p class="mt-1 text-sm text-ink-muted">Rarest: <span class="text-ink">@rarest.Name</span>, held by @rarest.UnlockersPercent.ToString("0.#", CultureInfo.InvariantCulture)% of players</p>
                 }
-            </section>
-        </aside>
+                <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Army)">All achievements</a></p>
+            }
+        </section>
     </div>
 
     <section aria-label="Lifetime totals">
         @if (armyLoad is null)
         {
-            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy="true">
-                @for (int i = 0; i < 4; i++)
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-busy="true">
+                @for (int i = 0; i < 3; i++)
                 {
                     <div class="card h-24 animate-pulse"></div>
                 }
@@ -315,17 +264,14 @@
 @code {
     private sealed record LeagueData(IReadOnlyList<LeagueSeason> Seasons, IReadOnlyList<LeagueEntry> Entries);
 
-    private sealed record ChartState(string Board, string Period, Loadable<IReadOnlyList<RatingJournalEntry>> Load, IReadOnlyList<LinePoint> Points);
-
     /// <summary>The player's id; the data is fetched by it.</summary>
     [Parameter, EditorRequired] public int PlayerId { get; set; }
 
-    /// <summary>The profile the page loaded: the clan and the names beside the chart.</summary>
+    /// <summary>The profile the page loaded: the clan and the names.</summary>
     [Parameter] public PlayerProfile? Profile { get; set; }
 
     private int loadedPlayer = -1;
     private CancellationTokenSource? staticCancellation;
-    private CancellationTokenSource? chartCancellation;
 
     private Loadable<IReadOnlyList<PlayerRating>>? ratingsLoad;
     private Loadable<IReadOnlyDictionary<string, int?>>? changesLoad;
@@ -334,59 +280,24 @@
     private Loadable<AchievementSummary>? achievementsLoad;
     private Loadable<PlayerPage<PlayerMatch>>? recentLoad;
 
-    private ChartState? chart;
-    private string? chartKey;
-    private bool chartLoading;
-    private int chartProgress;
-
     private IReadOnlyList<PlayerRating> ratingList = [];
-    private IReadOnlyList<ChoiceOption> boardOptions = [];
-    private string? defaultBoard;
-    private string? activeBoard;
-
-    private string RatingTabLink => ProfileLinks.RatingTab(PlayerId, activeBoard, Periods.Normalize(Read("period")), defaultBoard);
-
-    private string ChartSubtitle
-    {
-        get
-        {
-            if (chart is null)
-            {
-                return "Rating after every rated game.";
-            }
-
-            var entries = chart.Points.Select(point => point.Data).OfType<RatingJournalEntry>().ToList();
-            string range = entries.Count > 0 ? ProfileFormat.Range(entries[0].Date, entries[^1].Date) : "";
-            string games = $"{ProfileFormat.Number(entries.Count)} rated {(entries.Count == 1 ? "game" : "games")}";
-            return string.Join(" · ", new[] { Leaderboards.DisplayName(chart.Board), range, games }.Where(part => part.Length > 0));
-        }
-    }
-
     protected override void OnParametersSet()
     {
         if (PlayerId != loadedPlayer)
         {
             loadedPlayer = PlayerId;
             StartLoads();
-            return;
         }
-
-        RefreshChart();
     }
 
-    private static string CardClass(bool active)
-        => "card flex h-full w-full min-w-0 cursor-pointer flex-col items-stretch justify-start p-4 text-left text-ink transition hover:border-primary sm:p-4 "
-            + (active ? "border-primary ring-1 ring-primary" : "");
+    private const string CardClass = "card flex h-full w-full min-w-0 flex-col items-stretch justify-start p-4 text-left text-ink transition hover:border-primary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary sm:p-4";
 
     private static string WinWidth(PlayerRating rating)
         => ((rating.WinShare ?? 0) * 100).ToString("0.#", CultureInfo.InvariantCulture);
 
-    private void SelectBoard(string board) => Write("board", board, defaultBoard);
-
     private void StartLoads()
     {
         staticCancellation?.Cancel();
-        chartCancellation?.Cancel();
         staticCancellation = new CancellationTokenSource();
         CancellationToken token = staticCancellation.Token;
 
@@ -396,12 +307,7 @@
         armyLoad = null;
         achievementsLoad = null;
         recentLoad = null;
-        chart = null;
-        chartKey = null;
-        chartLoading = false;
         ratingList = [];
-        boardOptions = [];
-        defaultBoard = activeBoard = null;
 
         _ = LoadRatingsAsync(token);
         _ = RunAsync(async t =>
@@ -448,11 +354,7 @@
         }
 
         ratingList = ProfileSummaries.ByGames(ratings);
-        boardOptions = ProfileSummaries.BoardOptions(ratings);
-        defaultBoard = ProfileSummaries.DefaultBoard(ratings);
-        activeBoard = ProfileSummaries.ActiveBoard(ratings, Read("board"));
         StateHasChanged();
-        RefreshChart();
 
         await RunAsync(async t =>
         {
@@ -469,74 +371,9 @@
         }, load => changesLoad = load, token);
     }
 
-    /// <summary>Loads the chart again when the board or the period of the address is not the one drawn.</summary>
-    private void RefreshChart()
-    {
-        if (ratingsLoad?.Value is not { Count: > 0 } ratings || staticCancellation is null)
-        {
-            return;
-        }
-
-        // A navigation away from this tab or page also reaches this component before it is removed.
-        string path = new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/');
-        if (!path.EndsWith($"/players/{PlayerId}", StringComparison.OrdinalIgnoreCase)
-            || PlayerLinks.ParseTab(Read(PlayerLinks.TabParameter)) != PlayerTab.Overview)
-        {
-            return;
-        }
-
-        activeBoard = ProfileSummaries.ActiveBoard(ratings, Read("board"));
-        string period = Periods.Normalize(Read("period"));
-        string key = $"{PlayerId}|{activeBoard}|{period}";
-        if (key == chartKey || activeBoard is null)
-        {
-            return;
-        }
-
-        chartKey = key;
-        chartCancellation?.Cancel();
-        chartCancellation = CancellationTokenSource.CreateLinkedTokenSource(staticCancellation.Token);
-        _ = LoadChartAsync(activeBoard, period, chartCancellation.Token);
-    }
-
-    private async Task LoadChartAsync(string board, string period, CancellationToken token)
-    {
-        chartLoading = true;
-        chartProgress = 0;
-        StateHasChanged();
-        var progress = new Progress<int>(count =>
-        {
-            if (!token.IsCancellationRequested)
-            {
-                chartProgress = count;
-                StateHasChanged();
-            }
-        });
-
-        try
-        {
-            DateTimeOffset? since = Periods.Since(period, DateTimeOffset.UtcNow);
-            Loadable<IReadOnlyList<RatingJournalEntry>> load = await Loadable<IReadOnlyList<RatingJournalEntry>>.RunAsync(
-                () => Api.GetRatingHistoryAsync(PlayerId, board, since, progress, token));
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            chart = new ChartState(board, period, load, load.Value is { } entries ? RatingChartData.Points(entries) : []);
-            chartLoading = false;
-            StateHasChanged();
-        }
-        catch (OperationCanceledException)
-        {
-            // A newer board or period took over.
-        }
-    }
-
     public override void Dispose()
     {
         base.Dispose();
         staticCancellation?.Cancel();
-        chartCancellation?.Cancel();
     }
 }

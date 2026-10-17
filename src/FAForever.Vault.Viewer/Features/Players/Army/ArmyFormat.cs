@@ -26,9 +26,6 @@ public static class ArmyFormat
     public static double? WinShare(ArmySummary summary)
         => Games(summary) is > 0 and var games ? (double)summary.Factions.Sum(faction => faction.Wins) / games : null;
 
-    /// <summary>Whether the game counts custom and matchmaker games apart for this player.</summary>
-    public static bool HasModeCounters(ArmySummary summary) => summary.CustomGames is not null || summary.LadderGames is not null;
-
     /// <summary>Units built or lost in all of the rows.</summary>
     public static long Built(IReadOnlyList<BuiltAndLost> rows) => rows.Sum(row => row.Built);
 
@@ -71,13 +68,6 @@ public static class ArmyFormat
         new("Built", ChartColor.Viz1),
         new("Lost", ChartColor.Viz2),
     ];
-
-    /// <summary>Custom games and matchmaker games as the two parts of one bar.</summary>
-    public static IReadOnlyList<StackedSegment> ModeSegments(ArmySummary summary)
-        => [
-            new($"Custom games", summary.CustomGames ?? 0, ChartColor.Viz1),
-            new($"Matchmaker", summary.LadderGames ?? 0, ChartColor.Viz2),
-        ];
 
     /// <summary>
     /// Rows of units built and lost; one scale for the whole panel, so a small row is a small bar

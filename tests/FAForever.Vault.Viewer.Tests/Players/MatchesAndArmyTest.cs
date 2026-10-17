@@ -405,14 +405,4 @@ public class ArmyAndAchievementsTest
         Assert.AreEqual("None built", rows[2].LostShare);
         Assert.AreEqual(0, ArmyFormat.BuiltLostRows([]).Count);
     }
-
-    [TestMethod]
-    public void ModesAreTwoSegments()
-    {
-        var segments = ArmyFormat.ModeSegments(Army());
-
-        Assert.AreEqual(30, segments[0].Value);
-        Assert.AreEqual(70, segments[1].Value);
-        Assert.AreEqual("Custom games", segments[0].Label);
-    }
 }

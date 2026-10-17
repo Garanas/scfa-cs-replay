@@ -77,19 +77,6 @@
             }
         </section>
 
-        <section class="card" aria-labelledby="a-modes">
-            <h2 id="a-modes" class="text-[1rem] font-semibold text-ink">Where the games were played</h2>
-            @if (ArmyFormat.HasModeCounters(summary))
-            {
-                <p class="mt-1 mb-4 text-sm text-ink-muted">Custom lobbies against matchmaker games.</p>
-                <StackedBar Segments="ArmyFormat.ModeSegments(summary)" AriaLabel="Custom games against matchmaker games" />
-            }
-            else
-            {
-                <p class="mt-1 text-sm text-ink-muted">The game stopped counting custom and matchmaker games apart</p>
-            }
-        </section>
-
         <section class="card" aria-labelledby="a-units">
             <h2 id="a-units" class="text-[1rem] font-semibold text-ink">Units built and lost</h2>
             <p class="mt-1 mb-4 text-sm text-ink-muted">By category and by tech level. The share lost says how the army is spent.</p>

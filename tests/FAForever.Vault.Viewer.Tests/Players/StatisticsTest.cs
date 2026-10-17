@@ -317,7 +317,6 @@ public class ArmyStatisticsTest
         Assert.IsNull(summary.HoursPlayed);
         Assert.IsNull(summary.CustomGames);
         Assert.AreEqual(0.2, summary.AcusLostPerGame!.Value, 1e-9, "per faction game when the game counters are absent");
-        Assert.IsFalse(ArmyFormat.HasModeCounters(summary));
         Assert.AreEqual(8421, ArmyFormat.TotalGames(8421, summary), "the match list total wins");
         Assert.AreEqual(50, ArmyFormat.TotalGames(null, summary));
 

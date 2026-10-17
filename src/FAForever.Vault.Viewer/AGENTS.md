@@ -567,8 +567,8 @@ writes with `replace: true` and drops `page`):
 |---|---|---|---|
 | `q` | landing, rankings | Search text; on rankings, part of a name (the server filters) | none |
 | `tab` | profile | `rating`, `matches`, `army` | Overview |
-| `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games) |
-| `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` |
+| `board` | profile (Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games) |
+| `period` | profile (Rating history), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` |
 | `page` | lists | Page number | 1 |
 | `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter |
 | `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all |
