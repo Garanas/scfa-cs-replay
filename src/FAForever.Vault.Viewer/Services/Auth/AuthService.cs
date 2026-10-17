@@ -26,6 +26,9 @@ public sealed class AuthService(HttpClient http, IJSRuntime js, NavigationManage
     /// <summary>Refresh the access token this long before it actually expires.</summary>
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromSeconds(30);
 
+    /// <summary>The page to open after a login callback, until <see cref="TakePendingReturnUrl"/> takes it.</summary>
+    private string? pendingReturnUrl;
+
     public AuthSession? Session { get; private set; }
 
     public bool IsAuthenticated => Session is not null;
@@ -183,7 +186,19 @@ public sealed class AuthService(HttpClient http, IJSRuntime js, NavigationManage
             }
         }
 
-        navigation.NavigateTo(returnUrl ?? string.Empty, replace: true);
+        // The callback runs before the app starts, when the router is not yet listening: a navigation
+        // now would change the address bar but leave the home page on screen. App takes it on start.
+        pendingReturnUrl = returnUrl ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Returns the page a login started from, once, after the callback completed (or failed).
+    /// </summary>
+    public string? TakePendingReturnUrl()
+    {
+        string? url = pendingReturnUrl;
+        pendingReturnUrl = null;
+        return url;
     }
 
     private async Task<string?> RefreshAsync()

@@ -230,7 +230,10 @@ based on, and they end up in moderation records. Treat them as a public contract
   holds personal preferences only (faction, light/dark mode), never something that filters or selects.
 - **The login round trip keeps the full URL.** `AuthService.BeginLoginAsync` stores the address,
   query included, and the callback returns to it. Any new redirect (another provider, an error
-  page) must do the same.
+  page) must do the same. The callback completes in `Program.cs`, before the router listens, so it
+  does not navigate: `App.razor` takes the page (`TakePendingReturnUrl`) and opens it on start
+  (a navigation before `RunAsync` changes the address bar but leaves the home page on screen;
+  `AuthServiceTest` pins this).
 - **Check it before merging** a change to a replay tab: set up a view, copy the address, open it in
   a private window (signed out) and confirm the identical view, selection included. Then add the
   parameter to the table above.
