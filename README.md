@@ -1,63 +1,103 @@
-# Replay parser for Supreme Commander: Forged Alliance (Forever)
+# FAF workshop
 
-A small library to read and interpret replays of the game [Supreme Commander: Forged Alliance Forever](https://store.steampowered.com/app/9420/Supreme_Commander_Forged_Alliance/). It also supports the compressed replay format of [FAForever](https://faforever.com/). It is inspired by a similar [Java implementation](https://github.com/FAForever/faf-java-commons/blob/develop/faf-commons-data/src/main/java/com/faforever/commons/replay/ReplayLoader.java).
+Tools for [Supreme Commander: Forged Alliance Forever](https://faforever.com/), the community edition of
+[Supreme Commander: Forged Alliance](https://store.steampowered.com/app/9420/Supreme_Commander_Forged_Alliance/):
 
-The libraries live in `src/`:
+- **[Vault of FAForever](https://vault.jipwijnia.nl)**, a web app to watch replays again, study maps,
+  look up units and follow players. Everything is read in your browser.
+- **The map editor**, a desktop application (Windows and Linux) to make maps, from a first sketch to an
+  upload to the vault.
+- **Libraries** for .NET that read and write the game's files: replays, maps, blueprints, meshes and
+  the Lua the game's data is written in.
 
-- `FAForever.FileFormats.Replay`: the replay parser.
-- `FAForever.FileFormats.Blueprints`: blueprint files (`.bp`) of units, projectiles, props and effects.
-- `FAForever.FileFormats.Lua`: Lua values and the data-only Lua that game files are written in.
-- `FAForever.FileFormats.Map`: maps: the binary `.scmap` and its `_save.lua` and `_scenario.lua`.
-- `FAForever.FileFormats.Mesh`: meshes of units and props (`.scm`), as glTF, and small pictures of them.
+## Vault of FAForever
 
-## Map editor
+![The Build order tab of a replay in Vault of FAForever: two players' orders on the map, side by side](docs/images/vault.webp)
 
-The beginnings of a desktop map editor: a map as a project of JSON and PNG files that terrain
-tools and image editors work on, packed into the game's files on export.
+Open it at **https://vault.jipwijnia.nl**. It runs in any modern browser, and installs as an app.
 
-- `src/FAForever.MapEditor.Project`: the editor's model of a map and its project format.
-- `src/FAForever.MapEditor.Cli`: the `faf-map` tool.
-- `src/FAForever.MapEditor.App`: the editor's window (Avalonia): open, import, save and export maps,
-  paint the heightmap, undo and redo; it reads back what other tools change in the project.
+- **Replays**: search the FAForever vault by player, map, mod and date, open the replays in your
+  computer's replay folder (installed app) or open a single `.fafreplay` or `.scfareplay` file. A replay
+  has tabs for its players, statistics, a playthrough of every order on the map, the build orders of
+  two players side by side, chat, events, sim callbacks and a moderation log that can be copied as a
+  prompt for an AI. Every view is a link to share: tab, filters, time window and selection included.
+- **Maps**: the featured maps, the matchmaker's map pools and a search of every map in the vault. A map
+  has a page with its terrain, resources, pathing, reclaim, the replays played on it and its reviews.
+- **Units**: the units of the base game and of every FAF release since 3603, with filters, comparisons
+  and the history of every unit across releases.
+- **Players**: profiles with rating history, matches and achievements, the leaderboards, leagues and
+  two players compared.
+- **About**: explainers for players about how a replay and a blueprint are put together.
+
+Replay, map and unit pages work signed out; searching the vault and the Players pages need an FAF login.
+
+## The map editor
+
+![The map editor with Project Tabula: the terrain from above and in 3D, side by side](docs/images/map-editor.webp)
+
+The map editor (beta) keeps a map as a project of JSON and PNG files, so terrain tools, image editors
+and git can work on it too, and writes the game's files when you export or upload it.
+
+- **Sketch** a layout first: pencil strokes, symbols, labels and a picture to trace, on sheets.
+- **Terrain** in layers you can change later: sculpting, stamps, curves for roads, rivers, ridges
+  and cliffs, a draft and a final heightmap for World Machine or Gaea.
+- **Paint** the strata by brush, by masks and by rules; water, lighting and the sky.
+- **Place** markers, props, decals and units, with symmetry for every edit, presets, palettes and
+  units placed in lines, rectangles and rings.
+- **Generate** what the map needs: walkability, path networks, the preview, normal and shadow decals.
+- **Share** it: export to the game, upload to the vault, or commit to git from the editor.
+- **Extend** it with Lua plugins, and drive it from scripts and agents through its automation server.
+- Guided tours explain the window; the same tours make [the guide](docs/guide/index.md).
+
+Download it from the [releases](https://github.com/Garanas/faf-workshop/releases): one executable per
+system that needs nothing else installed. Every push to `main` builds one as well (the workflow
+"Map editor", kept for 90 days). It needs the game and the FAF client's data on the same computer; on
+the first start it converts the game's assets into its workspace. Windows and Linux work; the macOS
+build has never been started.
+
+## Libraries
+
+The libraries live in `src/` and run on .NET 10, also in the browser (WebAssembly):
+
+| Library | What it reads and writes |
+|---|---|
+| `FAForever.FileFormats.Replay` | Replays (`.scfareplay` and FAF's compressed `.fafreplay`): the header, every input of every player, and analysis on top. |
+| `FAForever.FileFormats.Map` | Maps: the binary `.scmap` (versions 53, 56 and 60), `_save.lua` and `_scenario.lua`, and the navigational mesh of the map. |
+| `FAForever.FileFormats.Blueprints` | Blueprints (`.bp`) of units, projectiles, props and effects; blueprint ids, unit names and factions. |
+| `FAForever.FileFormats.Mesh` | Meshes of units and props (`.scm`): bones, vertices, triangles, written back or as glTF (`.glb`), and small pictures of them. |
+| `FAForever.FileFormats.Lua` | Lua values and an evaluator for the data-only Lua that the game's files are written in. |
+
+The replay parser was inspired by FAForever's
+[Java implementation](https://github.com/FAForever/faf-java-commons/blob/develop/faf-commons-data/src/main/java/com/faforever/commons/replay/ReplayLoader.java).
+
+## Building and running
+
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```sh
-faf-map workspace init "D:/FAF Map Editor"                 # the workspace: projects and the game's assets
-faf-map workspace convert                                  # env and units of the game and FAF, as PNG and JSON
-faf-map unpack maps/theta_passage.v0004 theta_passage      # a map folder into a project
+dotnet build FAForever.sln                                  # everything
+dotnet test FAForever.sln                                   # every test project
+dotnet watch --project src/FAForever.Vault.Server           # the vault on http://127.0.0.1:5080
+dotnet run --project src/FAForever.MapEditor.App            # the map editor
+```
+
+The vault's styles are made with the Tailwind CSS standalone CLI: run `pwsh tools/install-tailwind.ps1`
+once, and the build regenerates the stylesheet. The map editor comes with `faf-map`
+(`src/FAForever.MapEditor.Cli`), which turns a map folder into a project and back:
+
+```sh
+faf-map unpack maps/theta_passage.v0004 theta_passage       # a map folder into a project
 faf-map pack theta_passage "<game>/maps" --version 5        # a project into maps/theta_passage.v0005
 faf-map pack theta_passage "<game>/maps" --watch            # pack again on every change
-faf-map-editor theta_passage --automation 5371              # the editor, driven by...
-faf-map editor stroke points=[[10,10],[50,50]]              # ...commands like these
 ```
 
-## Web app
-
-The repository also ships a web app to search, inspect and analyse replays, and to browse the
-units of the base game and of every game version since 3603 (the Units tab, from `wwwroot/data/units/`),
-to read a player's rating history, games and factions, the leaderboards and the leagues, and to compare two
-players (the Players section, from the FAForever API once signed in):
-
-- `src/FAForever.Vault.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
-  faction colour themes, light and dark) that parses replays entirely in the browser.
-- `src/FAForever.Vault.Server`: a minimal ASP.NET Core host that serves the viewer, proxies
-  the FAForever OAuth token exchange (Hydra does not send CORS headers) and fills in link previews
-  for replay, unit and About pages.
-
-Run it locally:
-
-```sh
-pwsh tools/install-tailwind.ps1      # once: fetch the Tailwind standalone CLI
-dotnet watch --project src/FAForever.Vault.Server   # http://127.0.0.1:5080
-```
-
-See [AGENTS.md](AGENTS.md) for architecture notes, conventions and the verified FAForever
-endpoint/CORS matrix, and [TODO.md](TODO.md) for open items.
+[AGENTS.md](AGENTS.md) and the guides in each project hold the architecture, conventions and the
+FAForever endpoints the vault uses; [TODO.md](TODO.md) lists open items.
 
 ## Performance
 
-We use the [BenchmarkDotNet](https://www.myget.org/feed/benchmarkdotnet/package/nuget/BenchmarkDotNet) library to generate basic statistics of the performance of the library as a whole. We do not generate statistics of individual functions since in practice you'll never call the individual functions - you'll always parse a replay as a single unit.
-
-All files in `assets/faforever` are automatically part of the benchmark.
+The replay parser is benchmarked with [BenchmarkDotNet](https://benchmarkdotnet.org/), as a whole: in
+practice a replay is always parsed as one unit. Every replay in `assets/faforever` is part of the benchmark.
 
 _Benchmark data from 2024/09/04_
 
@@ -71,22 +111,26 @@ _Benchmark data from 2024/09/04_
 
 ## References
 
-The library attempts to use the latest and greatest of C#. This is made possible because of various books and online education content:
+The libraries use the latest of C#, learned from books and online education:
 
 - [Zoran Horvat](https://www.youtube.com/@zoran-horvat)
-- [dotnet](https://www.youtube.com/@dotnet)
-- - [A Complete .NET Developer's Guide to Span with Stephen Toub](https://www.youtube.com/watch?v=5KdICNWOfEQ)
-- [Raw coding](https://www.youtube.com/@RawCoding)
-- - [Understanding .NET C# Heaps (Deep Dive)](https://www.youtube.com/watch?v=TnDRzHZbOio)
+- [dotnet](https://www.youtube.com/@dotnet), in particular
+  [A Complete .NET Developer's Guide to Span with Stephen Toub](https://www.youtube.com/watch?v=5KdICNWOfEQ)
+- [Raw coding](https://www.youtube.com/@RawCoding), in particular
+  [Understanding .NET C# Heaps (Deep Dive)](https://www.youtube.com/watch?v=TnDRzHZbOio)
 
-And relevant documentation:
+And documentation:
 
-- [BenchmarkDotNet](https://benchmarkdotnet.org/articles/overview.html)
-- - [Diagnoses](https://benchmarkdotnet.org/articles/configs/diagnosers.html)
-- - [About Memory Diagnoser](https://adamsitnik.com/the-new-Memory-Diagnoser/)
+- [BenchmarkDotNet](https://benchmarkdotnet.org/articles/overview.html): its
+  [diagnosers](https://benchmarkdotnet.org/articles/configs/diagnosers.html) and
+  [the memory diagnoser](https://adamsitnik.com/the-new-Memory-Diagnoser/)
 
 ## Credits
 
-With thanks to the following individuals:
+With thanks to:
 
 - https://github.com/JoschiZ for casually helping a stranger with Blazor struggles on Discord
+
+## License
+
+[MIT](LICENSE).
