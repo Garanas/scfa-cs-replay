@@ -365,8 +365,6 @@ public class ArmyAndAchievementsTest
 
         Assert.AreEqual(100, ArmyFormat.Games(army));
         Assert.AreEqual(0.5, ArmyFormat.WinShare(army)!.Value, 1e-9);
-        Assert.AreEqual("100 h", ArmyFormat.Hours(army.HoursPlayed!.Value));
-        Assert.AreEqual("60 min per game", ArmyFormat.AverageGame(army));
         Assert.AreEqual(1400, ArmyFormat.Built(army.ByCategory));
         Assert.AreEqual(350, ArmyFormat.Lost(army.ByCategory));
         Assert.AreEqual(0.25, ArmyFormat.LostShare(1400, 350)!.Value, 1e-9);

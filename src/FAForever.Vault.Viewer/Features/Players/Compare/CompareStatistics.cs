@@ -72,7 +72,6 @@ public static class CompareStatistics
             Row("Win share in the period", winA, winB, Percent),
             Row("Peak rating in the period", summaryA.Peak, summaryB.Peak, Count),
             Row("Games with a faction recorded", ArmyFormat.Games(armyA), ArmyFormat.Games(armyB), Count),
-            HoursRow(armyA.HoursPlayed, armyB.HoursPlayed),
             Row("ACUs lost per game", armyA.AcusLostPerGame, armyB.AcusLostPerGame, value => value.ToString("0.00", CultureInfo.InvariantCulture), lowerIsBetter: true),
             new FactRow(
                 "Achievements unlocked",
@@ -181,11 +180,6 @@ public static class CompareStatistics
     private static string Count(double value) => Math.Round(value).ToString("N0", CultureInfo.InvariantCulture);
 
     private static string Percent(double value) => (value * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
-
-    private static FactRow HoursRow(double? a, double? b)
-        => a is null && b is null
-            ? new FactRow("Hours in game", "Not recorded", "Not recorded", Better.Neither)
-            : Row("Hours in game", a, b, Count);
 
     private static FactRow Row(string label, double? a, double? b, Func<double, string> format, bool lowerIsBetter = false)
         => new(label, a is { } x ? format(x) : "None", b is { } y ? format(y) : "None", Decide(a, b, lowerIsBetter));

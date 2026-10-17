@@ -26,21 +26,8 @@ public static class ArmyFormat
     public static double? WinShare(ArmySummary summary)
         => Games(summary) is > 0 and var games ? (double)summary.Factions.Sum(faction => faction.Wins) / games : null;
 
-    /// <summary>Hours with a thousands separator: 1,342 h.</summary>
-    public static string Hours(double hours) => $"{hours.ToString("N0", CultureInfo.InvariantCulture)} h";
-
-    /// <summary>The hours tile's value: the hours, or "Not recorded" when the game no longer reports time played.</summary>
-    public static string HoursOrNotRecorded(double? hours) => hours is { } value ? Hours(value) : "Not recorded";
-
-    /// <summary>The sub text of a missing time played.</summary>
-    public const string HoursNotRecordedSub = "the game no longer reports time played";
-
     /// <summary>Whether the game counts custom and matchmaker games apart for this player.</summary>
     public static bool HasModeCounters(ArmySummary summary) => summary.CustomGames is not null || summary.LadderGames is not null;
-
-    /// <summary>The average game in minutes (the time in game over the games), or null without games.</summary>
-    public static string? AverageGame(ArmySummary summary)
-        => summary.HoursPlayed is { } hours && Games(summary) is > 0 and var games ? $"{(int)Math.Round(hours * 60 / games)} min per game" : null;
 
     /// <summary>Units built or lost in all of the rows.</summary>
     public static long Built(IReadOnlyList<BuiltAndLost> rows) => rows.Sum(row => row.Built);

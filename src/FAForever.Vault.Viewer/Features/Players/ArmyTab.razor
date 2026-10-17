@@ -49,8 +49,7 @@
         long lost = ArmyFormat.Lost(summary.ByCategory);
         FactionPlays? main = ArmyFormat.MainFaction(summary.Factions);
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <InfoTile Label="Time in game" Value="@ArmyFormat.HoursOrNotRecorded(summary.HoursPlayed)" Sub="@(summary.HoursPlayed is null ? ArmyFormat.HoursNotRecordedSub : ArmyFormat.AverageGame(summary))" />
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <InfoTile Label="Games with a faction recorded" Value="@MatchFormat.Count(games)" Sub="@(games > 0 ? $"{MatchFormat.Percent(ArmyFormat.WinShare(summary))} won" : null)" />
             <InfoTile Label="Units built" Value="@MatchFormat.Count(built)"
                       Sub="@($"{MatchFormat.Count(lost)} lost, {MatchFormat.Percent(ArmyFormat.LostShare(built, lost))}")" />

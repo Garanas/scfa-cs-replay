@@ -220,8 +220,7 @@
         else if (armyLoad.Value is { } army)
         {
             BuiltAndLost experimentals = army.ByTech.First(group => group.Label == "Experimental");
-            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <InfoTile Label="Hours in game" Value="@(army.HoursPlayed is { } hours ? ProfileFormat.Number(hours) : "Not recorded")" Sub="@(army.HoursPlayed is { } h ? $"About {ProfileFormat.Number(h / 24)} days" : ArmyFormat.HoursNotRecordedSub)" />
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                 <InfoTile Label="Games" Value="@ProfileFormat.Number(ArmyFormat.TotalGames(recentLoad?.Value?.TotalRecords, army))" Sub="@($"{ProfileFormat.Number(ArmyFormat.Games(army))} with a faction recorded")" />
                 <InfoTile Label="ACUs lost" Value="@ProfileFormat.Number(army.AcusLost)" Sub="@(army.AcusLostPerGame is { } perGame ? $"{perGame.ToString("0.00", CultureInfo.InvariantCulture)} per game" : null)" />
                 <InfoTile Label="Experimentals built" Value="@ProfileFormat.Number(experimentals.Built)" Sub="@($"{ProfileFormat.Number(experimentals.Lost)} lost")" />
