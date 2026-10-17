@@ -109,28 +109,6 @@ _Benchmark data from 2024/09/04_
 | 23225508.fafreplay   |  1.056 ms | 0.0205 ms | 0.0182 ms |  261.7188 |  259.7656 |  248.0469 |   1.65 MB |
 | 23225685.fafreplay   |  6.138 ms | 0.0548 ms | 0.0512 ms | 1093.7500 | 1085.9375 | 1000.0000 |  12.94 MB |
 
-## References
-
-The libraries use the latest of C#, learned from books and online education:
-
-- [Zoran Horvat](https://www.youtube.com/@zoran-horvat)
-- [dotnet](https://www.youtube.com/@dotnet), in particular
-  [A Complete .NET Developer's Guide to Span with Stephen Toub](https://www.youtube.com/watch?v=5KdICNWOfEQ)
-- [Raw coding](https://www.youtube.com/@RawCoding), in particular
-  [Understanding .NET C# Heaps (Deep Dive)](https://www.youtube.com/watch?v=TnDRzHZbOio)
-
-And documentation:
-
-- [BenchmarkDotNet](https://benchmarkdotnet.org/articles/overview.html): its
-  [diagnosers](https://benchmarkdotnet.org/articles/configs/diagnosers.html) and
-  [the memory diagnoser](https://adamsitnik.com/the-new-Memory-Diagnoser/)
-
-## Credits
-
-With thanks to:
-
-- https://github.com/JoschiZ for casually helping a stranger with Blazor struggles on Discord
-
 ## License
 
 [MIT](LICENSE).
