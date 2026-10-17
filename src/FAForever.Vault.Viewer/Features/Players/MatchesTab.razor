@@ -127,6 +127,8 @@
                     }
                     else
                     {
+                        <PlayerCardHost>
+                        <ChildContent Context="cards">
                         <div class="card scroll-hint relative overflow-x-auto p-0 sm:p-0 transition-opacity @(tableLoading ? "opacity-50" : "")">
                             <table class="list-table w-full text-left text-sm sm:min-w-[56rem]">
                                 <thead class="border-b border-edge text-xs text-ink-muted">
@@ -146,7 +148,6 @@
                                 <tbody class="divide-y divide-edge">
                                     @foreach (PlayerMatch match in table.Items)
                                     {
-                                        (IReadOnlyList<MatchParticipant> mates, IReadOnlyList<MatchParticipant> opponents) = MatchFormat.Others(match, PlayerId);
                                         <tr @key="match.GameId">
                                             <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink-muted max-sm:p-0">@MatchFormat.When(match.StartTime)</td>
                                             <td class="max-w-[12rem] px-3 py-2 max-sm:p-0">
@@ -172,9 +173,8 @@
                                                     <span class="text-ink-muted">Unknown</span>
                                                 }
                                             </td>
-                                            <td class="list-table-wide space-y-0.5 px-3 py-2 sm:min-w-[14rem] sm:max-w-[20rem] max-sm:order-last max-sm:p-0">
-                                                <MatchPlayers Label="With" Players="mates" />
-                                                <MatchPlayers Label="Against" Players="opponents" />
+                                            <td class="list-table-wide px-3 py-2 sm:min-w-[12rem] max-sm:order-last max-sm:p-0">
+                                                <MatchPlayersCell Match="match" Line="MatchPlayersLine.Of(match, PlayerId)" Cards="cards" />
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">
                                                 <span class="inline-flex items-center gap-1.5">
@@ -230,6 +230,8 @@
                                 </tbody>
                             </table>
                         </div>
+                        </ChildContent>
+                        </PlayerCardHost>
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <p class="text-sm text-ink-muted">@PageSummary(table)</p>
                             <div class="flex gap-2">

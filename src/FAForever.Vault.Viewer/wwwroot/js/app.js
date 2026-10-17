@@ -121,6 +121,77 @@ window.fafReplay = {
         element.style.visibility = "visible";
     },
     /*
+     * Places a card (the player card of the Matches tab, PlayerCardHost.razor) below a button, in
+     * viewport pixels: from the button's left edge on wide screens, full width minus a 16 px gutter
+     * below sm; above the button where there is no room below, always inside the viewport.
+     */
+    placeBeside: function (cardId, buttonId) {
+        const card = document.getElementById(cardId), button = document.getElementById(buttonId);
+        if (!card || !button) return;
+        const gap = 6, margin = 8, narrow = window.innerWidth < 640, gutter = 16;
+        const box = button.getBoundingClientRect();
+        card.style.width = narrow ? (window.innerWidth - 2 * gutter) + "px" : "";
+        const width = card.offsetWidth, height = card.offsetHeight;
+        const left = narrow ? gutter : Math.min(box.left, window.innerWidth - margin - width);
+        let top = box.bottom + gap;
+        if (top + height > window.innerHeight - margin && box.top - gap - height >= margin) top = box.top - gap - height;
+        top = Math.max(margin, Math.min(top, window.innerHeight - margin - height));
+        card.style.left = Math.max(margin, left) + "px";
+        card.style.top = top + "px";
+        card.style.visibility = "visible";
+    },
+    /*
+     * Watches an open player card: Escape, a press outside the card and its button, the focus
+     * leaving both, and the button scrolling out of view close it (through CloseFromScript); a
+     * scroll or resize otherwise keeps it next to the button. Tab from the button goes into the
+     * card's links, Shift+Tab from the first link back to the button.
+     */
+    watchPlayerCard: function (ref, cardId, buttonId) {
+        const api = window.fafReplay;
+        api.unwatchPlayerCard();
+        const card = document.getElementById(cardId), button = document.getElementById(buttonId);
+        if (!card || !button) return;
+        const links = () => Array.from(card.querySelectorAll("a[href]"));
+        const close = (restore) => {
+            api.unwatchPlayerCard();
+            if (restore) button.focus();
+            ref.invokeMethodAsync("CloseFromScript");
+        };
+        const onKey = (event) => {
+            if (event.key === "Escape") { event.preventDefault(); close(true); return; }
+            if (event.key !== "Tab") return;
+            const all = links();
+            if (event.target === button && !event.shiftKey && all.length) { event.preventDefault(); all[0].focus(); }
+            else if (event.shiftKey && all.length && event.target === all[0]) { event.preventDefault(); button.focus(); }
+        };
+        const onPress = (event) => { if (!card.contains(event.target) && !button.contains(event.target)) close(false); };
+        const onFocusOut = (event) => {
+            const next = event.relatedTarget;
+            if (next && !card.contains(next) && next !== button) close(false);
+        };
+        const onMove = () => {
+            const box = button.getBoundingClientRect();
+            if (box.bottom < 0 || box.top > window.innerHeight) close(false); else api.placeBeside(cardId, buttonId);
+        };
+        document.addEventListener("keydown", onKey, true);
+        document.addEventListener("pointerdown", onPress, true);
+        document.addEventListener("scroll", onMove, true);
+        window.addEventListener("resize", onMove);
+        card.addEventListener("focusout", onFocusOut);
+        api._playerCardCleanup = () => {
+            document.removeEventListener("keydown", onKey, true);
+            document.removeEventListener("pointerdown", onPress, true);
+            document.removeEventListener("scroll", onMove, true);
+            window.removeEventListener("resize", onMove);
+            card.removeEventListener("focusout", onFocusOut);
+        };
+        api.placeBeside(cardId, buttonId);
+    },
+    unwatchPlayerCard: function () {
+        const api = window.fafReplay;
+        if (api._playerCardCleanup) { api._playerCardCleanup(); api._playerCardCleanup = null; }
+    },
+    /*
      * GoatCounter (see Services/Analytics/AnalyticsService.cs). The script is only loaded when an
      * endpoint is configured; counts made before it has loaded wait in a queue. "no_onload": the
      * app counts every page itself, so the automatic count on load would be a duplicate.
