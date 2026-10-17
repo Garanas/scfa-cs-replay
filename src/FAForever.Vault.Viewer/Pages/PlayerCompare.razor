@@ -33,33 +33,15 @@
     <Authorized>
         <form class="card mt-6 grid grid-cols-1 gap-4" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-start sm:gap-4">
-                <div class="min-w-0 text-sm">
-                    <label for="compare-a" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-                        <span class="h-2.5 w-2.5 rounded-full bg-viz-1" aria-hidden="true"></span>First player
-                    </label>
-                    <input id="compare-a" type="search" class="input-field min-h-11 aria-invalid:border-viz-8" placeholder="A player name" autocomplete="off"
-                           aria-invalid="@(messageA is null ? null : "true")" aria-describedby="@(messageA is null ? null : "compare-a-message")"
-                           value="@nameA" @onchange="e => nameA = e.Value?.ToString() ?? string.Empty" />
-                    @if (messageA is not null)
-                    {
-                        <p id="compare-a-message" class="mt-1 text-sm text-ink" role="status">@messageA</p>
-                    }
-                </div>
+                <PlayerNameSearch Id="compare-a" Label="First player" Dot="bg-viz-1" Placeholder="A player name"
+                                  @bind-Value="nameA" Invalid="@(messageA is not null)" Message="@messageA"
+                                  OnPick="PickAAsync" OnNotAuthenticated="() => needsLogin = true" />
                 <button type="button" class="btn-secondary min-h-11 min-w-11 justify-self-center px-3 sm:mt-[1.375rem]" aria-label="Swap the two players" title="Swap the two players" @onclick="Swap">
                     <svg class="h-4 w-4 sm:rotate-0" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2 5h11M10.5 2.5 13 5l-2.5 2.5M14 11H3M5.5 8.5 3 11l2.5 2.5" /></svg>
                 </button>
-                <div class="min-w-0 text-sm">
-                    <label for="compare-b" class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-                        <span class="h-2.5 w-2.5 rounded-full bg-viz-2" aria-hidden="true"></span>Second player
-                    </label>
-                    <input id="compare-b" type="search" class="input-field min-h-11 aria-invalid:border-viz-8" placeholder="A player name" autocomplete="off"
-                           aria-invalid="@(messageB is null ? null : "true")" aria-describedby="@(messageB is null ? null : "compare-b-message")"
-                           value="@nameB" @onchange="e => nameB = e.Value?.ToString() ?? string.Empty" />
-                    @if (messageB is not null)
-                    {
-                        <p id="compare-b-message" class="mt-1 text-sm text-ink" role="status">@messageB</p>
-                    }
-                </div>
+                <PlayerNameSearch Id="compare-b" Label="Second player" Dot="bg-viz-2" Placeholder="A player name"
+                                  @bind-Value="nameB" Invalid="@(messageB is not null)" Message="@messageB"
+                                  OnPick="PickBAsync" OnNotAuthenticated="() => needsLogin = true" />
                 <button type="submit" class="btn-primary min-h-11 w-full sm:mt-[1.375rem] sm:w-auto" disabled="@isResolving">Compare</button>
             </div>
             <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -449,8 +431,51 @@
         }
     }
 
+    private DateTimeOffset pickedAt = DateTimeOffset.MinValue;
+
+    private Task PickAAsync(PlayerSearchHit hit) => PickAsync(hit, first: true);
+
+    private Task PickBAsync(PlayerSearchHit hit) => PickAsync(hit, first: false);
+
+    /// <summary>A suggestion was picked: its id is used as it is, with no second lookup.</summary>
+    private Task PickAsync(PlayerSearchHit hit, bool first)
+    {
+        pickedAt = DateTimeOffset.UtcNow;
+        names[hit.Id] = hit.Login;
+        int? a = first ? hit.Id : idA;
+        int? b = first ? idB : hit.Id;
+        if (first)
+        {
+            messageA = null;
+        }
+        else
+        {
+            messageB = null;
+        }
+
+        if (CompareInput.IsSamePlayer(a, b))
+        {
+            messageB = SamePlayerMessage;
+        }
+
+        (a, b) = CompareInput.Resolved(a, b);
+        Write(
+            new Dictionary<string, string?>
+            {
+                ["a"] = a?.ToString(CultureInfo.InvariantCulture),
+                ["b"] = b?.ToString(CultureInfo.InvariantCulture),
+            });
+        return Task.CompletedTask;
+    }
+
     private async Task SubmitAsync()
     {
+        // Enter on a highlighted suggestion picks it, and the form's own submit must not resolve the text again.
+        if (DateTimeOffset.UtcNow - pickedAt < TimeSpan.FromMilliseconds(500))
+        {
+            return;
+        }
+
         resolveCancellation?.Cancel();
         CancellationTokenSource mine = new();
         resolveCancellation = mine;

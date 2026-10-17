@@ -538,6 +538,8 @@ search and a card per page below it, and each page links back ("← Players"). T
 the filter rows are in `Features/Players/PlayerFilters.cs`. The Home page has a Players card, and the
 header's Players link sits beside About.
 
+The Compare page's name fields are `Features/Players/PlayerNameSearch.razor`, a combobox that suggests players while typing: 300 ms after the last keystroke (a newer keystroke cancels the wait and the request) it calls `FindPlayersAsync` for two characters or more and lists up to 8 (`PlayerNameSuggestions` in `PlayerNameSearch.cs`: an exact name first, then current names, then former names, a player once). A pick raises `OnPick` with the hit, so the page uses its id without a second lookup; Enter without a highlight raises `OnSubmit`. Use it for any new player name field.
+
 | Page | Path | What |
 |---|---|---|
 | `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
