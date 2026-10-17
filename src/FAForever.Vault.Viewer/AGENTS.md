@@ -85,6 +85,10 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
 - Menus and other things that open on top of the page are popovers (Popover API: `popover` +
   `popovertarget`, no open/closed state in C#), like the header's menu on narrow screens
   (`.menu-popover`). `js/app.js` closes a popover when a link inside it is taken.
+- Account menu (`Layout/UserMenu.razor`, `.account-popover`): the header's account button (initial,
+  display name of the session, chevron) opens a popover with "Your profile" (`players/{id}`), "Your
+  replays" (`replays/search?player={name}`), "Your maps" (`maps/search?author={name}`) and "Sign out";
+  the addresses come from `Services/Auth/AccountLinks.cs`.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Narrow screens (phones, about 390 px wide) are built with Tailwind's breakpoints in CSS, desktop

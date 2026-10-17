@@ -1,20 +1,68 @@
 @implements IDisposable
 @inject AuthService Auth
+@using FAForever.Vault.Viewer.Services.Auth
 
 <AuthorizeView>
     <Authorized>
-        <div class="flex items-center gap-2">
-            <span class="hidden max-w-40 truncate text-sm font-medium sm:inline" title="Signed in via FAForever">
-                @context.User.Identity?.Name
-            </span>
-            <button type="button" class="btn-secondary h-8 w-8 px-0 py-0 sm:w-auto sm:px-3" title="Sign out" @onclick="() => Auth.LogoutAsync()">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        @{
+            var name = Auth.Session?.UserName ?? context.User.Identity?.Name;
+            var profile = AccountLinks.Profile(Auth.Session?.UserId);
+        }
+        @* The account menu: a popover (Popover API), so the browser opens and closes it; js/app.js closes it
+           when a link is taken. The first item has autofocus, so the keyboard lands in the menu. *@
+        <button type="button" popovertarget="account-menu" aria-haspopup="menu" title="Account"
+                class="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-edge bg-raised/70 py-1 pr-2 pl-1 text-ink transition hover:border-primary hover:text-primary sm:pr-3">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-edge bg-surface font-display text-sm font-bold text-primary" aria-hidden="true">@Initial(name)</span>
+            <span class="hidden max-w-40 truncate text-sm font-medium sm:inline">@name</span>
+            <svg class="h-3 w-3 shrink-0 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+            </svg>
+            <span class="sr-only sm:hidden">Account</span>
+        </button>
+        <div id="account-menu" popover class="account-popover">
+            <p class="px-3 pt-2 pb-1 text-xs text-ink-muted">
+                Signed in as <span class="font-medium text-ink">@name</span>
+                @if (Auth.Session?.UserId is { } userId)
+                {
+                    <span class="block">Player id @userId</span>
+                }
+            </p>
+            <nav role="menu" aria-label="Account" class="flex flex-col">
+                @if (profile is not null)
+                {
+                    <a href="@profile" role="menuitem" class="account-item" autofocus>
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+                        </svg>
+                        Your profile
+                    </a>
+                }
+                @if (name is not null)
+                {
+                    <a href="@AccountLinks.Replays(name)" role="menuitem" class="account-item">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" /><path d="M10 8.5l5 3.5-5 3.5z" />
+                        </svg>
+                        Your replays
+                    </a>
+                    <a href="@AccountLinks.Maps(name)" role="menuitem" class="account-item">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z" /><path d="M9 4v14M15 6v14" />
+                        </svg>
+                        Your maps
+                    </a>
+                }
+            </nav>
+            <div class="my-1 border-t border-edge"></div>
+            <button type="button" role="menuitem" class="account-item w-full text-left" @onclick="LogoutAsync">
+                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                     <path d="M16 17l5-5-5-5" />
                     <path d="M21 12H9" />
                 </svg>
-                <span class="sr-only sm:not-sr-only">Sign out</span>
+                Sign out
             </button>
         </div>
     </Authorized>
@@ -41,7 +89,11 @@
 @code {
     protected override void OnInitialized() => Auth.Changed += OnAuthChanged;
 
+    private async Task LogoutAsync() => await Auth.LogoutAsync();
+
     private async Task BeginLoginAsync() => await Auth.BeginLoginAsync();
+
+    private static string Initial(string? name) => string.IsNullOrEmpty(name) ? "?" : name[..1].ToUpperInvariant();
 
     private void OnAuthChanged() => StateHasChanged();
 

@@ -216,6 +216,15 @@
         @apply flex lg:hidden;
     }
 
+    /* The account menu (UserMenu.razor): a popover on every width, at the right edge below the header. */
+    .account-popover {
+        @apply fixed inset-auto top-14 right-4 m-0 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-edge bg-surface p-2 text-ink shadow-lg;
+    }
+
+    .account-item {
+        @apply flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink focus-visible:bg-raised focus-visible:text-ink;
+    }
+
     .btn-primary {
         @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50;
     }
