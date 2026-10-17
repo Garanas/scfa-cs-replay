@@ -6,6 +6,7 @@
 @using FAForever.Vault.Viewer.Services.Players.Statistics
 @inject IPlayersApi Api
 @inject AuthService Auth
+@inject IJSRuntime JS
 
 @* The leaderboards: a board at a time, its table in pages of 50 with the signed in player's row
    pinned, the player's position and the histogram of every rating on the board. *@
@@ -40,7 +41,9 @@
                 <ChoiceChips Label="Leaderboard" Query="board" Options="BoardOptions" Default="@PlayerFilters.DefaultBoard" />
                 <div class="grid grid-cols-1 gap-4 border-t border-edge pt-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-end">
                     <ChoiceSelect Label="Played in" Query="active" Options="PlayerFilters.Activity" Default="@RankingView.DefaultActivity" />
-                    <TextFilter Label="Find in the ranking" Query="q" Placeholder="Part of a name" />
+                    <PlayerNameSearch Id="ranking-find" Label="Find in the ranking" Placeholder="A player name" Value="@findText" ValueChanged="FindTextChanged"
+                                      OnPick="LocateAsync" OnSubmit="LocateByNameAsync" OnNotAuthenticated="NotSignedIn"
+                                      Invalid="@(findMessage is not null)" Message="@findMessage" />
                     <label class="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-muted">
                         <input type="checkbox" class="h-4 w-4 accent-primary" checked="@settledOnly" @onchange="ToggleSettled" />
                         Settled ratings only (σ below 100)
@@ -89,13 +92,18 @@
                                     @foreach (RankingRow row in result.Items)
                                     {
                                         bool isMe = row.PlayerId == userId;
-                                        <tr class="border-t border-edge/60 @(isMe ? "bg-primary/10" : "hover:bg-raised/50")">
+                                        bool isFound = highlightId > 0 && row.PlayerId == highlightId;
+                                        <tr id="@RowId(row.PlayerId)" aria-current="@(isFound ? "true" : null)" class="border-t border-edge/60 @(isFound ? "bg-primary/20 shadow-[inset_4px_0_0_0] shadow-primary" : isMe ? "bg-primary/10" : "hover:bg-raised/50")">
                                             <td class="px-4 py-2 text-right tabular-nums text-ink-muted max-sm:p-0"><span class="sm:hidden">#</span>@Number(row.Rank)</td>
                                             <td class="px-4 py-2 max-sm:min-w-[10rem] max-sm:flex-1 max-sm:p-0">
                                                 <a href="@PlayerLinks.Profile(row.PlayerId)" class="font-medium transition hover:text-primary max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">@row.Login</a>
                                                 @if (row.ClanTag is { Length: > 0 })
                                                 {
                                                     <span class="ml-1 text-xs text-ink-faint">[@row.ClanTag]</span>
+                                                }
+                                                @if (isMe)
+                                                {
+                                                    <span class="ml-1 text-xs text-ink-muted">(you)</span>
                                                 }
                                             </td>
                                             <td class="px-4 py-2 text-right font-semibold tabular-nums text-ink max-sm:p-0">@Number(row.Rating)</td>
@@ -242,6 +250,10 @@
     private string? pageNote;
     private bool clampPending;
     private CancellationTokenSource? loadCancellation;
+    private string findText = "";
+    private string? findMessage;
+    private int highlightId;
+    private int scrolledTo;
 
     private string ShareTitle => "Rankings on Vault of FAForever";
 
@@ -261,7 +273,7 @@
             }
 
             IReadOnlyList<RankingRow> items = result.Items;
-            return RankingView.RangeText(items.Count, items.Count > 0 ? items[0].Rank : 0, items.Count > 0 ? items[^1].Rank : 0, query.Page, query.PageSize, result.TotalRecords, query.Name);
+            return RankingView.RangeText(items.Count, items.Count > 0 ? items[0].Rank : 0, items.Count > 0 ? items[^1].Rank : 0, result.TotalRecords);
         }
     }
 
@@ -289,7 +301,7 @@
         }
 
         IEnumerable<string> knownBoards = boards is { Count: > 0 } ? boards.Select(board => board.TechnicalName) : PlayerFilters.Boards.Select(option => option.Token);
-        if (DropFromAddress(RankingView.StaleParameters(Read("board"), Read("settled"), Read("active"), Read("page"), knownBoards)))
+        if (DropFromAddress(RankingView.StaleParameters(Read("board"), Read("settled"), Read("active"), Read("page"), Read("player"), Read("q"), knownBoards)))
         {
             return; // the address changes, and this runs again for the clean one
         }
@@ -303,8 +315,16 @@
             pageNote = null;
         }
 
-        RankingQuery next = RankingView.ToQuery(Read("board"), Read("settled"), Read("active"), Read("q"), Read("page"), DateTimeOffset.UtcNow);
+        RankingQuery next = RankingView.ToQuery(Read("board"), Read("settled"), Read("active"), Read("page"), DateTimeOffset.UtcNow);
         settledOnly = next.SettledOnly;
+
+        // A player of another board or filter has no place in this one: the choice of a filter drops the highlight.
+        if (queryRead && Read("player") is not null && next with { Page = query.Page } != query && DropFromAddress(["player"]))
+        {
+            return;
+        }
+
+        highlightId = RankingView.PlayerId(Read("player"));
         if (!Auth.IsAuthenticated)
         {
             return;
@@ -332,8 +352,104 @@
             return;
         }
 
+        GoToRank(rank, userId);
+    }
+
+    private void GoToRank(int rank, int playerId)
+    {
         int page = RankingView.PageOfRank(rank);
-        Write(new Dictionary<string, string?> { ["page"] = page > 1 ? page.ToString(CultureInfo.InvariantCulture) : null, ["q"] = null }, resetPage: false);
+        Write(new Dictionary<string, string?>
+        {
+            ["page"] = page > 1 ? page.ToString(CultureInfo.InvariantCulture) : null,
+            ["player"] = playerId.ToString(CultureInfo.InvariantCulture),
+        }, resetPage: false);
+    }
+
+    private static string RowId(int playerId) => $"ranking-player-{playerId.ToString(CultureInfo.InvariantCulture)}";
+
+    private void FindTextChanged(string text)
+    {
+        findText = text;
+        findMessage = null;
+    }
+
+    private void NotSignedIn() => notAuthenticated = true;
+
+    private Task LocateAsync(PlayerSearchHit hit) => LocateAsync(hit.Id, hit.Login);
+
+    private async Task LocateByNameAsync(string text)
+    {
+        string name = text.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            PlayerSearchHit? hit = await Api.FindPlayerByNameAsync(name, CancellationToken.None);
+            if (hit is null)
+            {
+                findMessage = $"No player called “{name}”";
+                return;
+            }
+
+            await LocateAsync(hit.Id, hit.Login);
+        }
+        catch (NotAuthenticatedException)
+        {
+            notAuthenticated = true;
+        }
+        catch (HttpRequestException)
+        {
+            findMessage = "The FAForever API could not be reached. Try again.";
+        }
+    }
+
+    /// <summary>
+    /// Finds a player's place in the ranking as it is now and opens the page that holds it, with the
+    /// player in the address. A player the ranking does not hold leaves the page as it is, with the
+    /// reason under the field.
+    /// </summary>
+    private async Task LocateAsync(int playerId, string login)
+    {
+        findMessage = null;
+        try
+        {
+            IReadOnlyList<PlayerRating> ratings = await Api.GetRatingsAsync(playerId, CancellationToken.None);
+            PlayerRating? rating = ratings.FirstOrDefault(entry => entry.Board.TechnicalName == query.Board);
+            RankingView.PlayerPlace place = RankingView.Place(rating, query);
+            if (RankingView.PlaceMessage(place, login, query, BoardName) is { } message)
+            {
+                findMessage = message;
+                return;
+            }
+
+            int rank = await Api.GetRankOfRatingAsync(query, rating!.Rating, CancellationToken.None);
+            GoToRank(rank, playerId);
+        }
+        catch (NotAuthenticatedException)
+        {
+            notAuthenticated = true;
+        }
+        catch (HttpRequestException)
+        {
+            findMessage = "The FAForever API could not be reached. Try again.";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The found player's row comes into view once the table that holds it is drawn.
+        if (highlightId > 0 && highlightId != scrolledTo && !isLoading && result?.Items.Any(row => row.PlayerId == highlightId) == true)
+        {
+            scrolledTo = highlightId;
+            await JS.InvokeVoidAsync("fafReplay.scrollIntoView", RowId(highlightId));
+        }
+        else if (highlightId == 0)
+        {
+            scrolledTo = 0;
+        }
     }
 
     private string TopText(Aside mine)

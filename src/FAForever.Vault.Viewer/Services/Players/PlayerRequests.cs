@@ -164,6 +164,31 @@ public static class PlayerRequests
             + $"&filter={Filter(string.Join(";", filters))}";
     }
 
+    /// <summary>The most player ids one games request carries; longer lists are split.</summary>
+    public const int MaxIdsPerRequest = 50;
+
+    /// <summary>The rows of a page of the latest games of a league.</summary>
+    public const int LeagueGamesPageSize = 20;
+
+    /// <summary>
+    /// One page of the rated games of some players on a board since a moment, newest first: the
+    /// statistics rows of the listed players with each game, its map and everybody in it. A game two
+    /// listed players were in has a row for each of them (<see cref="PlayerMappers.MapGamesOfPlayers"/>
+    /// keeps one). At most <see cref="MaxIdsPerRequest"/> ids.
+    /// </summary>
+    public static string GamesOfPlayers(IEnumerable<int> playerIds, string board, DateTimeOffset since, int page, int pageSize = LeagueGamesPageSize)
+    {
+        string[] filters =
+        [
+            $"player.id=in=({string.Join(",", playerIds.Take(MaxIdsPerRequest).Select(Number))})",
+            $"scoreTime=ge={Time(since)}",
+            $"ratingChanges.leaderboard.technicalName=={FafApiClient.Quote(board)}",
+        ];
+        return "/data/gamePlayerStats?include=game,game.mapVersion.map,game.playerStats.player&sort=-scoreTime"
+            + $"&page[size]={Math.Clamp(pageSize, 1, MaxPageSize)}&page[number]={Math.Max(page, 1)}&page[totals]"
+            + $"&filter={Filter(string.Join(";", filters))}";
+    }
+
     private static string MatchesRequest(int playerId, MatchQuery query, int page, int pageSize, bool withPlayers)
     {
         List<string> filters = [$"player.id=={Number(playerId)}"];

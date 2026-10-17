@@ -24,7 +24,7 @@ public class SamplePlayersApiTest
     [TestMethod]
     public void EveryFixtureIsEmbeddedAndParses()
     {
-        Assert.AreEqual(25, (SamplePlayersApi.ResourceNames).Count);
+        Assert.AreEqual(26, (SamplePlayersApi.ResourceNames).Count);
         foreach (string name in SamplePlayersApi.ResourceNames)
         {
             using Stream stream = typeof(SamplePlayersApi).Assembly.GetManifestResourceStream("players-sample/" + name)!;

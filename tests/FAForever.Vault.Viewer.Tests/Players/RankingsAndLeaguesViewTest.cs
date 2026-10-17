@@ -16,7 +16,7 @@ public class RankingViewTest
     [TestMethod]
     public void NoParametersGiveTheDefaults()
     {
-        RankingQuery query = RankingView.ToQuery(null, null, null, null, null, Now);
+        RankingQuery query = RankingView.ToQuery(null, null, null, null, Now);
 
         Assert.AreEqual("ladder_1v1", query.Board);
         Assert.IsTrue(query.SettledOnly);
@@ -29,18 +29,18 @@ public class RankingViewTest
     [TestMethod]
     public void ParametersChangeTheQuery()
     {
-        RankingQuery query = RankingView.ToQuery("global", "0", "all", "  ash ", "3", Now);
+        RankingQuery query = RankingView.ToQuery("global", "0", "all", "3", Now);
 
         Assert.AreEqual("global", query.Board);
         Assert.IsFalse(query.SettledOnly);
         Assert.IsNull(query.ActiveSince);
-        Assert.AreEqual("ash", query.Name);
+        Assert.IsNull(query.Name, "the name filter is not read from the address");
         Assert.AreEqual(3, query.Page);
     }
 
     [TestMethod]
     public void TheSameChoiceGivesTheSameQueryAllDay()
-        => Assert.AreEqual(RankingView.ToQuery(null, null, "30d", null, null, Now), RankingView.ToQuery(null, null, "30d", null, null, Now.AddHours(8)));
+        => Assert.AreEqual(RankingView.ToQuery(null, null, "30d", null, Now), RankingView.ToQuery(null, null, "30d", null, Now.AddHours(8)));
 
     [TestMethod]
     [DataRow("30d", 30)]

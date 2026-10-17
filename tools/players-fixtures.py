@@ -617,3 +617,43 @@ for game in sorted(head_to_head_games, key=lambda g: g["time"]):
 doc.page(len(doc.data), 100)
 write("head-to-head.json", doc.dump())
 print("rival:", RIVAL["id"], RIVAL["login"], "| other:", OTHER_RIVAL["id"], OTHER_RIVAL["login"])
+
+# ---------------------------------------------------------------- the latest games of a league (leagues page)
+
+# Rated 1v1 games of this season between players of the sample subdivision's standings (the 50 of its first page),
+# some against players outside it. A game between two listed players has a statistics row for each (the data) and
+# is listed once by the page; the sample API picks the rows of the ids it is asked for.
+doc = Doc()
+standing_ids = [r["id"] for r in league_players.data]
+standing_logins = {r["id"]: r["attributes"]["login"] for r in league_players.data}
+season_start, league_game_count = season_dates[-1][0], 46
+for number in range(league_game_count):
+    start = season_start + (ANCHOR - season_start - timedelta(hours=3)) * (number / league_game_count) + timedelta(minutes=rng.randint(0, 600))
+    first = rng.choice(standing_ids)
+    listed_pair = rng.random() < 0.35
+    second = rng.choice([i for i in standing_ids if i != first]) if listed_pair else 520000 + rng.randint(0, 400)
+    second_login = standing_logins.get(second) or f"{rng.choice(ADJECTIVES)}{rng.choice(NOUNS)}{second % 100}"
+    minutes = length_minutes("ladder_1v1")
+    map_name, folder = rng.choice(MAPS)
+    game_id = 24_500_000 + number * 23 + rng.randint(0, 20)
+    first_wins = rng.random() < 0.5
+    stats_ids = []
+    rows = []
+    for team, (person, login) in enumerate(((first, standing_logins[first]), (second, second_login)), start=2):
+        counter["stats"] += 1
+        won = first_wins == (team == 2)
+        attrs = {"team": team, "faction": pick_faction(), "result": "VICTORY" if won else "DEFEAT", "ai": False, "score": int(minutes * rng.uniform(8, 30)),
+                 "scoreTime": iso(start + timedelta(minutes=minutes)), "beforeMean": round(rng.uniform(1100, 1500) + 200, 2), "beforeDeviation": round(rng.uniform(60, 90), 2)}
+        stats_ids.append(counter["stats"])
+        rows.append(res("gamePlayerStats", counter["stats"], attrs, {"player": ("player", person), "game": ("game", game_id)}))
+        doc.include(res("player", person, {"login": login}))
+    doc.include(res("game", game_id, {"name": f"Ladder game {game_id}", "startTime": iso(start), "endTime": iso(start + timedelta(minutes=minutes + 1)),
+                                      "replayTicks": int(minutes * 600), "validity": "VALID"},
+                    {"mapVersion": ("mapVersion", map_version_ids[folder]), "playerStats": [("gamePlayerStats", i) for i in stats_ids]}))
+    doc.include(res("mapVersion", map_version_ids[folder], {"folderName": folder}, {"map": ("map", map_ids[folder])}))
+    doc.include(res("map", map_ids[folder], {"displayName": map_name}))
+    for row in rows:
+        doc.include(row)
+        if row["relationships"]["player"]["data"]["id"] in map(str, standing_ids):
+            doc.add(row)
+write("league-games.json", doc.dump())

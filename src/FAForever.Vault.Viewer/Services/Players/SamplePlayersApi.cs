@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using FAForever.Vault.Viewer.Services.Api;
 using FAForever.Vault.Viewer.Services.Players.Statistics;
@@ -160,8 +161,42 @@ public sealed partial class SamplePlayersApi(TimeProvider? timeProvider = null) 
             matching = [.. found.Skip((page - 1) * size).Take(size)];
         }
 
-        JsonApiDocument document = RankingDocument(query, bins, matching, factor, now, count, size);
+        JsonApiDocument document = RankingDocument(query, bins, matching, factor, now, count, size, await KnownPlayersAtRanksAsync(query, matching, cancellationToken));
         return PlayerMappers.MapRanking(document, page, size);
+    }
+
+    /// <summary>A player of the fixtures standing in a ranking page.</summary>
+    private sealed record KnownPlayer(int Id, string Login, string? ClanTag, PlayerRating Rating);
+
+    /// <summary>
+    /// The players of the fixtures (the sample player and everybody the name search knows) whose rank in the
+    /// ranking falls on one of <paramref name="ranks"/>, by that rank: the rows of a page are made up, so
+    /// without them a player found through <see cref="GetRankOfRatingAsync"/> would not be in the row it names.
+    /// </summary>
+    private async Task<Dictionary<int, KnownPlayer>> KnownPlayersAtRanksAsync(RankingQuery query, int[] ranks, CancellationToken cancellationToken)
+    {
+        Dictionary<int, KnownPlayer> found = [];
+        if (ranks.Length == 0 || !string.IsNullOrWhiteSpace(query.Name))
+        {
+            return found;
+        }
+
+        PlayerSearchHit[] people = [.. PlayerMappers.MapLoginHits(Document("search-players.json")), new PlayerSearchHit(SamplePlayerId, "Ashgrove", null)];
+        foreach (PlayerSearchHit person in people.DistinctBy(hit => hit.Id))
+        {
+            PlayerRating? rating = (await GetRatingsAsync(person.Id, cancellationToken)).FirstOrDefault(entry => entry.Board.TechnicalName == query.Board);
+            if (rating is null || (query.SettledOnly && rating.Deviation >= 100) || (query.ActiveSince is { } since && (rating.UpdatedAt ?? DateTimeOffset.MinValue) < since))
+            {
+                continue;
+            }
+
+            int rank = await GetRankOfRatingAsync(query, rating.Rating, cancellationToken);
+            if (ranks.Contains(rank))
+            {
+                found.TryAdd(rank, new KnownPlayer(person.Id, person.Login, person.ClanTag, rating));
+            }
+        }
+        return found;
     }
 
     /// <inheritdoc />
@@ -283,6 +318,32 @@ public sealed partial class SamplePlayersApi(TimeProvider? timeProvider = null) 
     public Task<IReadOnlyList<HeadToHeadGame>> GetHeadToHeadAsync(int playerA, int playerB, DateTimeOffset? since, CancellationToken cancellationToken)
         => Done<IReadOnlyList<HeadToHeadGame>>([.. PlayerMappers.MapHeadToHead(Document("head-to-head.json"), playerA, playerB).Where(game => since is null || game.StartTime >= since)]);
 
+    /// <inheritdoc />
+    public Task<PlayerPage<PlayerMatch>> GetGamesOfPlayersAsync(IReadOnlyList<int> playerIds, string boardTechnicalName, DateTimeOffset since, int page, CancellationToken cancellationToken)
+    {
+        // The fixture holds the season's games of the sample subdivision's first standings page (the rows of
+        // those players); any other ids (the other subdivisions' made up players) have none. The request's
+        // filters are applied here: the ids, the board and the start, newest first, a page of 20 rows.
+        page = Math.Max(page, 1);
+        if (boardTechnicalName != "ladder_1v1")
+        {
+            return Done(PlayerPage<PlayerMatch>.Empty);
+        }
+
+        HashSet<string> ids = [.. playerIds.Select(id => id.ToString(CultureInfo.InvariantCulture))];
+        JsonNode root = JsonNode.Parse(Text("league-games.json"))!;
+        JsonNode[] rows = [.. root["data"]!.AsArray().OfType<JsonNode>()
+            .Where(row => ids.Contains(row["relationships"]!["player"]!["data"]!["id"]!.GetValue<string>())
+                && DateTimeOffset.Parse(row["attributes"]!["scoreTime"]!.GetValue<string>(), CultureInfo.InvariantCulture) >= since)
+            .OrderByDescending(row => row["attributes"]!["scoreTime"]!.GetValue<string>(), StringComparer.Ordinal)];
+        int size = PlayerRequests.LeagueGamesPageSize;
+        JsonArray data = [.. rows.Skip((page - 1) * size).Take(size).Select(row => row.DeepClone())];
+        root["data"] = data;
+        root["meta"] = new JsonObject { ["page"] = new JsonObject { ["totalRecords"] = rows.Length, ["totalPages"] = Math.Max(1, (rows.Length + size - 1) / size), ["number"] = page, ["limit"] = size } };
+        JsonApiDocument document = JsonApiDocument.Parse(root.ToJsonString());
+        return Done(new PlayerPage<PlayerMatch>(PlayerMappers.MapGamesOfPlayers(document), page, document.TotalPages, document.TotalRecords));
+    }
+
     private const int StandingsPageSize = 50;
 
     /// <summary>How many players have a rating on each board (the sum of the board's distribution, about).</summary>
@@ -363,7 +424,7 @@ public sealed partial class SamplePlayersApi(TimeProvider? timeProvider = null) 
     }
 
     /// <summary>The ratings of the given ranks as a JSON:API document, as the real ranking request answers.</summary>
-    private static JsonApiDocument RankingDocument(RankingQuery query, IReadOnlyList<RatingBin> bins, int[] ranks, double factor, DateTimeOffset now, int total, int size)
+    private static JsonApiDocument RankingDocument(RankingQuery query, IReadOnlyList<RatingBin> bins, int[] ranks, double factor, DateTimeOffset now, int total, int size, IReadOnlyDictionary<int, KnownPlayer> known)
     {
         System.Text.Json.Nodes.JsonArray data = [];
         System.Text.Json.Nodes.JsonArray included = [];
@@ -378,12 +439,19 @@ public sealed partial class SamplePlayersApi(TimeProvider? timeProvider = null) 
             int games = 900 + (int)(hash % 3300);
             int playerId = 200000 + boardIndex * 100000 + fullRank;
             string? tag = ClanTags[(hash >> 4) % (uint)ClanTags.Length];
+            known.TryGetValue(rank, out KnownPlayer? own);
+            if (own is not null)
+            {
+                playerId = own.Id;
+                tag = own.ClanTag;
+                deviation = own.Rating.Deviation;
+            }
 
             System.Text.Json.Nodes.JsonObject player = new()
             {
                 ["type"] = "player",
                 ["id"] = playerId.ToString(CultureInfo.InvariantCulture),
-                ["attributes"] = new System.Text.Json.Nodes.JsonObject { ["login"] = RankingLogin(query.Board, fullRank) },
+                ["attributes"] = new System.Text.Json.Nodes.JsonObject { ["login"] = own?.Login ?? RankingLogin(query.Board, fullRank) },
             };
             if (tag is not null)
             {
@@ -413,11 +481,11 @@ public sealed partial class SamplePlayersApi(TimeProvider? timeProvider = null) 
                 ["id"] = (700000 + boardIndex * 100000 + fullRank).ToString(CultureInfo.InvariantCulture),
                 ["attributes"] = new System.Text.Json.Nodes.JsonObject
                 {
-                    ["mean"] = Math.Round(display + 3 * deviation, 2),
+                    ["mean"] = own?.Rating.Mean ?? Math.Round(display + 3 * deviation, 2),
                     ["deviation"] = deviation,
-                    ["totalGames"] = games,
-                    ["wonGames"] = (int)(games * (0.5 + hash % 19 / 100.0)),
-                    ["updateTime"] = now.AddHours(-1 - hash % (uint)windowHours).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture),
+                    ["totalGames"] = own?.Rating.TotalGames ?? games,
+                    ["wonGames"] = own?.Rating.WonGames ?? (int)(games * (0.5 + hash % 19 / 100.0)),
+                    ["updateTime"] = (own?.Rating.UpdatedAt ?? now.AddHours(-1 - hash % (uint)windowHours)).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture),
                 },
                 ["relationships"] = new System.Text.Json.Nodes.JsonObject
                 {
