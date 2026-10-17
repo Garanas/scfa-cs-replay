@@ -1,0 +1,225 @@
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Theming
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+@* The one floating player card of the Matches tab; the cells ask for it (Hover, Focus, Toggle). It
+   wraps the table, hands itself to the content and draws the card outside the table's scrolling box,
+   placed by fafReplay.placeBeside. Hovering opens it after 150 ms and closing waits 250 ms so the
+   pointer can travel into it; a click, a tap or the keyboard pins it until Escape, a click outside,
+   the focus leaving it or the button scrolling away. *@
+@ChildContent(this)
+
+@if (current is { } request)
+{
+    <div id="@CardId" role="dialog" aria-label="Players of this game" tabindex="-1"
+         class="fixed left-0 top-0 z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg border border-edge bg-raised p-3 text-sm shadow-lg sm:w-80"
+         style="visibility:hidden" @onmouseenter="CancelClose" @onmouseleave="Leave">
+        @if (request.Line.Mates.Count > 0)
+        {
+            @Section("With", request.Line.Mates)
+        }
+        @if (request.Line.Opponents.Count > 0)
+        {
+            @Section(request.Line.Mates.Count > 0 ? "Against" : "Players", request.Line.Opponents)
+        }
+    </div>
+}
+
+@code {
+    internal const string CardId = "player-card";
+
+    public sealed record Request(int GameId, string ButtonId, MatchPlayersLine Line);
+
+    [Parameter, EditorRequired] public required RenderFragment<PlayerCardHost> ChildContent { get; set; }
+
+    private Request? current;
+    private Request? placed;
+    private bool pinned;
+    private bool pointerIsDown;
+    private CancellationTokenSource? timer;
+    private DotNetObjectReference<PlayerCardHost>? self;
+
+    public bool IsOpen(int gameId) => current?.GameId == gameId;
+
+    public void PointerDown() => pointerIsDown = true;
+
+    public void Hover(Request request)
+    {
+        if (pinned)
+        {
+            return;
+        }
+
+        Schedule(150, () =>
+        {
+            current = request;
+            pinned = false;
+        });
+    }
+
+    public void Leave()
+    {
+        if (!pinned)
+        {
+            Schedule(250, () => current = null);
+        }
+    }
+
+    // Keyboard focus opens the card for good; a press with the pointer is left to the click.
+    public void Focus(Request request)
+    {
+        if (pointerIsDown)
+        {
+            return;
+        }
+
+        Cancel();
+        current = request;
+        pinned = true;
+        Refresh();
+    }
+
+    public void Toggle(Request request)
+    {
+        pointerIsDown = false;
+        Cancel();
+        if (current?.GameId == request.GameId && pinned)
+        {
+            current = null;
+            pinned = false;
+        }
+        else
+        {
+            current = request;
+            pinned = true;
+        }
+
+        Refresh();
+    }
+
+    // The cells run their handlers on their own, so the host asks for its own render.
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void CancelClose() => Cancel();
+
+    [JSInvokable]
+    public async Task CloseFromScript()
+    {
+        Cancel();
+        current = null;
+        pinned = false;
+        pointerIsDown = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Cancel()
+    {
+        timer?.Cancel();
+        timer = null;
+    }
+
+    private void Schedule(int milliseconds, Action action)
+    {
+        Cancel();
+        CancellationTokenSource source = timer = new CancellationTokenSource();
+        _ = RunAsync(milliseconds, action, source.Token);
+    }
+
+    private async Task RunAsync(int milliseconds, Action action, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(milliseconds, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await InvokeAsync(() =>
+        {
+            action();
+            StateHasChanged();
+        });
+    }
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        current = null;
+        pinned = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (current == placed)
+        {
+            return;
+        }
+
+        placed = current;
+        if (current is { } request)
+        {
+            self ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("fafReplay.watchPlayerCard", self, CardId, request.ButtonId);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("fafReplay.unwatchPlayerCard");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        Cancel();
+        try
+        {
+            await JS.InvokeVoidAsync("fafReplay.unwatchPlayerCard");
+        }
+        catch (Exception exception) when (exception is JSDisconnectedException or InvalidOperationException or TaskCanceledException)
+        {
+        }
+
+        self?.Dispose();
+    }
+
+    private RenderFragment Section(string label, IReadOnlyList<MatchParticipant> players) =>
+        @<section class="mb-3 last:mb-0">
+            @if (players.Count > 0)
+            {
+                <h3 class="mb-1 text-xs font-medium text-ink-muted">@label</h3>
+                <ul class="space-y-0.5">
+                    @foreach (MatchParticipant player in players)
+                    {
+                        <li class="flex min-h-9 items-center gap-2 text-ink max-sm:min-h-11">
+                            @if (Factions.IconPath(player.Faction) is { } icon)
+                            {
+                                <img src="@icon" alt="@Factions.Name(player.Faction)" class="h-5 w-5 shrink-0" />
+                            }
+                            else
+                            {
+                                <span class="h-5 w-5 shrink-0" aria-hidden="true"></span>
+                            }
+                            @if (player.IsAi)
+                            {
+                                <span class="truncate">@player.Login <span class="text-xs text-ink-muted">AI</span></span>
+                            }
+                            else
+                            {
+                                <a href="@PlayerLinks.Profile(player.PlayerId)" class="truncate transition hover:text-primary max-sm:flex max-sm:min-h-11 max-sm:items-center">@player.Login</a>
+                            }
+                            @if (player.Rating is { } rating)
+                            {
+                                <span class="ml-auto shrink-0 tabular-nums text-ink-muted">@MatchFormat.Count(rating)</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>;
+}

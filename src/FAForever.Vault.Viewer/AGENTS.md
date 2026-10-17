@@ -552,6 +552,8 @@ The Compare page's name fields are `Features/Players/PlayerNameSearch.razor`, a 
 | `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision. The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
 | `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
 
+The Matches tab's Players column is one short line (`MatchPlayersLine`: "vs name", "3 with · 4 against", "n others") whose button opens a single player card (`Matches/PlayerCardHost.razor`, placed by `fafReplay.placeBeside` and watched by `watchPlayerCard`): it opens on hover after 150 ms, on focus and on click or tap, and closes on leaving, Escape (focus back on the button), a press outside, the focus leaving it or the row scrolling away.
+
 A profile is addressed by the numeric id, never by name. The pages below `players/` other than a profile
 share `PlayersSectionTabs` (Rankings, Leagues, Compare).
 

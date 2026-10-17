@@ -1,0 +1,53 @@
+@using FAForever.Vault.Viewer.Services.Players
+@* The Players column of one game: one short line and a button that opens the player card
+   (PlayerCardHost). A 1v1 names the opponent as a profile link beside a small button. *@
+<div class="flex items-center gap-1">
+    @if (Line.Opponent is { } opponent)
+    {
+        <span class="flex min-h-11 items-center gap-1 text-ink-muted">
+            vs
+            @if (opponent.IsAi)
+            {
+                <span>@opponent.Login</span>
+            }
+            else
+            {
+                <a href="@PlayerLinks.Profile(opponent.PlayerId)" class="inline-flex min-h-11 items-center text-ink transition hover:text-primary">@opponent.Login</a>
+            }
+        </span>
+        <button type="button" id="@ButtonId" class="inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted transition hover:text-primary"
+                aria-haspopup="dialog" aria-expanded="@(IsOpen ? "true" : "false")" aria-label="Show the players of this game"
+                @onmouseenter="() => Cards.Hover(Request)" @onmouseleave="Cards.Leave" @onfocus="() => Cards.Focus(Request)"
+                @onpointerdown="Cards.PointerDown" @onclick="() => Cards.Toggle(Request)">
+            <PeopleIcon />
+        </button>
+    }
+    else if (Line.Mates.Count + Line.Opponents.Count == 0)
+    {
+        <span class="text-ink-muted">@Line.Text</span>
+    }
+    else
+    {
+        <button type="button" id="@ButtonId" class="inline-flex min-h-11 items-center gap-1.5 text-ink transition hover:text-primary"
+                aria-haspopup="dialog" aria-expanded="@(IsOpen ? "true" : "false")"
+                @onmouseenter="() => Cards.Hover(Request)" @onmouseleave="Cards.Leave" @onfocus="() => Cards.Focus(Request)"
+                @onpointerdown="Cards.PointerDown" @onclick="() => Cards.Toggle(Request)">
+            <PeopleIcon />
+            <span>@Line.Text</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required PlayerMatch Match { get; set; }
+
+    [Parameter, EditorRequired] public required MatchPlayersLine Line { get; set; }
+
+    [Parameter, EditorRequired] public required PlayerCardHost Cards { get; set; }
+
+    private string ButtonId => $"match-players-{Match.GameId}";
+
+    private bool IsOpen => Cards.IsOpen(Match.GameId);
+
+    private PlayerCardHost.Request Request => new(Match.GameId, ButtonId, Line);
+}
