@@ -118,14 +118,13 @@ public class SamplePlayersApiTest
     {
         int reported = 0;
         IReadOnlyList<RatingJournalEntry> history = await Create().GetRatingHistoryAsync(
-            SamplePlayersApi.SamplePlayerId, board, null, new Progress<int>(count => reported = count), Token);
+            SamplePlayersApi.SamplePlayerId, board, null, new SynchronousProgress(count => reported = count), Token);
 
         Assert.AreEqual(expected, (history).Count);
         Assert.IsTrue(history.Zip(history.Skip(1)).All(pair => pair.First.Date <= pair.Second.Date), "oldest first");
         Assert.IsTrue(history.All(entry => entry.MapName is { Length: > 0 } && entry.MapFolder is { Length: > 0 } && entry.Opponents.Count > 0));
         Assert.IsTrue(history.All(entry => entry.Date >= Now.AddDays(-366) && entry.Date <= Now));
-        await Task.Delay(1); // Progress<T> posts to the thread pool
-        Assert.AreEqual(expected == 0 ? 0 : expected, reported);
+        Assert.AreEqual(expected, reported);
     }
 
     [TestMethod]
@@ -232,11 +231,10 @@ public class SamplePlayersApiTest
     public async Task AllMatchesAreTheLightList()
     {
         int reported = 0;
-        IReadOnlyList<PlayerMatch> all = await Create().GetAllMatchesAsync(SamplePlayersApi.SamplePlayerId, new MatchQuery(), new Progress<int>(count => reported = count), Token);
+        IReadOnlyList<PlayerMatch> all = await Create().GetAllMatchesAsync(SamplePlayersApi.SamplePlayerId, new MatchQuery(), new SynchronousProgress(count => reported = count), Token);
 
         Assert.AreEqual(120, (all).Count);
         Assert.IsTrue(all.All(match => match.Players.Count == 0));
-        await Task.Delay(1);
         Assert.AreEqual(120, reported);
     }
 
@@ -421,5 +419,10 @@ public class SamplePlayersApiTest
         Assert.AreEqual(4, (await api.GetHeadToHeadAsync(player, OtherRival, null, Token)).Count);
         Assert.AreEqual(0, (await api.GetHeadToHeadAsync(Rival, OtherRival, null, Token)).Count);
         Assert.AreEqual(0, (await api.GetHeadToHeadAsync(player, Rival, Now.AddDays(1), Token)).Count);
+    }
+    // Progress<T> posts its callback to the thread pool, so a test could read the count before it arrives.
+    private sealed class SynchronousProgress(Action<int> report) : IProgress<int>
+    {
+        public void Report(int value) => report(value);
     }
 }
