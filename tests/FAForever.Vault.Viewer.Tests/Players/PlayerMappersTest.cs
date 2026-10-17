@@ -336,6 +336,26 @@ public class PlayerRequestsTest
     }
 
     [TestMethod]
+    public void ABoardWithoutGamesIsNoRating()
+    {
+        JsonApiDocument document = Parse("""
+            {"data":[
+              {"type":"leaderboardRating","id":"1","attributes":{"mean":1500,"deviation":500,"rating":0,"totalGames":0,"wonGames":0},"relationships":{"leaderboard":{"data":{"type":"leaderboard","id":"1"}}}},
+              {"type":"leaderboardRating","id":"2","attributes":{"mean":1537.47,"deviation":65.5,"rating":1340.97,"totalGames":184,"wonGames":97},"relationships":{"leaderboard":{"data":{"type":"leaderboard","id":"2"}}}}
+            ],"included":[
+              {"type":"leaderboard","id":"1","attributes":{"technicalName":"global"}},
+              {"type":"leaderboard","id":"2","attributes":{"technicalName":"ladder_1v1"}}
+            ]}
+            """);
+
+        IReadOnlyList<PlayerRating> ratings = PlayerMappers.MapRatings(document);
+
+        Assert.AreEqual(1, ratings.Count, "the API keeps a row at the starting values for a board never played on");
+        Assert.AreEqual("ladder_1v1", ratings[0].Board.TechnicalName);
+        Assert.AreEqual(184, ratings[0].TotalGames);
+    }
+
+    [TestMethod]
     public void QuoteIsTheClientsQuote()
         => Assert.AreEqual("\"a\\\"b\\\\\"", FafApiClient.Quote("a\"b\\"));
 }

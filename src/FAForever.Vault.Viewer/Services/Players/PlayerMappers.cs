@@ -102,6 +102,13 @@ public static class PlayerMappers
                 continue;
             }
 
+            // The API keeps a row for a board the player never played on (zero games, a mean and a
+            // deviation at their starting values); such a row is no rating.
+            if ((rating.GetInt32("totalGames") ?? 0) <= 0)
+            {
+                continue;
+            }
+
             ratings.Add(new PlayerRating(
                 MapLeaderboard(board),
                 rating.GetNumber("mean") ?? 0,
