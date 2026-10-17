@@ -83,6 +83,14 @@ public interface IPlayersApi
     /// <summary>The changes of a player's league score through a season, in game order.</summary>
     Task<IReadOnlyList<LeagueJournalEntry>> GetLeagueJourneyAsync(int playerId, int seasonId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A page of 20 of the latest rated games of some players on a board since a moment (a league's
+    /// season start), newest first. A game that several of them were in is listed once, with the
+    /// statistics of the first of them (<see cref="PlayerMatch.ListedPlayerId"/>), so a page can hold
+    /// fewer than 20 rows, and a game whose two rows fall on two pages shows on both. The ids go out in requests of at most 50.
+    /// </summary>
+    Task<PlayerPage<PlayerMatch>> GetGamesOfPlayersAsync(IReadOnlyList<int> playerIds, string boardTechnicalName, DateTimeOffset since, int page, CancellationToken cancellationToken);
+
     /// <summary>The games two players were in together since a moment (null for all), newest first.</summary>
     Task<IReadOnlyList<HeadToHeadGame>> GetHeadToHeadAsync(int playerA, int playerB, DateTimeOffset? since, CancellationToken cancellationToken);
 }

@@ -150,6 +150,13 @@ public sealed record PlayerMatch(int GameId, string GameName, DateTimeOffset? St
     /// <summary>The players of the game, the player included; empty for the lighter lists used by charts.</summary>
     public IReadOnlyList<MatchParticipant> Players { get; init; } = [];
 
+    /// <summary>
+    /// The player whose statistics the row is, when a list holds the games of several players
+    /// (<see cref="IPlayersApi.GetGamesOfPlayersAsync"/>); <see cref="Result"/>, <see cref="Team"/> and the
+    /// rest are that player's.
+    /// </summary>
+    public int? ListedPlayerId { get; init; }
+
     /// <summary>The change of the display rating, when the game was rated.</summary>
     public int? RatingChange => RatingBefore is { } before && RatingAfter is { } after ? after - before : null;
 }

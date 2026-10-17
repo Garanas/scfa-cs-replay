@@ -170,6 +170,35 @@ public sealed class FafPlayersApi(HttpClient http, AuthService auth, IConfigurat
         return [.. games.OrderByDescending(game => game.StartTime ?? DateTimeOffset.MinValue)];
     }
 
+    /// <inheritdoc />
+    public async Task<PlayerPage<PlayerMatch>> GetGamesOfPlayersAsync(IReadOnlyList<int> playerIds, string boardTechnicalName, DateTimeOffset since, int page, CancellationToken cancellationToken)
+    {
+        page = Math.Max(page, 1);
+        int size = PlayerRequests.LeagueGamesPageSize;
+        int[][] chunks = [.. playerIds.Distinct().Chunk(PlayerRequests.MaxIdsPerRequest)];
+        if (chunks.Length == 0)
+        {
+            return PlayerPage<PlayerMatch>.Empty;
+        }
+
+        if (chunks.Length == 1)
+        {
+            JsonApiDocument document = await GetAsync(PlayerRequests.GamesOfPlayers(chunks[0], boardTechnicalName, since, page, size), cancellationToken);
+            return new PlayerPage<PlayerMatch>(PlayerMappers.MapGamesOfPlayers(document), page, document.TotalPages, document.TotalRecords);
+        }
+
+        // Several requests: each gives its newest rows up to the end of the wanted page (at most 100, so
+        // page 5), the rows are merged by time, and the page is cut from the merge.
+        int depth = Math.Min(PlayerRequests.MaxPageSize, size * page);
+        JsonApiDocument[] documents = await Task.WhenAll(chunks.Select(chunk => GetAsync(PlayerRequests.GamesOfPlayers(chunk, boardTechnicalName, since, 1, depth), cancellationToken)));
+        PlayerMatch[] merged = [.. documents
+            .SelectMany(PlayerMappers.MapGamesOfPlayers)
+            .OrderByDescending(game => game.StartTime ?? DateTimeOffset.MinValue)
+            .DistinctBy(game => game.GameId)];
+        int total = documents.Sum(document => document.TotalRecords ?? document.Data.Count);
+        return new PlayerPage<PlayerMatch>([.. merged.Skip((page - 1) * size).Take(size)], page, Math.Max(1, (total + size - 1) / size), total);
+    }
+
     private async Task<IReadOnlyList<RatingBin>> ReadDistributionAsync(RankingQuery query, CancellationToken cancellationToken)
     {
         Task<JsonApiDocument>[] requests = [.. Enumerable.Range(0, RatingBinning.Count)

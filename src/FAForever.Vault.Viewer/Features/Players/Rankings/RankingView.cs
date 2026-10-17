@@ -44,25 +44,85 @@ public static class RankingView
     public static int PageNumber(string? token)
         => int.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out int page) && page > 1 ? page : 1;
 
-    /// <summary>The query of the address parameters: <c>board</c>, <c>settled</c> (0 for every deviation), <c>active</c>, <c>q</c>, <c>page</c>.</summary>
-    public static RankingQuery ToQuery(string? board, string? settled, string? active, string? name, string? page, DateTimeOffset now) => new()
+    /// <summary>The query of the address parameters: <c>board</c>, <c>settled</c> (0 for every deviation), <c>active</c>, <c>page</c>.</summary>
+    public static RankingQuery ToQuery(string? board, string? settled, string? active, string? page, DateTimeOffset now) => new()
     {
         Board = Board(board),
         SettledOnly = settled != "0",
         ActiveSince = ActiveSince(Activity(active), now),
-        Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim(),
         Page = PageNumber(page),
         PageSize = PageSize,
+    };
+
+    /// <summary>The player of the address (<c>player</c>), a positive id; 0 for anything else.</summary>
+    public static int PlayerId(string? token)
+        => int.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out int id) && id > 0 ? id : 0;
+
+    /// <summary>Where a player stands relative to a ranking.</summary>
+    public enum PlayerPlace
+    {
+        /// <summary>The player has a rating on the board and the filters let it through; the rank can be asked.</summary>
+        Listed,
+
+        /// <summary>The player has no rating on the board.</summary>
+        NoRating,
+
+        /// <summary>The player has a rating the filters leave out (an unsettled one, or one not played in the chosen period).</summary>
+        FilteredOut,
+    }
+
+    /// <summary>
+    /// Whether a player's rating on the ranking's board is in the ranking with the query's filters
+    /// (the same conditions the ranking request applies: a deviation below 100 when settled only, a
+    /// rating changed since the "played in" start).
+    /// </summary>
+    public static PlayerPlace Place(PlayerRating? rating, RankingQuery query)
+    {
+        if (rating is null || rating.TotalGames <= 0)
+        {
+            return PlayerPlace.NoRating;
+        }
+
+        if (query.SettledOnly && rating.Deviation >= 100)
+        {
+            return PlayerPlace.FilteredOut;
+        }
+
+        if (query.ActiveSince is { } since && (rating.UpdatedAt is null || rating.UpdatedAt < since))
+        {
+            return PlayerPlace.FilteredOut;
+        }
+
+        return PlayerPlace.Listed;
+    }
+
+    /// <summary>The sentence under the field for a player that is not in the ranking; null for a listed one.</summary>
+    public static string? PlaceMessage(PlayerPlace place, string login, RankingQuery query, string boardName) => place switch
+    {
+        PlayerPlace.NoRating => query.SettledOnly ? $"{login} has no settled rating on {boardName}" : $"{login} has no rating on {boardName}",
+        PlayerPlace.FilteredOut => $"{login} is not in this ranking with these filters",
+        _ => null,
     };
 
     /// <summary>
     /// The address parameters that hold a value the page does not read as given: an unknown board
     /// (not in <paramref name="knownBoards"/>), a "settled" other than 0, an unknown "played in", a
-    /// page that is not a number above 1. The page drops them from the address.
+    /// page that is not a number above 1, a <c>player</c> that is not an id, and the retired name
+    /// filter <c>q</c> whatever it holds. The page drops them from the address.
     /// </summary>
-    public static IReadOnlyList<string> StaleParameters(string? board, string? settled, string? active, string? page, IEnumerable<string> knownBoards)
+    public static IReadOnlyList<string> StaleParameters(string? board, string? settled, string? active, string? page, string? player, string? retiredName, IEnumerable<string> knownBoards)
     {
         List<string> stale = [];
+        if (retiredName is not null)
+        {
+            stale.Add("q");
+        }
+
+        if (player is not null && PlayerId(player) == 0)
+        {
+            stale.Add("player");
+        }
+
         if (board is not null && !knownBoards.Contains(board))
         {
             stale.Add("board");
@@ -90,26 +150,10 @@ public static class RankingView
     public static int LastPage(int? totalPages, int? totalRecords, int pageSize)
         => Math.Max(1, totalPages ?? (totalRecords is { } total ? (total + Math.Max(pageSize, 1) - 1) / Math.Max(pageSize, 1) : 1));
 
-    /// <summary>
-    /// The line under the table. Unfiltered: the ranks shown out of the board's players. With a name
-    /// filter the ranks mean nothing next to a count of matches, so it says how many players match and
-    /// which of those are on the page.
-    /// </summary>
-    public static string RangeText(int itemCount, int firstRank, int lastRank, int page, int pageSize, int? total, string? name)
+    /// <summary>The line under the table: the ranks shown out of the board's players.</summary>
+    public static string RangeText(int itemCount, int firstRank, int lastRank, int? total)
     {
         string Count(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            string matches = total is { } found ? $"{Count(found)} {(found == 1 ? "player matches" : "players match")} \"{name.Trim()}\"" : $"Players matching \"{name.Trim()}\"";
-            if (itemCount == 0)
-            {
-                return matches;
-            }
-
-            int first = (page - 1) * pageSize + 1;
-            return $"{matches}, showing {Count(first)} to {Count(first + itemCount - 1)}";
-        }
-
         if (itemCount == 0)
         {
             return "No ranks to show";

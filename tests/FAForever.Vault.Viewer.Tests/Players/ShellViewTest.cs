@@ -19,14 +19,14 @@ public class ShellViewTest
 
     [TestMethod]
     public void CleanParametersAreNotStale()
-        => Assert.AreEqual(0, RankingView.StaleParameters("global", "0", "30d", "3", Boards).Count);
+        => Assert.AreEqual(0, RankingView.StaleParameters("global", "0", "30d", "3", "100285", null, Boards).Count);
 
     [TestMethod]
     public void UnknownValuesAreStale()
     {
-        IReadOnlyList<string> stale = RankingView.StaleParameters("zzz", "yes", "zz", "abc", Boards);
+        IReadOnlyList<string> stale = RankingView.StaleParameters("zzz", "yes", "zz", "abc", "someone", "rust", Boards);
 
-        CollectionAssert.AreEqual(new[] { "board", "settled", "active", "page" }, stale.ToArray());
+        CollectionAssert.AreEqual(new[] { "q", "player", "board", "settled", "active", "page" }, stale.ToArray());
     }
 
     [TestMethod]
@@ -34,11 +34,11 @@ public class ShellViewTest
     [DataRow("1")]
     [DataRow("-4")]
     public void APageBelowTwoIsStale(string page)
-        => CollectionAssert.AreEqual(new[] { "page" }, RankingView.StaleParameters(null, null, null, page, Boards).ToArray());
+        => CollectionAssert.AreEqual(new[] { "page" }, RankingView.StaleParameters(null, null, null, page, null, null, Boards).ToArray());
 
     [TestMethod]
     public void TheDefaultPlayedInIsStaleInTheAddress()
-        => CollectionAssert.AreEqual(new[] { "active" }, RankingView.StaleParameters(null, null, "90d", null, Boards).ToArray());
+        => CollectionAssert.AreEqual(new[] { "active" }, RankingView.StaleParameters(null, null, "90d", null, null, null, Boards).ToArray());
 
     [TestMethod]
     [DataRow(null, 8423, 50, 169)]
@@ -51,19 +51,11 @@ public class ShellViewTest
 
     [TestMethod]
     public void TheRangeLineGivesRanksOutOfTheBoard()
-        => Assert.AreEqual("Ranks 51 to 100 of 8,423", RankingView.RangeText(50, 51, 100, 2, 50, 8423, null));
-
-    [TestMethod]
-    public void TheRangeLineOfAFilterCountsMatches()
-    {
-        Assert.AreEqual("7 players match \"rustic\", showing 1 to 7", RankingView.RangeText(7, 2, 43, 1, 50, 7, " rustic "));
-        Assert.AreEqual("1 player matches \"x\", showing 1 to 1", RankingView.RangeText(1, 9, 9, 1, 50, 1, "x"));
-        Assert.AreEqual("0 players match \"zz\"", RankingView.RangeText(0, 0, 0, 1, 50, 0, "zz"));
-    }
+        => Assert.AreEqual("Ranks 51 to 100 of 8,423", RankingView.RangeText(50, 51, 100, 8423));
 
     [TestMethod]
     public void AnEmptyPageHasNoRanks()
-        => Assert.AreEqual("No ranks to show", RankingView.RangeText(0, 0, 0, 999, 50, null, null));
+        => Assert.AreEqual("No ranks to show", RankingView.RangeText(0, 0, 0, null));
 
     private static readonly LeagueDivision Bronze = new(1, 1, "Bronze");
 

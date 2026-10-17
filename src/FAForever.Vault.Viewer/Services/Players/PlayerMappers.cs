@@ -194,6 +194,30 @@ public static class PlayerMappers
         return matches;
     }
 
+    /// <summary>
+    /// The games of a list of statistics rows of several players (<see cref="PlayerRequests.GamesOfPlayers"/>),
+    /// in the order of the rows, one entry for a game: when two listed players were in the same game
+    /// the first row stands. <see cref="PlayerMatch.ListedPlayerId"/> names the player of the row.
+    /// </summary>
+    public static IReadOnlyList<PlayerMatch> MapGamesOfPlayers(JsonApiDocument document)
+    {
+        IReadOnlyList<PlayerMatch> rows = MapMatches(document, 0);
+        HashSet<int> seen = [];
+        List<PlayerMatch> games = [];
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (!seen.Add(rows[i].GameId))
+            {
+                continue;
+            }
+
+            JsonApiResource stats = document.Data[i];
+            string? player = stats.Relationship("player")?.Id ?? document.FindIncluded("gamePlayerStats", stats.Id)?.Relationship("player")?.Id;
+            games.Add(rows[i] with { ListedPlayerId = Id(player) });
+        }
+        return games;
+    }
+
     /// <summary>The counters of a player, by lower-case event id.</summary>
     public static PlayerEventCounts MapEventCounts(JsonApiDocument document)
     {

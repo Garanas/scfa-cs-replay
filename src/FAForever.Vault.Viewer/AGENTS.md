@@ -548,8 +548,8 @@ The Compare page's name fields are `Features/Players/PlayerNameSearch.razor`, a 
 |---|---|---|
 | `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
 | `Pages/PlayerPage.razor` | `players/{id}` | A profile: loads the profile, `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). Their shaping, formatting and CSV logic is in `Features/Players/Profile/` (`ProfileFormat`, `ProfileSummaries`, `RatingChartData`, `RatingTooltip`, `Loadable`). |
-| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time (six chips: global, ladder 1v1, 2v2, 3v3 and the two 4v4 boards), the table in pages of 50 with the signed in player's row pinned, "your position" and the histogram of every rating. The name filter runs on the server (`RankingQuery.Name`), so its line says how many players match. Pure parts in `Features/Players/Rankings/RankingView.cs`. |
-| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision. The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
+| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time (six chips: global, ladder 1v1, 2v2, 3v3 and the two 4v4 boards), the table in pages of 50 with the signed in player's row pinned, "your position" and the histogram of every rating. "Find in the ranking" is a `PlayerNameSearch`: a picked player (or an exact name on Enter) has their rating on the board read, their rank asked (`GetRankOfRatingAsync` with the page's filters) and the page that holds it opened with `player={id}`; a player without a rating, or filtered out by settled or played in, gets a line under the field and the page stays. Pure parts in `Features/Players/Rankings/RankingView.cs`. |
+| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision (each row with a "Replays" link to `replays/search?player=`) and below them `LeagueGamesCard`: the latest rated games of the standings page's players in the season on the league's board (`IPlayersApi.GetGamesOfPlayersAsync`, ids in requests of at most 50, a game of two listed players once per page). The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
 | `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. |
 
 A profile is addressed by the numeric id, never by name. The pages below `players/` other than a profile
@@ -565,13 +565,15 @@ writes with `replace: true` and drops `page`):
 
 | Parameter | Page | Meaning | Default when absent |
 |---|---|---|---|
-| `q` | landing, rankings | Search text; on rankings, part of a name (the server filters) | none |
+| `q` | landing | Search text (rankings dropped it from the address when present) | none |
 | `tab` | profile | `rating`, `matches`, `army` | Overview |
 | `board` | profile (Overview, Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games) |
 | `period` | profile (Overview too), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` |
 | `page` | lists | Page number | 1 |
 | `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter |
 | `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all |
+| `player` | rankings | A player id: the row is highlighted and scrolled into view (set by "Find in the ranking" and "Jump to my rank", together with the `page` that holds the rank; dropped when a filter changes) | none |
+| `gamesPage` | leagues | Page of the "Latest games" card (20 rows); dropped when the league, season, subdivision or standings page changes | 1 |
 | `settled` | rankings | `0` also shows ratings with σ above 100 | settled only |
 | `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` |
 | `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one |
