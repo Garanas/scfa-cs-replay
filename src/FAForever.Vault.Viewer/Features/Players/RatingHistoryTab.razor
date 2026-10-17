@@ -1,0 +1,563 @@
+@using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Profile
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inherits PlayerUrlComponent
+@inject IPlayersApi Api
+
+@* The Rating history tab: the board and the period, six tiles, the rating line with its sigma panel
+   and the peak marked, the histogram of the change per game, one small chart per board over the same
+   period and the journal table with a CSV download. The charts and tiles use every game of the
+   period; only the table is paged (25 rows, newest first, `page` in the address). The journals of
+   all boards are read once per period, the board in the address first. *@
+<section aria-label="Rating history" class="grid gap-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] sm:items-end">
+        @if (ratingList.Count > 0)
+        {
+            <ChoiceSelect Label="Leaderboard" Query="board" Options="boardOptions" Default="@(defaultBoard ?? PlayerFilters.DefaultBoard)" />
+        }
+        <ChoiceChips Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+    </div>
+
+    @if (ratingsLoad is null)
+    {
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6" aria-busy="true">
+            @for (int i = 0; i < 6; i++)
+            {
+                <div class="card h-24 animate-pulse"></div>
+            }
+        </div>
+        <div class="card h-80 animate-pulse" aria-busy="true"></div>
+    }
+    else if (ratingsLoad.Error is { } ratingsError)
+    {
+        <div class="card" role="alert">
+            <p class="font-semibold">The ratings could not be loaded</p>
+            <p class="mt-1 text-sm text-ink-muted">@ratingsError</p>
+        </div>
+    }
+    else if (ratingList.Count == 0)
+    {
+        <div class="card text-center text-sm text-ink-muted">This player has no rated games yet.</div>
+    }
+    else
+    {
+        <div class="grid gap-6 transition-opacity @(loading && journals is not null ? "opacity-50" : "")" aria-busy="@(loading ? "true" : "false")">
+            <p class="text-sm text-ink-muted" aria-live="polite">@Subtitle</p>
+
+            @if (activeLoad is null)
+            {
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6" aria-busy="true">
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        <div class="card h-24 animate-pulse"></div>
+                    }
+                </div>
+                <div class="card h-80 animate-pulse" aria-busy="true"></div>
+            }
+            else if (activeLoad.Error is { } journalError)
+            {
+                <div class="card" role="alert">
+                    <p class="font-semibold">The rating history could not be loaded</p>
+                    <p class="mt-1 text-sm text-ink-muted">@journalError</p>
+                </div>
+            }
+            else if (entries.Count == 0)
+            {
+                <div class="card text-center text-sm text-ink-muted">No rated games on @Leaderboards.DisplayName(activeBoard ?? "") in this period.</div>
+            }
+            else if (summary is { } stats)
+            {
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+                    @if (change30 is { } thirty)
+                    {
+                        <InfoTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Delta="@($"{ProfileFormat.Signed(thirty)} in 30 days")" Tone="ProfileFormat.Tone(thirty)" Up="@(thirty >= 0)" />
+                    }
+                    else
+                    {
+                        <InfoTile Label="Current" Value="@ProfileFormat.Number(stats.Current ?? 0)" Sub="No games in 30 days" />
+                    }
+                    <InfoTile Label="Peak" Value="@ProfileFormat.Number(stats.Peak ?? 0)" Sub="@ProfileFormat.Date(stats.PeakDate)" />
+                    <InfoTile Label="Games" Value="@ProfileFormat.Number(stats.Games)" Sub="@($"{ProfileFormat.Number(stats.Wins)} won, {ProfileFormat.Number(stats.Losses)} lost")" />
+                    <InfoTile Label="Average change" Value="@(stats.AverageChange is { } average ? ProfileFormat.SignedOneDecimal(average) : "0.0")" Sub="per game" />
+                    <InfoTile Label="Biggest gain" Value="@(bestGain is null ? "None" : ProfileFormat.Signed(bestGain.Change))" Sub="@GameSub(bestGain)" />
+                    <InfoTile Label="Biggest loss" Value="@(bestLoss is null ? "None" : ProfileFormat.Signed(bestLoss.Change))" Sub="@GameSub(bestLoss)" />
+                </div>
+
+                <section class="card min-w-0" aria-labelledby="rh-line-title">
+                    <h2 id="rh-line-title" class="text-lg font-semibold text-ink">Rating, one point per rated game</h2>
+                    <p class="mb-3 mt-1 text-sm text-ink-muted">Rating is μ − 3σ. Hover or tap for a game; the arrow keys move along the line.</p>
+                    <div class="mb-2">
+                        <Legend Items="lineLegend" />
+                    </div>
+                    <LineChart Points="points" Panel="sigma" PanelLabel="Uncertainty σ, same games" Name="Rating" Height="300"
+                               Marked="peak" MarkedLabel="@(peak is null ? null : $"Peak {ProfileFormat.Number(peak.Value)}")"
+                               AriaLabel="@($"Rating and uncertainty on {Leaderboards.DisplayName(activeBoard ?? "")} over time")">
+                        <Tooltip Context="point">
+                            <RatingTooltip Point="point" />
+                        </Tooltip>
+                    </LineChart>
+                    <p class="mt-4 text-xs text-ink-muted">Rankings count a rating as settled below σ 100. A lower σ means the rating moves less per game.</p>
+                </section>
+
+                <section class="card min-w-0" aria-labelledby="rh-hist-title">
+                    <h2 id="rh-hist-title" class="text-lg font-semibold text-ink">Rating change per game</h2>
+                    <p class="mb-4 mt-1 text-sm text-ink-muted">How much a win gives and a loss takes. Narrow bars mean a settled rating.</p>
+                    <Histogram Bins="bins" ShowZeroInLegend="false" NegativeLabel="@LossLabel" PositiveLabel="@WinLabel"
+                               AriaLabel="@($"Rating change per game on {Leaderboards.DisplayName(activeBoard ?? "")}")" />
+                </section>
+            }
+
+            <section aria-labelledby="rh-boards-title">
+                <h2 id="rh-boards-title" class="text-lg font-semibold text-ink">Every leaderboard, @ProfileFormat.SamePeriod(period)</h2>
+                <p class="mb-3 mt-1 text-sm text-ink-muted">One small chart each, so the scales stay honest. Pick one to show it above.</p>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach (BoardCard card in boardCards)
+                    {
+                        bool active = card.Board == activeBoard;
+                        <a href="@ProfileLinks.RatingTab(PlayerId, card.Board, Read("period"), defaultBoard)" aria-current="@(active ? "true" : null)"
+                           class="card block min-w-0 p-4 transition hover:border-primary sm:p-4 @(active ? "border-primary ring-1 ring-primary" : "")">
+                            <span class="flex items-baseline justify-between gap-2">
+                                <span class="text-sm font-semibold">@card.Name</span>
+                                <span class="text-xs text-ink-muted">@(card.Loaded ? $"{ProfileFormat.Number(card.Games)} games" : "")</span>
+                            </span>
+                            @if (!card.Loaded)
+                            {
+                                <span class="mt-3 block h-12 animate-pulse rounded-md bg-raised"></span>
+                            }
+                            else if (card.Games == 0)
+                            {
+                                <span class="mt-3 block text-sm text-ink-muted">No games in this period</span>
+                            }
+                            else
+                            {
+                                <span class="mt-2 flex items-end justify-between gap-3">
+                                    <span class="block min-w-0">
+                                        <span class="block text-2xl font-semibold leading-tight text-ink">@ProfileFormat.Number(card.Current ?? 0)</span>
+                                        <span class="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
+                                            @if (card.Change is { } change)
+                                            {
+                                                DeltaTone tone = ProfileFormat.Tone(change);
+                                                if (tone != DeltaTone.Neutral)
+                                                {
+                                                    <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(tone == DeltaTone.Good ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                                                        @if (tone == DeltaTone.Good)
+                                                        {
+                                                            <path d="M4 0.5 7.5 7h-7Z" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <path d="M4 7.5 0.5 1h7Z" />
+                                                        }
+                                                    </svg>
+                                                }
+                                                <span>@ProfileFormat.Signed(change) @ProfileFormat.InPeriod(period)</span>
+                                            }
+                                        </span>
+                                    </span>
+                                    <Sparkline Values="card.Values" AriaLabel="@($"Rating on {card.Name} over the period")" />
+                                </span>
+                            }
+                        </a>
+                    }
+                </div>
+            </section>
+
+            @if (entries.Count > 0)
+            {
+                IReadOnlyList<RatingJournalEntry> rows = RatingChartData.TablePage(entries, requestedPage, out int pageCount, out int shownPage);
+                <section class="card min-w-0" aria-labelledby="rh-journal-title">
+                    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                        <div class="min-w-0">
+                            <h2 id="rh-journal-title" class="text-lg font-semibold text-ink">Rating journal</h2>
+                            <p class="mt-1 text-sm text-ink-muted">The table behind the charts: every rated game with the rating before and after it.</p>
+                        </div>
+                        <a class="btn-secondary min-h-11" href="@csvUrl" download="@csvName">Download CSV</a>
+                    </div>
+                    <div class="scroll-hint relative mt-4 overflow-x-auto">
+                        <table class="list-table w-full text-left text-sm sm:min-w-[46rem]">
+                            <thead class="text-xs text-ink-muted">
+                                <tr>
+                                    <th scope="col" class="py-2 pr-4 font-medium">Date</th>
+                                    <th scope="col" class="py-2 pr-4 font-medium">Map</th>
+                                    <th scope="col" class="py-2 pr-4 font-medium">Opponent</th>
+                                    <th scope="col" class="py-2 pr-4 font-medium">Result</th>
+                                    <th scope="col" class="py-2 pr-4 text-right font-medium">Before</th>
+                                    <th scope="col" class="py-2 pr-4 text-right font-medium">After</th>
+                                    <th scope="col" class="py-2 pr-4 text-right font-medium">Change</th>
+                                    <th scope="col" class="py-2 pr-4 text-right font-medium">σ after</th>
+                                    <th scope="col" class="py-2 font-medium"><span class="sr-only">Replay</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (RatingJournalEntry row in rows)
+                                {
+                                    DeltaTone rowTone = ProfileFormat.Tone(row.Change);
+                                    <tr class="border-t border-edge">
+                                        <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(row.Date)</td>
+                                        <td class="list-table-wide max-w-[12rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0" title="@row.MapName">@(row.MapName ?? MatchFormat.MapNotInVault)</td>
+                                        <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-7 max-sm:max-w-none max-sm:p-0">
+                                            @for (int i = 0; i < row.Opponents.Count && i < 2; i++)
+                                            {
+                                                PlayerReference opponent = row.Opponents[i];
+                                                <span>@(i > 0 ? ", " : "")<a class="hover:text-primary hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:items-center" href="@PlayerLinks.Profile(opponent.Id)">@opponent.Login</a></span>
+                                            }
+                                            @if (row.Opponents.Count > 2)
+                                            {
+                                                <span class="text-ink-muted"> and @(row.Opponents.Count - 2) more</span>
+                                            }
+                                        </td>
+                                        <td class="whitespace-nowrap py-2 pr-4 max-sm:order-2 max-sm:p-0">
+                                            <span class="inline-flex items-center gap-1.5">
+                                                @if (rowTone != DeltaTone.Neutral)
+                                                {
+                                                    <span class="h-2 w-2 rounded-full @(rowTone == DeltaTone.Good ? "bg-viz-3" : "bg-viz-8")" aria-hidden="true"></span>
+                                                }
+                                                @ProfileFormat.ResultWord(row.Change)
+                                            </span>
+                                        </td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:hidden">@ProfileFormat.Number(row.RatingBefore)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:order-3 max-sm:p-0">@ProfileFormat.Number(row.RatingAfter)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums max-sm:order-4 max-sm:p-0">@ProfileFormat.Signed(row.Change)</td>
+                                        <td class="whitespace-nowrap py-2 pr-4 text-right tabular-nums text-ink-muted max-sm:hidden">@ProfileFormat.Number(row.DeviationAfter)</td>
+                                        <td class="whitespace-nowrap py-2 text-right max-sm:order-5 max-sm:ml-auto max-sm:p-0"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(row.GameId)">Replay</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-sm text-ink-muted">Showing @(((shownPage - 1) * RatingChartData.PageSize) + 1) to @(Math.Min(shownPage * RatingChartData.PageSize, entries.Count)) of @ProfileFormat.Number(entries.Count) games, newest first</p>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="btn-secondary min-h-11" disabled="@(shownPage <= 1)" @onclick="() => GoToPage(shownPage - 1)">Previous</button>
+                            <span class="text-sm text-ink-muted">Page @shownPage of @pageCount</span>
+                            <button type="button" class="btn-secondary min-h-11" disabled="@(shownPage >= pageCount)" @onclick="() => GoToPage(shownPage + 1)">Next</button>
+                        </div>
+                    </div>
+                </section>
+            }
+        </div>
+    }
+
+    @if (loading)
+    {
+        <p class="text-xs text-ink-muted" role="status">Loading rated games@(progressTotal > 0 ? $", {progressTotal.ToString("N0", CultureInfo.InvariantCulture)} so far" : "")&hellip;</p>
+    }
+</section>
+
+@code {
+    private sealed record BoardCard(string Board, string Name, bool Loaded, int Games, IReadOnlyList<double> Values, int? Current, int? Change);
+
+    private static readonly IReadOnlyList<LegendItem> lineLegend =
+    [
+        new LegendItem("Rating", ChartColor.Primary, LegendKind.Line),
+        new LegendItem("Uncertainty σ", ChartColor.Viz7, LegendKind.Line),
+    ];
+
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+
+    /// <summary>The profile the page loaded (not needed by the data; kept for the page's tabs to share).</summary>
+    [Parameter] public PlayerProfile? Profile { get; set; }
+
+    private int loadedPlayer = -1;
+    private CancellationTokenSource? playerCancellation;
+    private CancellationTokenSource? journalCancellation;
+
+    private Loadable<IReadOnlyList<PlayerRating>>? ratingsLoad;
+    private IReadOnlyList<PlayerRating> ratingList = [];
+    private IReadOnlyList<ChoiceOption> boardOptions = [];
+    private string? defaultBoard;
+    private string? activeBoard;
+    private string period = PlayerFilters.DefaultPeriod;
+    private int requestedPage = 1;
+
+    // The journals read for one period, by board; the period they belong to and the moment of the read.
+    private Dictionary<string, Loadable<IReadOnlyList<RatingJournalEntry>>>? journals;
+    private string? journalsPeriod;
+    private DateTimeOffset journalsNow;
+    private string? requestedPeriod;
+    private bool loading;
+    private readonly Dictionary<string, int> progress = [];
+    private int progressTotal;
+
+    // What the active board shows, derived from its journal.
+    private Loadable<IReadOnlyList<RatingJournalEntry>>? activeLoad;
+    private IReadOnlyList<RatingJournalEntry> entries = [];
+    private RatingSummary? summary;
+    private int? change30;
+    private RatingJournalEntry? bestGain;
+    private RatingJournalEntry? bestLoss;
+    private IReadOnlyList<LinePoint> points = [];
+    private IReadOnlyList<LinePoint> sigma = [];
+    private LinePoint? peak;
+    private IReadOnlyList<Charts.HistogramBin> bins = [];
+    private ChangeSplit split = new(0, null, 0, null);
+    private string csvUrl = "";
+    private string csvName = "rating-journal.csv";
+    private IReadOnlyList<BoardCard> boardCards = [];
+    private Loadable<IReadOnlyList<RatingJournalEntry>>? derivedFrom;
+    private string? derivedKey;
+
+    private string LossLabel => split.MeanLoss is { } mean ? $"Losses {split.Losses:N0} · mean {ProfileFormat.SignedOneDecimal(mean)}" : $"Losses {split.Losses:N0}";
+
+    private string WinLabel => split.MeanWin is { } mean ? $"Wins {split.Wins:N0} · mean {ProfileFormat.SignedOneDecimal(mean)}" : $"Wins {split.Wins:N0}";
+
+    private string Subtitle
+    {
+        get
+        {
+            if (activeBoard is null)
+            {
+                return "";
+            }
+
+            string range = entries.Count > 0 ? ProfileFormat.Range(entries[0].Date, entries[^1].Date) : "";
+            string games = activeLoad is null ? "" : $"{ProfileFormat.Number(entries.Count)} rated {(entries.Count == 1 ? "game" : "games")}";
+            return string.Join(" · ", new[] { Leaderboards.DisplayName(activeBoard), games, range }.Where(part => part.Length > 0));
+        }
+    }
+
+    private static string? GameSub(RatingJournalEntry? entry)
+    {
+        if (entry is null)
+        {
+            return null;
+        }
+
+        string opponents = ProfileFormat.Opponents(entry.Opponents, 1);
+        string date = ProfileFormat.Date(entry.Date);
+        return opponents.Length > 0 ? $"{date} against {opponents}" : date;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (PlayerId != loadedPlayer)
+        {
+            loadedPlayer = PlayerId;
+            StartLoads();
+            return;
+        }
+
+        ApplyAddress();
+    }
+
+    /// <summary>Takes the board, the period and the page from the address; a new period reads the journals again.</summary>
+    private void ApplyAddress()
+    {
+        // A navigation away from this tab or page also reaches this component before it is removed.
+        string path = new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/');
+        if (!path.EndsWith($"/players/{PlayerId}", StringComparison.OrdinalIgnoreCase)
+            || PlayerLinks.ParseTab(Read(PlayerLinks.TabParameter)) != PlayerTab.Rating)
+        {
+            return;
+        }
+
+        period = Periods.Normalize(Read("period"));
+        requestedPage = int.TryParse(Read("page"), out int page) && page > 1 ? page : 1;
+        if (ratingsLoad?.Value is not { Count: > 0 } ratings || playerCancellation is null)
+        {
+            return;
+        }
+
+        activeBoard = ProfileSummaries.ActiveBoard(ratings, Read("board"));
+        if (period != requestedPeriod)
+        {
+            requestedPeriod = period;
+            journalCancellation?.Cancel();
+            journalCancellation = CancellationTokenSource.CreateLinkedTokenSource(playerCancellation.Token);
+            _ = LoadJournalsAsync(period, ratings, journalCancellation.Token);
+        }
+        else
+        {
+            Derive();
+        }
+    }
+
+    private void StartLoads()
+    {
+        playerCancellation?.Cancel();
+        journalCancellation?.Cancel();
+        playerCancellation = new CancellationTokenSource();
+        ratingsLoad = null;
+        ratingList = [];
+        boardOptions = [];
+        defaultBoard = activeBoard = requestedPeriod = null;
+        journals = null;
+        journalsPeriod = null;
+        loading = false;
+        Derive();
+        _ = LoadRatingsAsync(playerCancellation.Token);
+    }
+
+    private async Task LoadRatingsAsync(CancellationToken token)
+    {
+        try
+        {
+            Loadable<IReadOnlyList<PlayerRating>> load = await Loadable<IReadOnlyList<PlayerRating>>.RunAsync(() => Api.GetRatingsAsync(PlayerId, token));
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            ratingsLoad = load;
+            if (load.Value is { } ratings)
+            {
+                ratingList = ProfileSummaries.ByGames(ratings);
+                boardOptions = ProfileSummaries.BoardOptions(ratings);
+                defaultBoard = ProfileSummaries.DefaultBoard(ratings);
+            }
+
+            StateHasChanged();
+            ApplyAddress();
+        }
+        catch (OperationCanceledException)
+        {
+            // Another player, or the page went away.
+        }
+    }
+
+    private async Task LoadJournalsAsync(string forPeriod, IReadOnlyList<PlayerRating> ratings, CancellationToken token)
+    {
+        try
+        {
+            loading = true;
+            progress.Clear();
+            progressTotal = 0;
+            StateHasChanged();
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset? since = RatingChartData.LoadSince(Periods.Since(forPeriod, now), now);
+            Dictionary<string, Loadable<IReadOnlyList<RatingJournalEntry>>> next = [];
+
+            async Task LoadBoardAsync(string board)
+            {
+                var reporter = new Progress<int>(count =>
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        progress[board] = count;
+                        progressTotal = progress.Values.Sum();
+                        StateHasChanged();
+                    }
+                });
+                Loadable<IReadOnlyList<RatingJournalEntry>> load = await Loadable<IReadOnlyList<RatingJournalEntry>>.RunAsync(
+                    () => Api.GetRatingHistoryAsync(PlayerId, board, since, reporter, token));
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                next[board] = load;
+                if (ReferenceEquals(journals, next))
+                {
+                    Derive();
+                    StateHasChanged();
+                }
+            }
+
+            // The board that is shown first; the others fill in the small charts afterwards.
+            string first = activeBoard ?? ratings[0].Board.TechnicalName;
+            await LoadBoardAsync(first);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            journals = next;
+            journalsPeriod = forPeriod;
+            journalsNow = now;
+            loading = false;
+            Derive();
+            StateHasChanged();
+
+            await Task.WhenAll(ratings.Select(rating => rating.Board.TechnicalName).Where(board => board != first).Select(LoadBoardAsync));
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer period took over.
+        }
+    }
+
+    /// <summary>Derives everything the active board shows from the journals read so far.</summary>
+    private void Derive()
+    {
+        Loadable<IReadOnlyList<RatingJournalEntry>>? load = null;
+        if (journals is not null && activeBoard is not null)
+        {
+            journals.TryGetValue(activeBoard, out load);
+        }
+
+        BuildBoardCards();
+        activeLoad = load;
+        string key = $"{PlayerId}|{activeBoard}|{journalsPeriod}";
+        if (ReferenceEquals(load, derivedFrom) && key == derivedKey)
+        {
+            return;
+        }
+
+        derivedFrom = load;
+        derivedKey = key;
+        entries = [];
+        summary = null;
+        change30 = null;
+        bestGain = bestLoss = null;
+        points = sigma = [];
+        peak = null;
+        bins = [];
+        split = new ChangeSplit(0, null, 0, null);
+        csvUrl = "";
+        if (load?.Value is not { } raw)
+        {
+            return;
+        }
+
+        entries = RatingChartData.Within(raw, Periods.Since(journalsPeriod, journalsNow));
+        summary = RatingStatistics.Summarize(entries, journalsNow);
+        change30 = RatingStatistics.Summarize(raw, journalsNow).Change30Days;
+        bestGain = RatingChartData.BiggestGain(entries);
+        bestLoss = RatingChartData.BiggestLoss(entries);
+        points = RatingChartData.Points(entries);
+        sigma = RatingChartData.Sigma(entries);
+        peak = RatingChartData.Peak(points);
+        bins = RatingChartData.ChangeBins(entries);
+        split = RatingChartData.Split(entries);
+        csvUrl = RatingChartData.CsvDataUrl(RatingChartData.Csv(entries));
+        csvName = $"rating-journal-{activeBoard}-{PlayerId}.csv";
+    }
+
+    private void BuildBoardCards()
+    {
+        List<BoardCard> cards = [];
+        foreach (PlayerRating rating in ratingList)
+        {
+            string board = rating.Board.TechnicalName;
+            if (journals is null || !journals.TryGetValue(board, out Loadable<IReadOnlyList<RatingJournalEntry>>? load) || load.Value is not { } raw)
+            {
+                cards.Add(new BoardCard(board, rating.Board.DisplayName, false, 0, [], null, null));
+                continue;
+            }
+
+            IReadOnlyList<RatingJournalEntry> within = RatingChartData.Within(raw, Periods.Since(journalsPeriod, journalsNow));
+            cards.Add(new BoardCard(
+                board,
+                rating.Board.DisplayName,
+                true,
+                within.Count,
+                RatingChartData.SparkValues(within),
+                RatingStatistics.Summarize(within, journalsNow).Current,
+                ProfileSummaries.ChangeOver(within)));
+        }
+
+        boardCards = cards;
+    }
+
+    private void GoToPage(int page) => Write("page", page.ToString(CultureInfo.InvariantCulture), "1", resetPage: false);
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        playerCancellation?.Cancel();
+        journalCancellation?.Cancel();
+    }
+}

@@ -1,0 +1,202 @@
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Services.Players
+@inject IPlayersApi Api
+@implements IDisposable
+
+@* The latest rated games of the players on a standings page, this season, on the league's board: a
+   page of 20 with the replay of each. The card loads for itself when the players, the season or the
+   page change. A game two of the players were in is one row; the players of the subdivision are in
+   ink, the others muted, the result is from the view of the listed player. *@
+<section class="card min-w-0 p-0" aria-label="@($"Latest games in {SubdivisionName}")">
+    <div class="px-4 pt-4">
+        <h2 class="text-[1rem] font-semibold text-ink">Latest games in @SubdivisionName</h2>
+        <p class="mt-1 text-sm text-ink-muted">Rated games this season of the players listed above, newest first.</p>
+    </div>
+    @if (error is not null)
+    {
+        <div class="m-4 rounded-md border-l-4 border-l-bad bg-raised px-4 py-3" role="alert">
+            <p class="font-semibold">The games could not be loaded</p>
+            <p class="mt-1 text-sm text-ink-muted">@error</p>
+        </div>
+    }
+    else if (games is null)
+    {
+        <div class="m-4 h-48 animate-pulse rounded-md bg-raised" aria-busy="true"></div>
+    }
+    else
+    {
+        <div class="relative mt-3 overflow-x-auto transition-opacity @(loading ? "opacity-50" : "")" aria-busy="@(loading ? "true" : "false")">
+            <table class="list-table w-full text-left text-sm sm:min-w-[40rem]">
+                <thead class="bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 font-semibold">Date</th>
+                        <th scope="col" class="px-4 py-3 font-semibold">Map</th>
+                        <th scope="col" class="px-4 py-3 font-semibold">Players</th>
+                        <th scope="col" class="px-4 py-3 font-semibold">Result</th>
+                        <th scope="col" class="px-4 py-3 text-right font-semibold">Length</th>
+                        <th scope="col" class="px-4 py-3 font-semibold"><span class="sr-only">Replay</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (PlayerMatch game in games.Items)
+                    {
+                        <tr @key="game.GameId" class="border-t border-edge/60 hover:bg-raised/50">
+                            <td class="whitespace-nowrap px-4 py-2 tabular-nums text-ink-muted max-sm:p-0">@MatchFormat.When(game.StartTime)</td>
+                            <td class="max-w-[12rem] px-4 py-2 max-sm:p-0">
+                                @if (game.MapName is not null && game.MapFolder is not null)
+                                {
+                                    <a href="@MapLinks.Map(game.MapFolder)" class="flex min-h-11 items-center text-ink transition hover:text-primary"><span class="truncate">@game.MapName</span></a>
+                                }
+                                else
+                                {
+                                    <span class="block truncate" title="@(game.MapName is null ? game.GameName : null)">@(game.MapName ?? MatchFormat.MapNotInVault)</span>
+                                }
+                            </td>
+                            <td class="list-table-wide px-4 py-2 max-sm:order-last max-sm:p-0">
+                                @foreach ((IReadOnlyList<MatchParticipant> side, int index) in LeagueGames.Sides(game).Select((side, index) => (side, index)))
+                                {
+                                    @if (index > 0)
+                                    {
+                                        <span class="mx-1 text-ink-faint">vs</span>
+                                    }
+                                    @for (int i = 0; i < side.Count; i++)
+                                    {
+                                        MatchParticipant player = side[i];
+                                        @(i > 0 ? ", " : "")
+                                        @if (player.IsAi)
+                                        {
+                                            <span class="text-ink-muted">@player.Login</span>
+                                        }
+                                        else
+                                        {
+                                            <a href="@PlayerLinks.Profile(player.PlayerId)" class="transition hover:text-primary max-sm:inline-flex max-sm:min-h-11 max-sm:items-center @(PlayerIds.Contains(player.PlayerId) ? "font-medium text-ink" : "text-ink-muted")">@player.Login</a>
+                                        }
+                                    }
+                                }
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-2 max-sm:p-0">
+                                <span class="inline-flex items-center gap-1.5">
+                                    @if (game.Result is MatchResult.Victory or MatchResult.Defeat)
+                                    {
+                                        <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(game.Result == MatchResult.Victory ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                                            @if (game.Result == MatchResult.Victory)
+                                            {
+                                                <path d="M4 0.5 7.5 7h-7Z" />
+                                            }
+                                            else
+                                            {
+                                                <path d="M4 7.5 0.5 1h7Z" />
+                                            }
+                                        </svg>
+                                    }
+                                    @LeagueGames.ResultText(game)
+                                </span>
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-2 text-right tabular-nums max-sm:p-0">@MatchFormat.Length(game.Duration)</td>
+                            <td class="px-4 py-2 max-sm:ml-auto max-sm:p-0">
+                                <a href="@ReplayLinks.Vault(game.GameId)" class="inline-flex min-h-11 items-center text-primary transition hover:underline">Replay</a>
+                            </td>
+                        </tr>
+                    }
+                    @if (games.Items.Count == 0)
+                    {
+                        <tr class="border-t border-edge/60"><td colspan="6" class="px-4 py-6 text-center text-ink-muted max-sm:basis-full">No games yet this season</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-edge px-4 py-3 text-sm text-ink-muted">
+            <span>@LeagueGames.RangeText(games.Items.Count, Page, games.TotalPages)</span>
+            <div class="flex gap-2">
+                <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(Page <= 1)" @onclick="() => OnPage.InvokeAsync(Page - 1)">Previous</button>
+                <button type="button" class="btn-secondary min-h-11 px-3" disabled="@(!HasNext)" @onclick="() => OnPage.InvokeAsync(Page + 1)">Next</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private PlayerPage<PlayerMatch>? games;
+    private string? error;
+    private bool loading;
+    private string? loadedKey;
+    private CancellationTokenSource? cancellation;
+
+    /// <summary>The full name of the subdivision whose players are listed.</summary>
+    [Parameter, EditorRequired] public required string SubdivisionName { get; set; }
+
+    /// <summary>The players of the standings page.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<int> PlayerIds { get; set; }
+
+    /// <summary>The technical name of the league's board.</summary>
+    [Parameter, EditorRequired] public required string Board { get; set; }
+
+    /// <summary>The start of the season: older games are left out.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset Since { get; set; }
+
+    /// <summary>The page of games, from 1.</summary>
+    [Parameter] public int Page { get; set; } = 1;
+
+    /// <summary>Raised with the page the buttons ask for.</summary>
+    [Parameter] public EventCallback<int> OnPage { get; set; }
+
+    /// <summary>Raised when the request needs a login.</summary>
+    [Parameter] public EventCallback OnNotAuthenticated { get; set; }
+
+    private bool HasNext => games is not null && (games.TotalPages is { } pages ? Page < pages : games.Items.Count >= PlayerRequests.LeagueGamesPageSize);
+
+    protected override void OnParametersSet()
+    {
+        string key = LeagueGames.Key(PlayerIds, Board, Since, Page);
+        if (key == loadedKey)
+        {
+            return;
+        }
+
+        loadedKey = key;
+        _ = LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        cancellation?.Cancel();
+        CancellationTokenSource mine = cancellation = new();
+        loading = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            games = PlayerIds.Count == 0
+                ? PlayerPage<PlayerMatch>.Empty
+                : await Api.GetGamesOfPlayersAsync(PlayerIds, Board, Since, Page, mine.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer page or standings took over.
+        }
+        catch (NotAuthenticatedException)
+        {
+            await OnNotAuthenticated.InvokeAsync();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(cancellation, mine))
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+
+        // A page past the end: the last page opens.
+        if (ReferenceEquals(cancellation, mine) && games is { Items.Count: 0, TotalPages: { } last } && Page > Math.Max(last, 1))
+        {
+            await OnPage.InvokeAsync(Math.Max(last, 1));
+        }
+    }
+
+    public void Dispose() => cancellation?.Cancel();
+}

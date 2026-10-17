@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+// The Sample environment (the Players pages on recorded data, see docs/vault/players-plan.md) is not
+// Development, which is the only one that serves the Viewer's static files from the build output.
+if (builder.Environment.IsEnvironment("Sample"))
+{
+    builder.WebHost.UseStaticWebAssets();
+}
+
 string tokenEndpoint = builder.Configuration["OAuth:TokenEndpoint"] ?? "https://hydra.faforever.com/oauth2/token";
 
 builder.Services.AddHttpClient("Hydra", client =>
@@ -39,6 +46,21 @@ builder.Services.AddRateLimiter(options =>
 WebApplication app = builder.Build();
 
 app.UseRateLimiter();
+
+// The Sample environment (recorded Players data, see docs/vault/players-plan.md): the app only ever
+// asks for appsettings.json, so the Sample settings are served under that name. Nothing of this
+// exists outside that environment.
+if (app.Environment.IsEnvironment("Sample"))
+{
+    app.Use((context, next) =>
+    {
+        if (context.Request.Path == "/appsettings.json")
+        {
+            context.Request.Path = "/appsettings.Sample.json";
+        }
+        return next(context);
+    });
+}
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles(new StaticFileOptions
@@ -127,8 +149,9 @@ app.MapGet("/maps/{folder}", async (string folder, HttpContext context, IWebHost
     return Results.Content(html, "text/html; charset=utf-8");
 });
 
-// The unit pages get a card about the units in their address, the About pages a fixed one.
-foreach (string path in PageLinkPreview.Paths)
+// The unit pages get a card about the units in their address, the About pages a fixed one, a player's
+// profile (/players/{id}) one generic card.
+foreach (string path in PageLinkPreview.Paths.Append(PageLinkPreview.ProfileRoute))
 {
     app.MapGet(path, async (HttpContext context, PageLinkPreview preview, CancellationToken cancellationToken) =>
     {

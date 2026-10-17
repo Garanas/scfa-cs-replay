@@ -1,0 +1,261 @@
+@page "/dev/charts"
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@inject IWebAssemblyHostEnvironment Host
+
+@* The visual test bench of the chart components of the Players pages (Features/Players/Charts):
+   every component in every variant with fixed demo data, for checking both colour modes and the
+   narrow screen. Development only: any other environment gets the 404 page. Not linked anywhere. *@
+
+@if (!Host.IsDevelopment())
+{
+    <NotFoundView />
+    return;
+}
+
+<PageTitle>Chart gallery · Vault of FAForever</PageTitle>
+
+<h1 class="text-2xl font-bold">Chart gallery</h1>
+<p class="mt-1 max-w-2xl text-sm text-ink-muted">
+    Every chart component with demo data, in every variant. For development: check a change to a chart here
+    in dark and light mode, at 1440 and 390 px wide.
+</p>
+
+<div class="mt-8 grid grid-cols-1 gap-6">
+    <section class="card" aria-labelledby="g-line">
+        <h2 id="g-line" class="text-lg font-semibold">LineChart</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">Rating over a year with the wash, the peak, the end label and a tooltip. Hover, tap or use the arrow keys.</p>
+        <LineChart Points="rating" Area="true" Marked="peak" MarkedLabel="@($"Peak {Math.Round(peak.Value):N0}")" AriaLabel="Demo rating over one year">
+            <Tooltip Context="p">
+                <p class="text-ink-muted">@p.Time.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</p>
+                <p class="mt-0.5 text-[1rem] font-semibold text-ink">@Math.Round(p.Value).ToString("N0", CultureInfo.InvariantCulture)</p>
+                <p class="mt-0.5 text-ink-muted">Won against Kestrel on Osiris</p>
+            </Tooltip>
+        </LineChart>
+    </section>
+
+    <section class="card" aria-labelledby="g-line-sigma">
+        <h2 id="g-line-sigma" class="text-lg font-semibold">LineChart with a second panel</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">The rating and its uncertainty on the same time axis, no wash.</p>
+        <LineChart Points="rating" Panel="sigma" PanelLabel="Uncertainty σ, same games" AriaLabel="Demo rating and uncertainty" />
+    </section>
+
+    <section class="card" aria-labelledby="g-line-two">
+        <h2 id="g-line-two" class="text-lg font-semibold">LineChart, two players</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">Two lines on one scale with a legend, and dashed marks for games they played against each other.</p>
+        <LineChart Points="rating" Name="Ravelin" Other="otherRating" OtherName="Kestrel" Color="ChartColor.Viz1" OtherColor="ChartColor.Viz2"
+                   VerticalMarks="meetings" AriaLabel="Demo ratings of two players" />
+    </section>
+
+    <section class="card" aria-labelledby="g-line-step">
+        <h2 id="g-line-step" class="text-lg font-semibold">LineChart, steps</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">A staircase on a fixed axis step (the division number), as the league journey would use it.</p>
+        <LineChart Points="journey" Step="true" YStep="1" Height="200" ShowEndLabel="true" ValueFormat="@(v => v.ToString("0", CultureInfo.InvariantCulture))"
+                   AriaLabel="Demo league journey" />
+    </section>
+
+    <section class="card" aria-labelledby="g-line-short">
+        <h2 id="g-line-short" class="text-lg font-semibold">LineChart, one month</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">A short period gets day ticks.</p>
+        <LineChart Points="shortRating" Area="true" Height="200" AriaLabel="Demo rating over one month" />
+    </section>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="card" aria-labelledby="g-bars">
+            <h2 id="g-bars" class="text-lg font-semibold">BarRows</h2>
+            <p class="mb-4 mt-1 text-sm text-ink-muted">Win share per faction, with the 50 % marker.</p>
+            <BarRows Rows="winShare" Max="100" Marker="50" AriaLabel="Demo win share per faction" />
+            <h3 class="mb-3 mt-8 text-sm font-semibold">Stacked: won and lost</h3>
+            <BarRows Rows="stacked" AriaLabel="Demo games per faction" />
+            <div class="mt-3">
+                <Legend Items="stackedLegend" />
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="g-columns">
+            <h2 id="g-columns" class="text-lg font-semibold">ColumnChart</h2>
+            <p class="mb-4 mt-1 text-sm text-ink-muted">Win share by game length, with a selective label on top and the 50 % line.</p>
+            <ColumnChart Items="byLength" Max="100" Marker="50" MarkerLabel="50%" AriaLabel="Demo win share by game length" />
+        </section>
+
+        <section class="card" aria-labelledby="g-hist">
+            <h2 id="g-hist" class="text-lg font-semibold">Histogram</h2>
+            <p class="mb-4 mt-1 text-sm text-ink-muted">Rating change per game: losses, the zero bin and wins.</p>
+            <Histogram Bins="bins" AriaLabel="Demo rating change per game" />
+        </section>
+
+        <section class="card" aria-labelledby="g-heat">
+            <h2 id="g-heat" class="text-lg font-semibold">Heatmap</h2>
+            <p class="mb-4 mt-1 text-sm text-ink-muted">Games per weekday and time of day.</p>
+            <Heatmap Values="heat" RowLabels="days" ColumnLabels="hours" AriaLabel="Demo games per weekday and hour" />
+        </section>
+
+        <section class="card" aria-labelledby="g-dumb">
+            <h2 id="g-dumb" class="text-lg font-semibold">Dumbbell</h2>
+            <p class="mb-4 mt-1 text-sm text-ink-muted">Rating per leaderboard, two players.</p>
+            <Dumbbell Rows="dumbbells" NameA="Ravelin" NameB="Kestrel" AriaLabel="Demo ratings of two players per leaderboard" />
+        </section>
+
+        <section class="card" aria-labelledby="g-small">
+            <h2 id="g-small" class="text-lg font-semibold">Sparkline, ScoreMeter and Legend</h2>
+            <div class="mt-4 flex flex-wrap items-center gap-6">
+                <Sparkline Values="spark" AriaLabel="Demo trend" />
+                <Sparkline Values="spark" Color="ChartColor.Viz1" Width="140" Height="40" AriaLabel="Demo trend, larger" />
+            </div>
+            <div class="mt-6 max-w-sm">
+                <ScoreMeter Value="7" Max="10" Label="7 of 10" />
+            </div>
+            <div class="mt-6">
+                <Legend Items="allLegend" />
+            </div>
+        </section>
+    </div>
+
+    <section aria-labelledby="g-tiles">
+        <h2 id="g-tiles" class="mb-3 text-lg font-semibold">StatTile</h2>
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatTile Label="Current rating" Value="1,588" Delta="+42 in 30 days" Tone="DeltaTone.Good" Up="true" Sub="Ladder 1v1" />
+            <StatTile Label="Average change" Value="−0.8" Delta="−1.2 against last year" Tone="DeltaTone.Bad" Up="false" />
+            <StatTile Label="Games" Value="1,314" Sub="58% won" />
+            <StatTile Label="Fewer losses" Value="31%" Delta="−4 points" Tone="DeltaTone.Good" Up="false" />
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="g-colors">
+        <h2 id="g-colors" class="text-lg font-semibold">Colours</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-muted">The accent, viz-1 to viz-8 and the faint ink, as the components use them.</p>
+        <div class="flex flex-wrap gap-2">
+            @foreach (ChartColor color in Enum.GetValues<ChartColor>())
+            {
+                <span class="flex items-center gap-2 text-xs text-ink-muted">
+                    <span class="h-6 w-10 rounded-[4px] @ChartColors.Bg(color)"></span>@color
+                </span>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private static readonly DateTimeOffset End = new(2026, 10, 16, 12, 0, 0, TimeSpan.Zero);
+
+    private IReadOnlyList<LinePoint> rating = [];
+    private IReadOnlyList<LinePoint> otherRating = [];
+    private IReadOnlyList<LinePoint> sigma = [];
+    private IReadOnlyList<LinePoint> journey = [];
+    private IReadOnlyList<LinePoint> shortRating = [];
+    private IReadOnlyList<DateTimeOffset> meetings = [];
+    private LinePoint peak = new(End, 0);
+
+    private readonly IReadOnlyList<BarRow> winShare =
+    [
+        new("UEF", 55.3, "55%", ChartColor.Primary, Sub: "412 games"),
+        new("Cybran", 52.9, "53%", ChartColor.Primary, Sub: "601 games"),
+        new("Aeon", 48.9, "49%", ChartColor.Primary, Sub: "188 games"),
+        new("Seraphim", 47.8, "48%", ChartColor.Primary, Sub: "113 games"),
+    ];
+
+    private readonly IReadOnlyList<BarRow> stacked =
+    [
+        new("UEF", 228, "412 games", Extra: 184, CssColor: "var(--swatch-uef)"),
+        new("Cybran", 318, "601 games", Extra: 283, CssColor: "var(--swatch-cybran)"),
+        new("Aeon", 92, "188 games", Extra: 96, CssColor: "var(--swatch-aeon)"),
+        new("Seraphim", 54, "113 games", Extra: 59, CssColor: "var(--swatch-seraphim)"),
+    ];
+
+    private readonly IReadOnlyList<LegendItem> stackedLegend =
+    [
+        new("Won", ChartColor.Faint),
+        new("Lost", ChartColor.Faint, Opacity: 0.35),
+    ];
+
+    private readonly IReadOnlyList<ColumnItem> byLength =
+    [
+        new("0 to 10", 38, "38%"), new("10 to 20", 47), new("20 to 30", 55, "55%"), new("30 to 40", 52),
+        new("40 to 50", 49), new("50 to 60", 61, "61%"), new("60 to 80", 58), new("80 plus", 44, "44%"),
+    ];
+
+    private IReadOnlyList<HistogramBin> bins = [];
+
+    private IReadOnlyList<IReadOnlyList<double>> heat = [];
+
+    private readonly IReadOnlyList<string> days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    private readonly IReadOnlyList<string> hours =
+        Enumerable.Range(0, 24).Select(h => h % 6 == 0 ? h.ToString("00", CultureInfo.InvariantCulture) : "").ToList();
+
+    private readonly IReadOnlyList<DumbbellRow> dumbbells =
+    [
+        new("Global", 1520, 1790, "1,520", "1,790", "270 apart"),
+        new("Ladder 1v1", 1588, 1904, "1,588", "1,904", "316 apart"),
+        new("2v2", 1210, 1105, "1,210", "1,105", "105 apart"),
+        new("4v4 full share", 1340, 1342, "1,340", "1,342", "2 apart"),
+    ];
+
+    private readonly IReadOnlyList<double> spark = [10, 14, 12, 18, 22, 19, 26, 24, 30, 28, 35];
+
+    private readonly IReadOnlyList<LegendItem> allLegend =
+    [
+        new("Swatch", ChartColor.Viz1),
+        new("Line", ChartColor.Viz2, LegendKind.Line),
+        new("Dot", ChartColor.Viz3, LegendKind.Dot),
+        new("Accent", ChartColor.Primary),
+        new("Faint", ChartColor.Faint),
+    ];
+
+    protected override void OnInitialized()
+    {
+        var random = new Random(7);
+        rating = Walk(random, 330, 1400, 14, 18);
+        otherRating = Walk(new Random(21), 300, 1700, 9, 16);
+        sigma = Enumerable.Range(0, rating.Count)
+            .Select(i => new LinePoint(rating[i].Time, 170 * Math.Exp(-i / 70.0) + 60))
+            .ToList();
+        peak = rating.MaxBy(p => p.Value)!;
+        meetings = [rating[40].Time, rating[120].Time, rating[121].Time, rating[^5].Time];
+        shortRating = Walk(new Random(3), 28, 1500, 1, 14);
+
+        var levels = new List<LinePoint>();
+        double level = 3;
+        for (int i = 0; i < 40; i++)
+        {
+            level = Math.Clamp(level + (random.NextDouble() < 0.2 ? (random.NextDouble() < 0.7 ? 1 : -1) : 0), 1, 6);
+            levels.Add(new LinePoint(End.AddDays(-80 + i * 2), level));
+        }
+
+        journey = levels;
+
+        int[] counts = [4, 9, 22, 60, 130, 240, 310, 120, 8, 150, 260, 190, 90, 40, 18, 7];
+        bins = counts.Select((count, i) => new HistogramBin(
+            i % 5 == 0 ? AxisMark((i - 8) * 3) : "",
+            count,
+            i < 8 ? -1 : i == 8 ? 0 : 1,
+            count > 250 ? count.ToString(CultureInfo.InvariantCulture) : null,
+            $"{count} games")).ToList();
+
+        heat = Enumerable.Range(0, 7)
+            .Select(d => (IReadOnlyList<double>)Enumerable.Range(0, 24)
+                .Select(h => Math.Max(0, (d >= 5 ? 6 : 2) * Math.Exp(-Math.Pow((h - 21) / 4.0, 2)) * 5 + random.Next(0, 3) - (h < 7 ? 2 : 0)))
+                .ToList())
+            .ToList();
+    }
+
+    /// <summary>A signed axis mark: a plus for a gain and the minus sign U+2212 for a loss.</summary>
+    private static string AxisMark(int value)
+        => value < 0 ? "−" + (-value).ToString(CultureInfo.InvariantCulture) : (value > 0 ? "+" : "") + value.ToString(CultureInfo.InvariantCulture);
+
+    private static List<LinePoint> Walk(Random random, int days, double start, double drift, double noise)
+    {
+        var points = new List<LinePoint>();
+        double value = start;
+        for (int i = 0; i < days; i++)
+        {
+            if (random.NextDouble() < 0.75 || days < 60)
+            {
+                value += (random.NextDouble() - 0.45) * noise + (i < days / 2 ? drift / 14 : -drift / 30);
+                points.Add(new LinePoint(End.AddDays(i - days), value));
+            }
+        }
+
+        return points;
+    }
+}

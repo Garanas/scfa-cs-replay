@@ -3,6 +3,7 @@ using FAForever.Vault.Viewer.Services.Analytics;
 using FAForever.Vault.Viewer.Services.Api;
 using FAForever.Vault.Viewer.Services.Auth;
 using FAForever.Vault.Viewer.Services.Maps;
+using FAForever.Vault.Viewer.Services.Players;
 using FAForever.Vault.Viewer.Services.Replays;
 using FAForever.Vault.Viewer.Services.Theming;
 using FAForever.Vault.Viewer.Services.Units;
@@ -31,6 +32,18 @@ builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("OAuth").Get<OAuthOptions>() ?? new OAuthOptions());
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FafApiClient>();
+
+// The Players pages: the real API, or recorded documents when appsettings.Sample.json is loaded
+// (ASPNETCORE_ENVIRONMENT=Sample on the server).
+// A JSON true reads back as "True", so compare without case.
+if (string.Equals(builder.Configuration["Players:SampleData"], "true", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IPlayersApi, SamplePlayersApi>();
+}
+else
+{
+    builder.Services.AddScoped<IPlayersApi, FafPlayersApi>();
+}
 builder.Services.AddScoped<AuthenticationStateProvider, FafAuthenticationStateProvider>();
 builder.Services.AddAuthorizationCore();
 

@@ -1,0 +1,45 @@
+@* A number with its label, like StatTile, but the lines under the value wrap instead of being cut:
+   the tiles of the profile carry sentences (a game against a long player name, the custom and ladder counts). *@
+<div class="card px-4 py-3 sm:p-4">
+    <p class="text-xs text-ink-muted">@Label</p>
+    <p class="mt-1 text-2xl font-semibold leading-tight text-ink [overflow-wrap:anywhere]">@Value</p>
+    @if (Delta is { Length: > 0 })
+    {
+        <p class="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
+            @if (Tone != DeltaTone.Neutral)
+            {
+                <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(Tone == DeltaTone.Good ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                    @if (Up)
+                    {
+                        <path d="M4 0.5 7.5 7h-7Z" />
+                    }
+                    else
+                    {
+                        <path d="M4 7.5 0.5 1h7Z" />
+                    }
+                </svg>
+            }
+            <span>@Delta</span>
+        </p>
+    }
+    @if (Sub is { Length: > 0 })
+    {
+        <p class="mt-0.5 text-xs text-ink-faint [overflow-wrap:anywhere]">@Sub</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string Label { get; set; }
+
+    [Parameter, EditorRequired] public required string Value { get; set; }
+
+    /// <summary>The change with its sign and unit ("+42 in 30 days"); empty for none.</summary>
+    [Parameter] public string? Delta { get; set; }
+
+    [Parameter] public DeltaTone Tone { get; set; }
+
+    /// <summary>The triangle points up (a rise) or down; independent of <see cref="Tone"/>, since a fall can be good.</summary>
+    [Parameter] public bool Up { get; set; } = true;
+
+    [Parameter] public string? Sub { get; set; }
+}

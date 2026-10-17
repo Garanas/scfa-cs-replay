@@ -1,0 +1,24 @@
+@inherits PlayerUrlComponent
+
+@* A text filter kept in one query parameter: written when the field is left or Enter is pressed (the
+   placeholder says so, since nothing changes while typing). *@
+<label class="block min-w-0 text-sm">
+    <span class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">@Label</span>
+    <input type="search" class="input-field min-h-11" placeholder="@HintedPlaceholder" enterkeyhint="search" value="@current" @onchange="Changed" />
+</label>
+
+@code {
+    [Parameter, EditorRequired] public required string Label { get; set; }
+
+    [Parameter, EditorRequired] public required string Query { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    private string current = "";
+
+    private string HintedPlaceholder => Placeholder is { Length: > 0 } ? $"{Placeholder}, then Enter" : "Type, then press Enter";
+
+    protected override void OnParametersSet() => current = Read(Query) ?? "";
+
+    private void Changed(ChangeEventArgs e) => Write(Query, e.Value?.ToString()?.Trim());
+}

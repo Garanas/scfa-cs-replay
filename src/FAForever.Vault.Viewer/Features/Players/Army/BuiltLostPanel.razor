@@ -1,0 +1,38 @@
+@using System.Globalization
+@* Units built and lost, one row per group: the label, two thin bars (built above, lost below) with
+   their numbers at the bar ends, and the share lost at the right. All rows of a panel share one
+   scale. The legend is the page's, shown once above both panels. *@
+<div role="list" aria-label="@Title">
+    <h3 class="mb-3 text-sm font-semibold text-ink">@Title</h3>
+    <div class="grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-4 sm:grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto]">
+        @foreach (BuiltLostRow row in Rows)
+        {
+            <div class="contents" role="listitem">
+                <div class="min-w-0 truncate text-sm">@row.Label</div>
+                <div class="min-w-0 space-y-0.5 border-l border-edge" title="@row.Label: @Count(row.Built) built, @Count(row.Lost) lost">
+                    <div class="flex items-center gap-1.5">
+                        <div class="h-2 min-w-px rounded-r-[4px] bg-viz-1" style="width:@Bar(row.BuiltFraction)"></div>
+                        <span class="shrink-0 text-xs text-ink-muted">@Count(row.Built)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="h-2 min-w-px rounded-r-[4px] bg-viz-2" style="width:@Bar(row.LostFraction)"></div>
+                        <span class="shrink-0 text-xs text-ink-muted">@Count(row.Lost)</span>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-ink-muted">@row.LostShare</div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string Title { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<BuiltLostRow> Rows { get; set; }
+
+    // The bars leave room at the right for the number that follows them.
+    private static string Bar(double fraction)
+        => $"calc((100% - 4.5rem) * {fraction.ToString("0.####", CultureInfo.InvariantCulture)})";
+
+    private static string Count(long value) => value.ToString("N0", CultureInfo.InvariantCulture);
+}

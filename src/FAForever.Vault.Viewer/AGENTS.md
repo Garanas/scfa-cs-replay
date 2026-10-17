@@ -85,6 +85,10 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
 - Menus and other things that open on top of the page are popovers (Popover API: `popover` +
   `popovertarget`, no open/closed state in C#), like the header's menu on narrow screens
   (`.menu-popover`). `js/app.js` closes a popover when a link inside it is taken.
+- Account menu (`Layout/UserMenu.razor`, `.account-popover`): the header's account button (initial,
+  display name of the session, chevron) opens a popover with "Your profile" (`players/{id}`), "Your
+  replays" (`replays/search?player={name}`), "Your maps" (`maps/search?author={name}`) and "Sign out";
+  the addresses come from `Services/Auth/AccountLinks.cs`.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Narrow screens (phones, about 390 px wide) are built with Tailwind's breakpoints in CSS, desktop
@@ -528,6 +532,129 @@ chosen faction (`NotFoundMessages.cs`, four or five per faction), with the icon 
 - Switching faction on the page picks a message of the new faction; "Another message" picks a
   different one. The choice is not in the URL: the page has no state worth sharing.
 - The unit ids must be in the icon atlas (a missing one shows the placeholder icon).
+
+## Players tab
+
+The Players tab is built like the Maps tab: `Pages/Players.razor` (`/players`) is an entry page with a
+search and a card per page below it, and each page links back ("← Players"). The plan is
+[`docs/vault/players-plan.md`](../../docs/vault/players-plan.md) (data, stories, decisions). Paths, the
+`tab` values and the helpers that build a link are in `Features/Players/PlayerLinks.cs`; the choices of
+the filter rows are in `Features/Players/PlayerFilters.cs`. The Home page has a Players card, and the
+header's Players link sits beside About.
+
+The Compare page's name fields and the landing page's "Find a player" field are `Features/Players/PlayerNameSearch.razor`, a combobox that suggests players while typing: 300 ms after the last keystroke (a newer keystroke cancels the wait and the request) it calls `FindPlayersAsync` for two characters or more and lists up to 8 (`PlayerNameSuggestions` in `PlayerNameSearch.cs`: an exact name first, then current names, then former names, a player once). A pick raises `OnPick` with the hit, so the page uses its id without a second lookup; Enter without a highlight raises `OnSubmit`. The list is absolutely positioned (`z-10`) under the input, so it overlays the content. On the landing page a pick opens `players/{id}` and Enter keeps the `q` result list. Use it for any new player name field.
+
+| Page | Path | What |
+|---|---|---|
+| `Pages/Players.razor` | `players` | Search for a player (`q`) and cards to the three pages below. The cards work signed out, the search needs the login gate. |
+| `Pages/PlayerPage.razor` | `players/{id}` | A profile: loads the profile, `PlayerHeader`, then the tabs Overview, Rating history, Matches, Army and factions (`ProfileOverview`, `RatingHistoryTab`, `MatchesTab`, `ArmyTab`). Their shaping, formatting and CSV logic is in `Features/Players/Profile/` (`ProfileFormat`, `ProfileSummaries`, `RatingChartData`, `RatingTooltip`, `Loadable`). |
+| `Pages/PlayerRankings.razor` | `players/rankings` | One leaderboard at a time (six chips: global, ladder 1v1, 2v2, 3v3 and the two 4v4 boards), the table in pages of 50 with the signed in player's row pinned, "your position" and the histogram of every rating. "Find in the ranking" is a `PlayerNameSearch`: a picked player (or an exact name on Enter) has their rating on the board read, their rank asked (`GetRankOfRatingAsync` with the page's filters) and the page that holds it opened with `player={id}`; a player without a rating, or filtered out by settled or played in, gets a line under the field and the page stays. Pure parts in `Features/Players/Rankings/RankingView.cs`. |
+| `Pages/PlayerLeagues.razor` | `players/leagues` | A league season (four leagues, about 21 seasons each, newest first, the running one marked): the player's entry (a player still in placement has no score), players per subdivision (`Features/Players/Leagues/SubdivisionColumns.razor`, one group per row below `sm` so a column is wide enough to press), the season game by game, the standings of one subdivision (each row with a "Replays" link to `replays/search?player=`) and below them `LeagueGamesCard`: the latest rated games of the standings page's players in the season on the league's board (`IPlayersApi.GetGamesOfPlayersAsync`, ids in requests of at most 50, a game of two listed players once per page). The listed subdivision's player count is the standings total everywhere on the page (`LeagueView.CountsWithStandings`). |
+| `Pages/PlayerCompare.razor` | `players/compare` | Two players side by side. A missing `a` is the signed in user (not written to the address until a second player is picked). A head to head row is one link to its replay (covering anchor, the map link above it). |
+
+The Matches tab's Players column is one short line (`MatchPlayersLine`: "vs name", "3 with · 4 against", "n others") whose button opens a single player card (`Matches/PlayerCardHost.razor`, placed by `fafReplay.placeBeside` and watched by `watchPlayerCard`): it opens on hover after 150 ms, on focus and on click or tap, and closes on leaving, Escape (focus back on the button), a press outside, the focus leaving it or the row scrolling away.
+
+A profile is addressed by the numeric id, never by name. The pages below `players/` other than a profile
+share `PlayersSectionTabs` (Rankings, Leagues, Compare).
+
+**Every Players page needs a signed in user** (the API refuses anonymous calls): signed out, a page shows
+`PlayersLoginGate` in place of its content (the landing page only in place of the search). Nothing is
+fetched anonymously, and the server never calls the API (its link preview cards are fixed; a profile gets
+one generic card). A page starts its load only when `Auth.IsAuthenticated`.
+
+The URL parameters (defaults stay out of the URL; every page with state inherits `PlayerUrlComponent`, which
+writes with `replace: true` and drops `page`):
+
+| Parameter | Page | Meaning | Default when absent |
+|---|---|---|---|
+| `q` | landing | Search text (rankings dropped it from the address when present) | none |
+| `tab` | profile | `rating`, `matches`, `army` | Overview |
+| `board` | profile (Rating history), rankings, compare | Leaderboard technical name | `ladder_1v1` (profile: the board with most games) |
+| `period` | profile (Rating history), compare | `1w`, `1m`, `3m`, `1y`, `all` | `1y` |
+| `page` | lists | Page number | 1 |
+| `mode`, `faction`, `result`, `map`, `with`, `sort` | profile, Matches | Filters of the match list (`ladder_1v1`, `tmm_2v2`, `tmm_4v4_full_share`, `custom`, `all`; `uef`, `cybran`, `aeon`, `seraphim`; `win`, `loss`) | no filter |
+| `show` | profile, Army | Achievements: `unlocked`, `progress`, `locked` | all |
+| `player` | rankings | A player id: the row is highlighted and scrolled into view (set by "Find in the ranking" and "Jump to my rank", together with the `page` that holds the rank; dropped when a filter changes) | none |
+| `gamesPage` | leagues | Page of the "Latest games" card (20 rows); dropped when the league, season, subdivision or standings page changes | 1 |
+| `settled` | rankings | `0` also shows ratings with σ above 100 | settled only |
+| `active` | rankings | Played in: `30d`, `90d`, `1y`, `all` | `90d` |
+| `league`, `season`, `subdivision` | leagues | League, season id, subdivision id | the ladder 1v1 league, the running season (else the latest); `subdivision`: the player's own, else the top one |
+| `a`, `b` | compare | Player ids (the two name fields resolve to them on submit) | `a`: the signed in user; `b`: none |
+
+A value a page does not read as given is dropped from the address (`PlayerUrlComponent.DropFromAddress`,
+decided by `RankingView.StaleParameters` and `LeagueView.StaleParameters`): an unknown `board`, `league`,
+`season` or `subdivision`, a `settled` other than 0, an unknown `active`, a `page` that is not a number
+above 1. A `page` past the last page opens the last page with a note (`role="status"`) and the address
+follows.
+
+Filter components (`Features/Players/`): `ChoiceChips` (one choice as chips, `aria-pressed`, a `role="group"`
+named by its label), `ChoiceSelect` (a select) and `TextFilter` (a search field written on change or Enter; its
+placeholder ends with "then Enter"), each bound to one query parameter by its `Query` parameter. Chips and
+fields are 44 px high. `NextStepNote` is the one quiet line of a page whose data is not there yet.
+
+The Matches tab (`MatchesTab`, helpers in `Features/Players/Matches/`: `MatchUrl` reads the address into `MatchFilters`, `MatchFormat` words the numbers and builds the chart rows, `MatchPlayers` lists the other players of a game) loads twice: every game of the filtered period for the tiles and charts (keyed on the filters without `sort` and `page`, so a page turn loads only the table) and one page of 25 for the table. The Army tab (`ArmyTab`, `Features/Players/Army/`: `ArmyFormat`, `AchievementFilter`, `BuiltLostPanel`) loads the counters and achievements once per player; `show` only filters the grid.
+
+### Pitfalls of this theme
+
+- **`text-base` is a colour, not a size.** In this theme `base` is the page background colour, so
+  `text-base` paints text in the background and the heading vanishes (the Games heading of the Matches tab
+  did, in both modes). For 1rem text write `text-[1rem]`, and give every heading and value an ink class
+  (`text-ink`, `text-ink-muted`). `tools/players-walk.cjs` reports headings whose colour equals the background.
+- **`relative` on every `overflow-x-auto` box that holds a table.** A table's `sr-only` cells are
+  absolutely positioned; without a positioned ancestor inside the scroll box they sit against the page and
+  widen it, which makes the whole page scroll sideways at 390 px.
+- **Wide tables become lists below `sm`** (`.list-table`, see "Narrow screens"): the rankings and the
+  standings do, and each cell then carries the short word the hidden header would have given (`#`, `σ`,
+  `games`). Links in those rows are 44 px high below `sm` (`max-sm:min-h-11`).
+- Write the minus sign U+2212 in visible text, never a hyphen; the CSV keeps `-`.
+- A grid or flex item that holds a chart needs `min-w-0`, a single column `grid-cols-1`.
+
+### Checking the pages
+
+Without a token the pages run on sample data (fixtures embedded in `Services/Players/Sample/`, one
+fictional player, "Ashgrove", id 2049311): build, then start the server with the Sample environment, which
+loads `wwwroot/appsettings.Sample.json` (`Players:SampleData`) and signs a sample user in:
+
+```powershell
+dotnet build src/FAForever.Vault.Server --artifacts-path D:\wt\art-x
+$env:ASPNETCORE_ENVIRONMENT='Sample'; $env:ASPNETCORE_URLS='http://127.0.0.1:5400'
+dotnet run --project src/FAForever.Vault.Server --artifacts-path D:\wt\art-x --no-launch-profile --no-build
+```
+
+`tools/players-walk.cjs` walks every Players page at 1440 and 390 px in both colour modes
+(`node tools/players-walk.cjs <base url> <screenshot folder>`; the header says what it needs: `playwright-core`
+from the npx cache and a chromium). Per page and mode it prints the scroll width against the viewport, the
+widest element, console errors, `role="alert"` cards, visible text with `undefined`, `NaN` or `[object`,
+headings in the colour of the background and touch targets under 44 px, and saves a screenshot. Read its
+output and look at the pictures; run it after any change to a Players page. The chart gallery needs the
+Development environment (`dev/charts`, a second server on another port).
+
+### Chart components and the gallery
+
+The charts are in `Features/Players/Charts/`, take plain data (records in `ChartModels.cs`, no API types)
+and use only semantic tokens. The rules (plan, decision 4): the player's own series in `primary`, two
+players in `viz-1` and `viz-2`, magnitudes in one hue, good and bad changes in `viz-3` and `viz-8` with a
+sign or a word (never colour alone), text never wears a series colour, a legend for two or more series,
+selective labels (never a number on every point), `tabular-nums` only in tables and axes, no borders
+around marks, 2 px between bars. Tailwind only sees class names that appear literally in a `.razor` or
+`.cs` file: pick colours through `ChartColor` and `ChartColors`, never build a class from a number.
+Labels never overlap or leave the chart: `LabelLayout` estimates the room a label takes; `LineChart` moves
+the peak label beside its point when it would meet the end label and, as a step line, reserves a right
+margin for the end label; `ColumnChart` moves the marker's label to the other end (or under the line) when
+a value label is in the way and writes axis marks in full (`OverflowLabels`); `Dumbbell` puts the values
+above the track when its container is narrower than 28rem (a container query; `@@md:` in Razor).
+
+| Component | What |
+|---|---|
+| `LineChart` | Over time; measures its width (`fafReplay.observeWidth`, a ResizeObserver) and draws at pixel size; optional wash, step line, marked point, second line, vertical marks, second panel on the same time axis; crosshair and tooltip (`RenderFragment<LinePoint>`) on pointer or arrow keys |
+| `BarRows`, `ColumnChart`, `Histogram`, `Heatmap`, `Dumbbell` | HTML and CSS (no measuring) |
+| `Sparkline`, `ScoreMeter`, `StatTile`, `Legend` | Small parts |
+| `StackedBar` | One 100 % bar per player split by faction swatch |
+
+`Pages/ChartGallery.razor` (`/dev/charts`) is the visual test bench: every component in every variant with
+fixed demo data. It renders only when `IWebAssemblyHostEnvironment.IsDevelopment()` (the 404 page
+otherwise) and is linked nowhere. Check a change to a chart there in both modes at 1440 and 390 px. A new
+chart or variant gets an entry in the gallery.
 
 ## Home page
 

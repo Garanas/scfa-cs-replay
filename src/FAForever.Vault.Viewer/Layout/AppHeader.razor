@@ -5,7 +5,7 @@
             <span>Vault of <span class="text-primary">FAForever</span></span>
         </a>
 
-        <nav class="hidden items-center gap-1 sm:flex" aria-label="Main">
+        <nav class="hidden items-center gap-1 md:flex" aria-label="Main">
             <NavLink href="" Match="NavLinkMatch.All" class="nav-link" ActiveClass="active">Home</NavLink>
             <NavLink href="replays" class="nav-link" ActiveClass="active">Replays</NavLink>
             <NavLink href="maps" class="nav-link" ActiveClass="active">Maps</NavLink>
@@ -13,14 +13,16 @@
         </nav>
 
         <div class="ml-auto flex items-center gap-2 sm:gap-3">
-            @* About sits apart from the main sections, with the settings on the right. *@
-            <NavLink href="about" class="nav-link hidden sm:inline-flex" ActiveClass="active">About</NavLink>
+            @* Players and About sit apart from the content sections, with the settings on the right.
+               Below lg they live in the menu, so the header fits between 640 and 1023 px. *@
+            <NavLink href="players" class="nav-link hidden lg:inline-flex" ActiveClass="active">Players</NavLink>
+            <NavLink href="about" class="nav-link hidden lg:inline-flex" ActiveClass="active">About</NavLink>
 
             @* Narrow screens: the sections and the settings in a menu, a popover (Popover API). The
                browser opens and closes it, light dismiss and Escape included; js/app.js closes it
                when a link is taken. *@
             <button type="button" popovertarget="main-menu"
-                    class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:hidden"
+                    class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary lg:hidden"
                     title="Menu">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" aria-hidden="true">
@@ -34,6 +36,7 @@
                     <NavLink href="replays" class="nav-link" ActiveClass="active">Replays</NavLink>
                     <NavLink href="maps" class="nav-link" ActiveClass="active">Maps</NavLink>
                     <NavLink href="units" class="nav-link" ActiveClass="active">Units</NavLink>
+                    <NavLink href="players" class="nav-link" ActiveClass="active">Players</NavLink>
                     <NavLink href="about" class="nav-link" ActiveClass="active">About</NavLink>
                 </nav>
                 <div class="mt-1 flex items-center justify-between gap-3 border-t border-edge px-1 pt-3">
@@ -42,7 +45,7 @@
                 </div>
             </div>
 
-            <div class="hidden items-center gap-3 sm:flex">
+            <div class="hidden items-center gap-3 lg:flex">
                 <ModeToggle />
                 <FactionSwitcher />
             </div>

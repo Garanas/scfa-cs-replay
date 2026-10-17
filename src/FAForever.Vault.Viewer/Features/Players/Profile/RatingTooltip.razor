@@ -1,0 +1,40 @@
+@using FAForever.Vault.Viewer.Services.Players
+
+@* The tooltip of a point of the rating line (a game): the date, the rating with its change, the
+   result in words, the map and the opponents, the mean and the uncertainty. The change carries a
+   triangle in the good or bad colour and its sign; the text itself stays in plain ink. *@
+@if (Entry is { } entry)
+{
+    DeltaTone tone = ProfileFormat.Tone(entry.Change);
+    <p class="text-ink-muted">@ProfileFormat.Date(entry.Date)</p>
+    <p class="mt-0.5 flex items-center gap-1.5 text-[1rem] font-semibold text-ink">
+        @ProfileFormat.Number(entry.RatingAfter)
+        <span class="flex items-center gap-1 text-xs font-normal text-ink-muted">
+            @if (tone != DeltaTone.Neutral)
+            {
+                <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(tone == DeltaTone.Good ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                    @if (tone == DeltaTone.Good)
+                    {
+                        <path d="M4 0.5 7.5 7h-7Z" />
+                    }
+                    else
+                    {
+                        <path d="M4 7.5 0.5 1h7Z" />
+                    }
+                </svg>
+            }
+            @ProfileFormat.Signed(entry.Change)
+        </span>
+    </p>
+    <p class="mt-0.5 text-ink">
+        @ProfileFormat.ResultWord(entry.Change)@(entry.Opponents.Count > 0 ? " against " + ProfileFormat.Opponents(entry.Opponents) : "")@(entry.MapName is { Length: > 0 } map ? " on " + map : "")
+    </p>
+    <p class="mt-0.5 text-ink-muted">μ @ProfileFormat.Number(entry.MeanAfter) · σ @ProfileFormat.Number(entry.DeviationAfter)</p>
+}
+
+@code {
+    /// <summary>The point the crosshair is on; its data is the journal entry.</summary>
+    [Parameter, EditorRequired] public required LinePoint Point { get; set; }
+
+    private RatingJournalEntry? Entry => Point.Data as RatingJournalEntry;
+}

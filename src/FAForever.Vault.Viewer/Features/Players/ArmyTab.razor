@@ -1,0 +1,228 @@
+@inherits PlayerUrlComponent
+@using FAForever.Vault.Viewer.Features.Players.Army
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Profile
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inject IPlayersApi Api
+
+@* The Army and factions tab: the lifetime counters the game reports (games and wins per faction,
+   custom against matchmaker, time in game, units built and lost) and the achievements with a state
+   filter. The counters have no period. They load once per player; the achievements filter only
+   re-draws the grid. *@
+<section aria-label="Army and factions" class="space-y-6">
+    <p class="max-w-3xl text-sm text-ink-muted">
+        Lifetime counters the game reports after every match: games and wins per faction, units built
+        and lost by category and tech level, time played. They cover every mode and cannot be filtered
+        by period.
+    </p>
+
+    @if (signedOut)
+    {
+        <PlayersLoginGate What="the army statistics of this player" />
+    }
+    else if (error is not null)
+    {
+        <div class="card" role="alert" aria-live="polite">
+            <p class="font-semibold">The army statistics could not be loaded</p>
+            <p class="mt-1 text-sm text-ink-muted">@error</p>
+        </div>
+    }
+    else if (summary is null)
+    {
+        <div class="space-y-6" aria-live="polite" aria-busy="true">
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                @for (int i = 0; i < 5; i++)
+                {
+                    <div class="card h-24 animate-pulse"></div>
+                }
+            </div>
+            <div class="card h-56 animate-pulse"></div>
+            <div class="card h-40 animate-pulse"></div>
+            <div class="card h-72 animate-pulse"></div>
+        </div>
+    }
+    else
+    {
+        long games = ArmyFormat.Games(summary);
+        long built = ArmyFormat.Built(summary.ByCategory);
+        long lost = ArmyFormat.Lost(summary.ByCategory);
+        FactionPlays? main = ArmyFormat.MainFaction(summary.Factions);
+
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <InfoTile Label="Games with a faction recorded" Value="@MatchFormat.Count(games)" Sub="@(games > 0 ? $"{MatchFormat.Percent(ArmyFormat.WinShare(summary))} won" : null)" />
+            <InfoTile Label="Units built" Value="@MatchFormat.Count(built)"
+                      Sub="@($"{MatchFormat.Count(lost)} lost, {MatchFormat.Percent(ArmyFormat.LostShare(built, lost))}")" />
+            <InfoTile Label="Engineers built" Value="@MatchFormat.Count(summary.Engineers.Built)" Sub="@($"{MatchFormat.Count(summary.Engineers.Lost)} lost")" />
+            <InfoTile Label="ACUs lost per game" Value="@ArmyFormat.PerGame(summary.AcusLostPerGame)" Sub="@($"{MatchFormat.Count(summary.AcusLost)} lost in total")" />
+        </div>
+
+        <section class="card" aria-labelledby="a-factions">
+            <h2 id="a-factions" class="text-[1rem] font-semibold text-ink">Games per faction</h2>
+            <p class="mt-1 mb-4 text-sm text-ink-muted">Each bar is the games played as that faction, won games solid and lost games pale.</p>
+            <BarRows Rows="ArmyFormat.FactionRows(summary.Factions)" AriaLabel="Games per faction" />
+            <div class="mt-4">
+                <Legend Items="ArmyFormat.WonLostLegend" />
+            </div>
+            @if (main is not null)
+            {
+                <p class="mt-3 flex items-center gap-2 text-sm text-ink-muted">
+                    Main faction:
+                    @if (Factions.IconPath(main.Faction) is { } icon)
+                    {
+                        <img src="@icon" alt="" class="h-5 w-5" />
+                    }
+                    <span class="text-ink">@ArmyFormat.MainFactionText(main, games)</span>
+                </p>
+            }
+        </section>
+
+        <section class="card" aria-labelledby="a-units">
+            <h2 id="a-units" class="text-[1rem] font-semibold text-ink">Units built and lost</h2>
+            <p class="mt-1 mb-4 text-sm text-ink-muted">By category and by tech level. The share lost says how the army is spent.</p>
+            <Legend Items="ArmyFormat.BuiltLostLegend" />
+            <div class="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-2">
+                <BuiltLostPanel Title="By category" Rows="ArmyFormat.BuiltLostRows(summary.ByCategory)" />
+                <BuiltLostPanel Title="By tech level" Rows="ArmyFormat.BuiltLostRows(summary.ByTech)" />
+            </div>
+            <p class="mt-5 text-xs text-ink-faint">The bars of a column share one scale, so land dwarfs naval on purpose. Experimentals are counted apart from tech 3.</p>
+        </section>
+
+        <section class="card" aria-labelledby="a-achievements">
+            <h2 id="a-achievements" class="text-[1rem] font-semibold text-ink">Achievements</h2>
+            @if (rows is not null)
+            {
+                <p class="mt-1 text-sm text-ink-muted">@AchievementFilter.Summary(rows) Rarity is the share of all players who hold one.</p>
+                <div class="mt-4">
+                    <ChoiceChips Label="Show" Query="show" Options="PlayerFilters.AchievementStates" Default="@AchievementFilter.ShowAll" />
+                </div>
+                IReadOnlyList<AchievementRow> shown = AchievementFilter.Filter(rows, show);
+                @if (shown.Count == 0)
+                {
+                    <p class="mt-4 rounded-md bg-raised px-4 py-3 text-sm text-ink-muted">No achievements to show here.</p>
+                }
+                else
+                {
+                    <ul class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        @foreach (AchievementRow row in shown)
+                        {
+                            bool unlocked = row.Progress == AchievementProgress.Unlocked;
+                            <li @key="row.Definition.Id" class="flex gap-3 rounded-lg border border-edge bg-raised p-3 @(row.Progress == AchievementProgress.Locked ? "opacity-70" : "")">
+                                @if (AchievementFilter.IconUrl(row) is { } iconUrl)
+                                {
+                                    <img src="@iconUrl" alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-full @(unlocked ? "ring-2 ring-primary" : "")" />
+                                }
+                                else
+                                {
+                                    <span class="h-10 w-10 shrink-0 rounded-full border border-edge bg-surface @(unlocked ? "ring-2 ring-primary" : "")" aria-hidden="true"></span>
+                                }
+                                <div class="min-w-0 flex-1">
+                                    <p class="flex flex-wrap items-baseline justify-between gap-x-2">
+                                        <span class="text-sm font-semibold">@row.Definition.Name</span>
+                                        <span class="text-xs text-ink-muted">@AchievementFilter.StateWord(row.Progress)</span>
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-ink-muted">@row.Definition.Description</p>
+                                    @if (row.HasSteps && !unlocked)
+                                    {
+                                        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-edge" role="progressbar" aria-label="@($"Progress on {row.Definition.Name}")"
+                                             aria-valuemin="0" aria-valuemax="@row.Definition.TotalSteps" aria-valuenow="@row.Steps">
+                                            <div class="h-full rounded-full bg-primary" style="width:@((int)Math.Round(row.Fraction * 100))%"></div>
+                                        </div>
+                                        <p class="mt-1 text-xs text-ink-muted">@AchievementFilter.Steps(row)</p>
+                                    }
+                                    <p class="mt-1.5 text-xs text-ink-faint">@AchievementFilter.Rarity(row.Definition.UnlockersPercent)</p>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+            else
+            {
+                <p class="mt-1 text-sm text-ink-muted">The achievements could not be loaded.</p>
+            }
+        </section>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+
+    private ArmySummary? summary;
+    private IReadOnlyList<AchievementRow>? rows;
+    private string? error;
+    private bool signedOut;
+    private string show = AchievementFilter.ShowAll;
+    private int? loadedFor;
+    private CancellationTokenSource? cancellation;
+    private bool disposed;
+
+    protected override void OnParametersSet()
+    {
+        if (disposed || Read(PlayerLinks.TabParameter) != PlayerLinks.TabArmy)
+        {
+            return;
+        }
+
+        show = AchievementFilter.Normalize(Read("show"));
+        if (loadedFor != PlayerId)
+        {
+            loadedFor = PlayerId;
+            _ = LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        cancellation?.Cancel();
+        using CancellationTokenSource own = new();
+        cancellation = own;
+
+        summary = null;
+        rows = null;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            Task<PlayerEventCounts> counts = Api.GetEventCountsAsync(PlayerId, own.Token);
+            Task<IReadOnlyList<AchievementDefinition>> definitions = Api.GetAchievementsAsync(own.Token);
+            Task<IReadOnlyList<PlayerAchievement>> mine = Api.GetPlayerAchievementsAsync(PlayerId, own.Token);
+            await Task.WhenAll(counts, definitions, mine);
+            if (ReferenceEquals(cancellation, own))
+            {
+                summary = ArmyStatistics.Summarize(counts.Result);
+                rows = AchievementFilter.Build(definitions.Result, mine.Result);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by another player or by leaving the tab.
+        }
+        catch (NotAuthenticatedException)
+        {
+            signedOut = true;
+        }
+        catch (Exception exception)
+        {
+            if (ReferenceEquals(cancellation, own))
+            {
+                error = $"The FAForever API answered with an error: {exception.Message}";
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(cancellation, own))
+            {
+                cancellation = null;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public override void Dispose()
+    {
+        disposed = true;
+        base.Dispose();
+        cancellation?.Cancel();
+    }
+}

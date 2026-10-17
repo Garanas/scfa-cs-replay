@@ -213,7 +213,16 @@
 
     /* Wide screens show everything in the header itself, so a menu left open there disappears. */
     .menu-popover:popover-open {
-        @apply flex sm:hidden;
+        @apply flex lg:hidden;
+    }
+
+    /* The account menu (UserMenu.razor): a popover on every width, at the right edge below the header. */
+    .account-popover {
+        @apply fixed inset-auto top-14 right-4 m-0 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-edge bg-surface p-2 text-ink shadow-lg;
+    }
+
+    .account-item {
+        @apply flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-3 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink focus-visible:bg-raised focus-visible:text-ink;
     }
 
     .btn-primary {
@@ -293,6 +302,27 @@
 
     .list-table .list-table-wide {
         @apply max-sm:basis-full;
+    }
+
+    /* A box that scrolls sideways shows a shadow on the edge that has more behind it (the shadow
+       scrolls away, a cover in the box's own colour hides it at the ends). Put it on the element
+       with overflow-x-auto; --hint-bg is the colour behind it (surface by default, base on the page). */
+    .scroll-hint {
+        --hint-bg: var(--th-surface);
+        --hint-shadow: color-mix(in srgb, var(--th-ink) 22%, transparent);
+        background-image:
+            linear-gradient(to right, var(--hint-bg), transparent),
+            linear-gradient(to left, var(--hint-bg), transparent),
+            linear-gradient(to right, var(--hint-shadow), transparent),
+            linear-gradient(to left, var(--hint-shadow), transparent);
+        background-position: left center, right center, left center, right center;
+        background-size: 1.5rem 100%, 1.5rem 100%, 0.625rem 100%, 0.625rem 100%;
+        background-repeat: no-repeat;
+        background-attachment: local, local, scroll, scroll;
+    }
+
+    .scroll-hint-base {
+        --hint-bg: var(--th-base);
     }
 
     .input-field {

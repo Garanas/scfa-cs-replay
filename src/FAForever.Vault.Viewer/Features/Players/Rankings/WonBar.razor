@@ -1,0 +1,22 @@
+@using System.Globalization
+@* The share of games won: a thin bar and the percentage as text. *@
+@if (Share is { } share)
+{
+    <span class="inline-flex items-center gap-2" title="@Percent(share) of the games won">
+        <span class="h-1.5 w-16 overflow-hidden rounded-full bg-edge" aria-hidden="true">
+            <span class="block h-full rounded-full bg-primary" style="width:@((Math.Clamp(share, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture))%"></span>
+        </span>
+        <span class="tabular-nums text-ink-muted">@Percent(share)</span>
+    </span>
+}
+else
+{
+    <span class="text-ink-faint">none</span>
+}
+
+@code {
+    /// <summary>Wins as a share of the games (0 to 1); null before the first game.</summary>
+    [Parameter] public double? Share { get; set; }
+
+    private static string Percent(double share) => (share * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
+}

@@ -1,0 +1,447 @@
+@inherits PlayerUrlComponent
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Profile
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inject IPlayersApi Api
+
+@* The Matches tab: one filter row (period, mode, faction, result, map, with or against, order), then
+   five tiles and four charts over every game of the filtered period, then the games in pages of 25.
+   The address is the source of truth: a change of it loads again. The charts depend on the filters
+   only (not on the order or the page), so turning a page loads the table alone. *@
+<section aria-label="Matches" class="space-y-6">
+    <div class="card grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ChoiceSelect Label="Period" Query="period" Options="PlayerFilters.Periods" Default="@PlayerFilters.DefaultPeriod" />
+        <ChoiceSelect Label="Mode" Query="mode" Options="PlayerFilters.Modes" Default="all" />
+        <ChoiceSelect Label="Faction" Query="faction" Options="PlayerFilters.Factions" Default="any" />
+        <ChoiceSelect Label="Result" Query="result" Options="PlayerFilters.Results" Default="any" />
+        <TextFilter Label="Map" Query="map" Placeholder="Part of the map name, then Enter" />
+        <TextFilter Label="With or against" Query="with" Placeholder="Player name, then Enter" />
+        <ChoiceSelect Label="Order" Query="sort" Options="MatchUrl.Sorts" Default="@MatchUrl.DefaultSort" />
+        <div class="flex items-end">
+            <button type="button" class="btn-secondary min-h-11 w-full sm:w-auto" disabled="@(!MatchUrl.AnyFilter(Read))" @onclick="Reset">Reset filters</button>
+        </div>
+    </div>
+
+    @if (signedOut)
+    {
+        <PlayersLoginGate What="the matches of this player" />
+    }
+    else
+    {
+        <div aria-live="polite" class="space-y-6">
+            @if (chartsError is not null)
+            {
+                <div class="card" role="alert">
+                    <p class="font-semibold">The games could not be loaded</p>
+                    <p class="mt-1 text-sm text-ink-muted">@chartsError</p>
+                </div>
+            }
+            else if (data is null)
+            {
+                <p class="text-sm text-ink-muted">@(loadedCount > 0 ? $"{MatchFormat.Count(loadedCount)} games loaded" : "Loading the games") &hellip;</p>
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="card h-24 animate-pulse"></div>
+                    }
+                </div>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="card h-64 animate-pulse"></div>
+                    }
+                </div>
+            }
+            else if (data.Summary.Games == 0)
+            {
+                <div class="card text-center">
+                    <p class="font-semibold">No games match these filters</p>
+                    <p class="mt-1 text-sm text-ink-muted">Try a longer period or fewer filters.</p>
+                </div>
+            }
+            else
+            {
+                @if (chartsLoading)
+                {
+                    <p class="text-sm text-ink-muted">@(loadedCount > 0 ? $"{MatchFormat.Count(loadedCount)} games loaded" : "Loading the games") &hellip;</p>
+                }
+                <div class="space-y-6 transition-opacity @(chartsLoading ? "opacity-50" : "")">
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                        <InfoTile Label="Games" Value="@MatchFormat.Count(data.Summary.Games)" />
+                        <InfoTile Label="Win share" Value="@MatchFormat.Percent(data.Summary.WinShare)" Sub="@MatchFormat.Record(data.Summary)" />
+                        <InfoTile Label="Average length" Value="@MatchFormat.Minutes(data.Summary.AverageLength)" />
+                        @if (data.Summary.AverageRatingChange is { } change)
+                        {
+                            <InfoTile Label="Average rating change" Value="@MatchFormat.SignedDecimal(change)" Tone="@MatchFormat.Tone(change)" Up="@(change >= 0)" Sub="per rated game" />
+                        }
+                        else
+                        {
+                            <InfoTile Label="Average rating change" Value="Unrated" Sub="no rated games" />
+                        }
+                        <InfoTile Label="Most played map" Value="@(data.Summary.MostPlayedMap ?? "Unknown")"
+                                  Sub="@(data.Summary.MostPlayedMap is null ? null : $"{MatchFormat.Games(data.Summary.MostPlayedMapGames)}, {MatchFormat.Percent(data.TopMapShare)} won")" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <section class="card" aria-labelledby="m-faction">
+                            <h2 id="m-faction" class="text-[1rem] font-semibold text-ink">Win share by faction</h2>
+                            <p class="mt-1 mb-4 text-sm text-ink-muted">The share of decided games won; the games say how much to trust it. The thin line marks 50%.</p>
+                            <BarRows Rows="data.FactionRows" Max="100" Marker="50" AriaLabel="Win share by faction" />
+                        </section>
+                        <section class="card" aria-labelledby="m-length">
+                            <h2 id="m-length" class="text-[1rem] font-semibold text-ink">Win share by game length</h2>
+                            <p class="mt-1 mb-4 text-sm text-ink-muted">Rushes against long games, in minutes of game time. The thin line marks 50%.</p>
+                            <ColumnChart Items="data.LengthColumns" Max="100" Marker="50" MarkerLabel="50%" Height="200" AriaLabel="Win share by game length" />
+                        </section>
+                        <section class="card" aria-labelledby="m-maps">
+                            <h2 id="m-maps" class="text-[1rem] font-semibold text-ink">Maps, most played first</h2>
+                            <p class="mt-1 mb-4 text-sm text-ink-muted">The win share per map; a map name opens its page. Games on a map not in the vault are left out.</p>
+                            <BarRows Rows="data.MapRows" Max="100" Marker="50" AriaLabel="Win share by map" />
+                        </section>
+                        <section class="card" aria-labelledby="m-heat">
+                            <h2 id="m-heat" class="text-[1rem] font-semibold text-ink">When the games were played</h2>
+                            <p class="mt-1 mb-4 text-sm text-ink-muted">Games per weekday and block of four hours, in your time zone; the columns start at the hour shown.</p>
+                            <Heatmap Values="data.Heat" RowLabels="MatchFormat.DayLabels" ColumnLabels="MatchFormat.BlockLabels"
+                                     CellTitle="MatchFormat.CellText" LowLabel="Fewer games" HighLabel="More games" AriaLabel="Games per weekday and time of day" />
+                            @if (data.Busiest is not null)
+                            {
+                                <p class="mt-3 text-sm text-ink-muted">Busiest: @data.Busiest</p>
+                            }
+                        </section>
+                    </div>
+                </div>
+
+                <section aria-labelledby="m-games">
+                    <h2 id="m-games" class="mb-3 text-[1rem] font-semibold text-ink">Games</h2>
+                    @if (tableError is not null)
+                    {
+                        <div class="card" role="alert">
+                            <p class="font-semibold">The list of games could not be loaded</p>
+                            <p class="mt-1 text-sm text-ink-muted">@tableError</p>
+                        </div>
+                    }
+                    else if (table is null)
+                    {
+                        <div class="card h-64 animate-pulse"></div>
+                    }
+                    else
+                    {
+                        <PlayerCardHost>
+                        <ChildContent Context="cards">
+                        <div class="card scroll-hint relative overflow-x-auto p-0 sm:p-0 transition-opacity @(tableLoading ? "opacity-50" : "")">
+                            <table class="list-table w-full text-left text-sm sm:min-w-[56rem]">
+                                <thead class="border-b border-edge text-xs text-ink-muted">
+                                    <tr>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Date</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Map</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Mode</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Faction</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Players</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Result</th>
+                                        <th scope="col" class="px-3 py-2.5 text-right font-medium">Score</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium">Rating</th>
+                                        <th scope="col" class="px-3 py-2.5 text-right font-medium">Length</th>
+                                        <th scope="col" class="px-3 py-2.5 font-medium"><span class="sr-only">Replay</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-edge">
+                                    @foreach (PlayerMatch match in table.Items)
+                                    {
+                                        <tr @key="match.GameId">
+                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink-muted max-sm:p-0">@MatchFormat.When(match.StartTime)</td>
+                                            <td class="max-w-[12rem] px-3 py-2 max-sm:p-0">
+                                                @if (match.MapName is not null && match.MapFolder is not null)
+                                                {
+                                                    <a href="@MapLinks.Map(match.MapFolder)" class="flex min-h-11 items-center text-ink transition hover:text-primary"><span class="truncate">@match.MapName</span></a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="block truncate" title="@(match.MapName is null ? match.GameName : null)">@(match.MapName ?? MatchFormat.MapNotInVault)</span>
+                                                }
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">@MatchFormat.Mode(match.Board)</td>
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">
+                                                @if (Factions.IconPath(match.Faction) is { } icon)
+                                                {
+                                                    <span class="inline-flex items-center gap-1.5">
+                                                        <img src="@icon" alt="" class="h-5 w-5" />@Factions.Name(match.Faction)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-ink-muted">Unknown</span>
+                                                }
+                                            </td>
+                                            <td class="list-table-wide px-3 py-2 sm:min-w-[12rem] max-sm:order-last max-sm:p-0">
+                                                <MatchPlayersCell Match="match" Line="MatchPlayersLine.Of(match, PlayerId)" Cards="cards" />
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-2 max-sm:p-0">
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    @if (match.Result is MatchResult.Victory or MatchResult.Defeat)
+                                                    {
+                                                        <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(match.Result == MatchResult.Victory ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                                                            @if (match.Result == MatchResult.Victory)
+                                                            {
+                                                                <path d="M4 0.5 7.5 7h-7Z" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <path d="M4 7.5 0.5 1h7Z" />
+                                                            }
+                                                        </svg>
+                                                    }
+                                                    @MatchFormat.ResultWord(match.Result)
+                                                </span>
+                                            </td>
+                                            <td class="px-3 py-2 text-right tabular-nums max-sm:hidden">@(match.Score is { } score ? MatchFormat.Count(score) : "Unknown")</td>
+                                            <td class="whitespace-nowrap px-3 py-2 tabular-nums max-sm:p-0">
+                                                @if (match.RatingBefore is { } before && match.RatingAfter is { } after && match.RatingChange is { } delta)
+                                                {
+                                                    <span>@MatchFormat.Count(before) to @MatchFormat.Count(after)</span>
+                                                    <span class="ml-1 inline-flex items-center gap-1 text-ink-muted">
+                                                        @if (delta != 0)
+                                                        {
+                                                            <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(delta > 0 ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                                                                @if (delta > 0)
+                                                                {
+                                                                    <path d="M4 0.5 7.5 7h-7Z" />
+                                                                }
+                                                                else
+                                                                {
+                                                                    <path d="M4 7.5 0.5 1h7Z" />
+                                                                }
+                                                            </svg>
+                                                        }
+                                                        @MatchFormat.Signed(delta)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-ink-muted">Unrated</span>
+                                                }
+                                            </td>
+                                            <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums max-sm:p-0">@MatchFormat.Length(match.Duration)</td>
+                                            <td class="px-3 py-2 max-sm:ml-auto max-sm:p-0">
+                                                <a href="replays/@match.GameId" class="inline-flex min-h-11 items-center text-primary transition hover:underline">Replay</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        </ChildContent>
+                        </PlayerCardHost>
+                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-sm text-ink-muted">@PageSummary(table)</p>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn-secondary min-h-11" disabled="@(tableLoading || table.Page <= 1)" @onclick="() => GoToPage(table.Page - 1)">Previous</button>
+                                <button type="button" class="btn-secondary min-h-11" disabled="@(tableLoading || !HasNext(table))" @onclick="() => GoToPage(table.Page + 1)">Next</button>
+                            </div>
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private const int PageSize = 25;
+
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+
+    /// <summary>Everything the charts and tiles draw, worked out once per load.</summary>
+    private sealed record ChartData(
+        MatchSummary Summary,
+        double? TopMapShare,
+        IReadOnlyList<BarRow> FactionRows,
+        IReadOnlyList<ColumnItem> LengthColumns,
+        IReadOnlyList<BarRow> MapRows,
+        IReadOnlyList<IReadOnlyList<double>> Heat,
+        string? Busiest);
+
+    private MatchFilters filters = MatchFilters.Default;
+    private (int PlayerId, MatchFilters Filters)? chartsKey;
+    private (int PlayerId, MatchFilters Filters)? tableKey;
+
+    private ChartData? data;
+    private string? chartsError;
+    private bool chartsLoading;
+    private int loadedCount;
+    private CancellationTokenSource? chartsCancellation;
+
+    private PlayerPage<PlayerMatch>? table;
+    private string? tableError;
+    private bool tableLoading;
+    private CancellationTokenSource? tableCancellation;
+
+    private bool signedOut;
+    private bool disposed;
+
+    protected override void OnParametersSet()
+    {
+        // LocationChanged also fires when the tab is left; this component is then about to go.
+        if (disposed || Read(PlayerLinks.TabParameter) != PlayerLinks.TabMatches)
+        {
+            return;
+        }
+
+        filters = MatchUrl.Read(Read);
+
+        var charts = (PlayerId, filters.ForCharts());
+        if (chartsKey != charts)
+        {
+            chartsKey = charts;
+            _ = LoadChartsAsync(charts.Item2);
+        }
+
+        var rows = (PlayerId, filters);
+        if (tableKey != rows)
+        {
+            tableKey = rows;
+            _ = LoadTableAsync(filters);
+        }
+    }
+
+    private async Task LoadChartsAsync(MatchFilters wanted)
+    {
+        chartsCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        chartsCancellation = cancellation;
+
+        chartsLoading = true;
+        chartsError = null;
+        loadedCount = 0;
+        StateHasChanged();
+        try
+        {
+            IProgress<int> progress = new Progress<int>(count =>
+            {
+                if (ReferenceEquals(chartsCancellation, cancellation))
+                {
+                    loadedCount = count;
+                    _ = InvokeAsync(StateHasChanged);
+                }
+            });
+            IReadOnlyList<PlayerMatch> matches = await Api.GetAllMatchesAsync(PlayerId, wanted.ToQuery(DateTimeOffset.UtcNow), progress, cancellation.Token);
+            if (ReferenceEquals(chartsCancellation, cancellation))
+            {
+                data = Summarize(matches);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer query or by leaving the tab.
+        }
+        catch (NotAuthenticatedException)
+        {
+            signedOut = true;
+        }
+        catch (Exception exception)
+        {
+            if (ReferenceEquals(chartsCancellation, cancellation))
+            {
+                data = null;
+                chartsError = $"The FAForever API could not be reached: {exception.Message}";
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(chartsCancellation, cancellation))
+            {
+                chartsCancellation = null;
+                chartsLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LoadTableAsync(MatchFilters wanted)
+    {
+        tableCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        tableCancellation = cancellation;
+
+        tableLoading = true;
+        tableError = null;
+        StateHasChanged();
+        try
+        {
+            PlayerPage<PlayerMatch> page = await Api.GetMatchesAsync(PlayerId, wanted.ToQuery(DateTimeOffset.UtcNow) with { PageSize = PageSize }, cancellation.Token);
+            if (ReferenceEquals(tableCancellation, cancellation))
+            {
+                table = page;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer query or by leaving the tab.
+        }
+        catch (NotAuthenticatedException)
+        {
+            signedOut = true;
+        }
+        catch (Exception exception)
+        {
+            if (ReferenceEquals(tableCancellation, cancellation))
+            {
+                table = null;
+                tableError = $"The FAForever API could not be reached: {exception.Message}";
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(tableCancellation, cancellation))
+            {
+                tableCancellation = null;
+                tableLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static ChartData Summarize(IReadOnlyList<PlayerMatch> matches)
+    {
+        MatchSummary summary = MatchStatistics.Summarize(matches);
+        MapRecord? top = MatchStatistics.ByMap(matches, 1).FirstOrDefault();
+        IReadOnlyList<IReadOnlyList<int>> cells = MatchStatistics.Heatmap(matches);
+        return new ChartData(
+            summary,
+            top?.WinShare,
+            MatchFormat.FactionRows(MatchStatistics.ByFaction(matches)),
+            MatchFormat.LengthColumns(MatchStatistics.ByLength(matches)),
+            MatchFormat.MapRows(matches),
+            MatchFormat.HeatValues(cells),
+            MatchFormat.Busiest(cells));
+    }
+
+    private static string PageSummary(PlayerPage<PlayerMatch> page)
+    {
+        if (page.Items.Count == 0)
+        {
+            return "No games on this page";
+        }
+
+        int first = (page.Page - 1) * PageSize + 1;
+        int last = first + page.Items.Count - 1;
+        return page.TotalRecords is { } total
+            ? $"Games {first} to {last} of {MatchFormat.Count(total)}"
+            : $"Games {first} to {last}";
+    }
+
+    private static bool HasNext(PlayerPage<PlayerMatch> page)
+        => page.TotalPages is { } pages ? page.Page < pages : page.Items.Count >= PageSize;
+
+    private void GoToPage(int page) => Write("page", page.ToString(System.Globalization.CultureInfo.InvariantCulture), "1", resetPage: false);
+
+    private void Reset() => Write(MatchUrl.Parameters.ToDictionary(name => name, _ => (string?)null));
+
+    public override void Dispose()
+    {
+        disposed = true;
+        base.Dispose();
+        chartsCancellation?.Cancel();
+        tableCancellation?.Cancel();
+    }
+}

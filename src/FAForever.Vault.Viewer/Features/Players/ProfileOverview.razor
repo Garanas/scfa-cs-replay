@@ -1,0 +1,379 @@
+@using System.Globalization
+@using FAForever.Vault.Viewer.Features.Players.Matches
+@using FAForever.Vault.Viewer.Features.Players.Army
+@using FAForever.Vault.Viewer.Features.Players.Profile
+@using FAForever.Vault.Viewer.Services.Players
+@using FAForever.Vault.Viewer.Services.Players.Statistics
+@inherits PlayerUrlComponent
+@inject IPlayersApi Api
+
+@* The Overview tab of a profile: one card per leaderboard (each a link to the Rating history tab on
+   that board), the clan, the names and the achievements side by side, three lifetime tiles and the
+   last games. Each part loads on its own and shows a pulse until it is there. *@
+<section aria-label="Overview" class="grid gap-6">
+    <section aria-label="Ratings">
+        @if (ratingsLoad is null)
+        {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="card h-44 animate-pulse"></div>
+                }
+            </div>
+        }
+        else if (ratingsLoad.Error is { } ratingsError)
+        {
+            <div class="card" role="alert">
+                <p class="font-semibold">The ratings could not be loaded</p>
+                <p class="mt-1 text-sm text-ink-muted">@ratingsError</p>
+            </div>
+        }
+        else if (ratingList.Count == 0)
+        {
+            <div class="card text-center text-sm text-ink-muted">This player has no rated games yet.</div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach (PlayerRating rating in ratingList)
+                {
+                    string board = rating.Board.TechnicalName;
+                    LeagueLine? league = leagueLoad?.Value is { } leagueData ? ProfileSummaries.LeagueOf(board, leagueData.Seasons, leagueData.Entries, DateTimeOffset.UtcNow) : null;
+                    <a href="@ProfileLinks.RatingTab(PlayerId, board)" class="@CardClass">
+                        <span class="flex items-baseline justify-between gap-2">
+                            <span class="text-sm font-semibold">@rating.Board.DisplayName</span>
+                            <span class="text-xs text-ink-muted">@ProfileFormat.Number(rating.TotalGames) games</span>
+                        </span>
+                        <span class="mt-2 block text-3xl font-semibold leading-tight text-ink">@ProfileFormat.Number(rating.Rating)</span>
+                        <span class="mt-1 flex min-h-4 items-center gap-1.5 text-xs text-ink-muted">
+                            @if (changesLoad is null)
+                            {
+                                <span class="h-3 w-24 animate-pulse rounded bg-raised"></span>
+                            }
+                            else if (changesLoad.Value is { } changes && changes.TryGetValue(board, out int? change) && change is { } delta)
+                            {
+                                DeltaTone tone = ProfileFormat.Tone(delta);
+                                if (tone != DeltaTone.Neutral)
+                                {
+                                    <svg viewBox="0 0 8 8" class="h-2 w-2 shrink-0 @(tone == DeltaTone.Good ? "fill-viz-3" : "fill-viz-8")" aria-hidden="true">
+                                        @if (tone == DeltaTone.Good)
+                                        {
+                                            <path d="M4 0.5 7.5 7h-7Z" />
+                                        }
+                                        else
+                                        {
+                                            <path d="M4 7.5 0.5 1h7Z" />
+                                        }
+                                    </svg>
+                                }
+                                <span>@ProfileFormat.Signed(delta) in 30 days</span>
+                            }
+                            else if (changesLoad.Value is not null)
+                            {
+                                <span>No games in 30 days</span>
+                            }
+                        </span>
+                        <span class="mt-1 block text-xs text-ink-muted">μ @ProfileFormat.Number(rating.Mean) · σ @ProfileFormat.Number(rating.Deviation)</span>
+                        <span class="mt-3 block h-1.5 overflow-hidden rounded-full bg-raised">
+                            <span class="block h-full rounded-full bg-primary" style="width:@WinWidth(rating)%"></span>
+                        </span>
+                        <span class="mt-1 block text-xs text-ink-muted">@(rating.WinShare is null ? "No games" : ProfileFormat.Percent(rating.WinShare) + " won")</span>
+                        @if (league is not null)
+                        {
+                            <span class="mt-auto block pt-2"><span class="block border-t border-edge pt-2 text-xs text-ink-muted"><span class="font-semibold text-ink">@league.Title</span> · @league.Detail</span></span>
+                        }
+                        <span class="@(league is null ? "mt-auto pt-3" : "mt-2") flex items-center justify-between gap-2 text-xs text-ink-muted">
+                            <span>Rating history</span>
+                            <svg viewBox="0 0 16 16" class="h-3 w-3 shrink-0 fill-none stroke-current" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+                        </span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3" aria-label="About this player">
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Clan</h2>
+            @if (Profile?.Clan is { } clan)
+            {
+                <p class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 font-semibold">@clan.Tag</span>
+                    <span class="text-ink-muted">@clan.Name</span>
+                </p>
+            }
+            else
+            {
+                <p class="mt-2 text-sm text-ink-muted">Not in a clan.</p>
+            }
+        </section>
+
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Name history</h2>
+            @if (Profile is not null)
+            {
+                <ul class="mt-2 grid gap-1.5 text-sm">
+                    @foreach (NameSpan span in ProfileSummaries.NameHistory(Profile))
+                    {
+                        <li class="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <span class="@(span.IsCurrent ? "font-semibold" : "")">@span.Name</span>
+                            <span class="text-xs text-ink-muted">@span.Span</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="card min-w-0 p-4 sm:p-4">
+            <h2 class="text-sm font-semibold text-ink">Achievements</h2>
+            @if (achievementsLoad is null)
+            {
+                <div class="mt-2 h-16 animate-pulse rounded-md bg-raised"></div>
+            }
+            else if (achievementsLoad.Error is { } achievementsError)
+            {
+                <p class="mt-2 text-sm text-ink-muted" role="alert">@achievementsError</p>
+            }
+            else if (achievementsLoad.Value is { } summary)
+            {
+                <p class="mt-2 flex items-baseline gap-2">
+                    <span class="text-2xl font-semibold text-ink">@summary.Unlocked</span>
+                    <span class="text-sm text-ink-muted">of @summary.Total unlocked · @ProfileFormat.Number(summary.ExperiencePoints) XP</span>
+                </p>
+                @if (summary.Rarest is { } rarest)
+                {
+                    <p class="mt-1 text-sm text-ink-muted">Rarest: <span class="text-ink">@rarest.Name</span>, held by @rarest.UnlockersPercent.ToString("0.#", CultureInfo.InvariantCulture)% of players</p>
+                }
+                <p class="mt-1 text-sm"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Army)">All achievements</a></p>
+            }
+        </section>
+    </div>
+
+    <section aria-label="Lifetime totals">
+        @if (armyLoad is null)
+        {
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-busy="true">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="card h-24 animate-pulse"></div>
+                }
+            </div>
+        }
+        else if (armyLoad.Error is { } armyError)
+        {
+            <div class="card" role="alert">
+                <p class="font-semibold">The lifetime counters could not be loaded</p>
+                <p class="mt-1 text-sm text-ink-muted">@armyError</p>
+            </div>
+        }
+        else if (armyLoad.Value is { } army)
+        {
+            BuiltAndLost experimentals = army.ByTech.First(group => group.Label == "Experimental");
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                <InfoTile Label="Games" Value="@ProfileFormat.Number(ArmyFormat.TotalGames(recentLoad?.Value?.TotalRecords, army))" Sub="@($"{ProfileFormat.Number(ArmyFormat.Games(army))} with a faction recorded")" />
+                <InfoTile Label="ACUs lost" Value="@ProfileFormat.Number(army.AcusLost)" Sub="@(army.AcusLostPerGame is { } perGame ? $"{perGame.ToString("0.00", CultureInfo.InvariantCulture)} per game" : null)" />
+                <InfoTile Label="Experimentals built" Value="@ProfileFormat.Number(experimentals.Built)" Sub="@($"{ProfileFormat.Number(experimentals.Lost)} lost")" />
+            </div>
+        }
+    </section>
+
+    <section class="card min-w-0" aria-labelledby="ov-recent-title">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 id="ov-recent-title" class="text-lg font-semibold text-ink">Recent games</h2>
+            <a class="inline-flex min-h-11 items-center text-sm text-primary underline-offset-2 hover:underline" href="@PlayerLinks.Profile(PlayerId, PlayerTab.Matches)">@(recentLoad?.Value is { TotalRecords: { } total } ? $"All {ProfileFormat.Number(total)} games with filters" : "All games with filters")</a>
+        </div>
+        @if (recentLoad is null)
+        {
+            <div class="mt-4 h-40 animate-pulse rounded-md bg-raised" aria-busy="true"></div>
+        }
+        else if (recentLoad.Error is { } recentError)
+        {
+            <p class="mt-3 text-sm text-ink-muted" role="alert">@recentError</p>
+        }
+        else if (recentLoad.Value is { Items.Count: > 0 } recent)
+        {
+            <div class="scroll-hint relative mt-4 overflow-x-auto">
+                <table class="list-table w-full text-left text-sm sm:min-w-[40rem]">
+                    <thead class="text-xs text-ink-muted">
+                        <tr>
+                            <th scope="col" class="py-2 pr-4 font-medium">Date</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Map</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Mode</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Faction</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Result</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Rating</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Length</th>
+                            <th scope="col" class="py-2 font-medium"><span class="sr-only">Replay</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (PlayerMatch match in recent.Items)
+                        {
+                            DeltaTone resultTone = ProfileFormat.Tone(match.Result);
+                            <tr class="border-t border-edge">
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-1 max-sm:p-0">@ProfileFormat.Date(match.StartTime)</td>
+                                <td class="list-table-wide max-w-[14rem] truncate py-2 pr-4 max-sm:order-6 max-sm:max-w-none max-sm:p-0 max-sm:text-ink-muted" title="@(match.MapName ?? match.GameName)">@(match.MapName ?? MatchFormat.MapNotInVault)</td>
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:hidden">@ProfileFormat.ModeName(match.Board)</td>
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:order-4 max-sm:p-0">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        @if (Factions.IconPath(match.Faction) is { } icon)
+                                        {
+                                            <img src="@icon" alt="" class="h-4 w-4" />
+                                        }
+                                        @(Factions.Name(match.Faction) ?? "Random")
+                                    </span>
+                                </td>
+                                <td class="whitespace-nowrap py-2 pr-4 max-sm:order-2 max-sm:p-0">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        @if (resultTone != DeltaTone.Neutral)
+                                        {
+                                            <span class="h-2 w-2 rounded-full @(resultTone == DeltaTone.Good ? "bg-viz-3" : "bg-viz-8")" aria-hidden="true"></span>
+                                        }
+                                        @ProfileFormat.ResultWord(match.Result)
+                                    </span>
+                                </td>
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:order-3 max-sm:p-0">
+                                    @if (match.RatingAfter is { } after)
+                                    {
+                                        <span>@ProfileFormat.Number(after)</span>
+                                        if (match.RatingChange is { } ratingChange)
+                                        {
+                                            <span class="ml-1 text-xs text-ink-muted">@ProfileFormat.Signed(ratingChange)</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-ink-muted">Unrated</span>
+                                    }
+                                </td>
+                                <td class="whitespace-nowrap py-2 pr-4 tabular-nums max-sm:hidden">@ProfileFormat.Duration(match.Duration)</td>
+                                <td class="whitespace-nowrap py-2 text-right max-sm:order-5 max-sm:ml-auto max-sm:p-0"><a class="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline" href="@ReplayLinks.Vault(match.GameId)">Replay</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="mt-3 text-sm text-ink-muted">No games recorded.</p>
+        }
+    </section>
+</section>
+
+@code {
+    private sealed record LeagueData(IReadOnlyList<LeagueSeason> Seasons, IReadOnlyList<LeagueEntry> Entries);
+
+    /// <summary>The player's id; the data is fetched by it.</summary>
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+
+    /// <summary>The profile the page loaded: the clan and the names.</summary>
+    [Parameter] public PlayerProfile? Profile { get; set; }
+
+    private int loadedPlayer = -1;
+    private CancellationTokenSource? staticCancellation;
+
+    private Loadable<IReadOnlyList<PlayerRating>>? ratingsLoad;
+    private Loadable<IReadOnlyDictionary<string, int?>>? changesLoad;
+    private Loadable<LeagueData>? leagueLoad;
+    private Loadable<ArmySummary>? armyLoad;
+    private Loadable<AchievementSummary>? achievementsLoad;
+    private Loadable<PlayerPage<PlayerMatch>>? recentLoad;
+
+    private IReadOnlyList<PlayerRating> ratingList = [];
+    protected override void OnParametersSet()
+    {
+        if (PlayerId != loadedPlayer)
+        {
+            loadedPlayer = PlayerId;
+            StartLoads();
+        }
+    }
+
+    private const string CardClass = "card flex h-full w-full min-w-0 flex-col items-stretch justify-start p-4 text-left text-ink transition hover:border-primary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary sm:p-4";
+
+    private static string WinWidth(PlayerRating rating)
+        => ((rating.WinShare ?? 0) * 100).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private void StartLoads()
+    {
+        staticCancellation?.Cancel();
+        staticCancellation = new CancellationTokenSource();
+        CancellationToken token = staticCancellation.Token;
+
+        ratingsLoad = null;
+        changesLoad = null;
+        leagueLoad = null;
+        armyLoad = null;
+        achievementsLoad = null;
+        recentLoad = null;
+        ratingList = [];
+
+        _ = LoadRatingsAsync(token);
+        _ = RunAsync(async t =>
+        {
+            Task<IReadOnlyList<LeagueSeason>> seasons = Api.GetSeasonsAsync(t);
+            Task<IReadOnlyList<LeagueEntry>> entries = Api.GetActiveLeagueEntriesAsync(PlayerId, t);
+            return new LeagueData(await seasons, await entries);
+        }, load => leagueLoad = load, token);
+        _ = RunAsync(async t => ArmyStatistics.Summarize(await Api.GetEventCountsAsync(PlayerId, t)), load => armyLoad = load, token);
+        _ = RunAsync(async t =>
+        {
+            Task<IReadOnlyList<AchievementDefinition>> definitions = Api.GetAchievementsAsync(t);
+            Task<IReadOnlyList<PlayerAchievement>> mine = Api.GetPlayerAchievementsAsync(PlayerId, t);
+            return ProfileSummaries.Achievements(await definitions, await mine);
+        }, load => achievementsLoad = load, token);
+        _ = RunAsync(t => Api.GetMatchesAsync(PlayerId, new MatchQuery { PageSize = 6 }, t), load => recentLoad = load, token);
+    }
+
+    private async Task RunAsync<T>(Func<CancellationToken, Task<T>> load, Action<Loadable<T>> assign, CancellationToken token)
+    {
+        try
+        {
+            Loadable<T> result = await Loadable<T>.RunAsync(() => load(token));
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            assign(result);
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a load for another player, or the page went away.
+        }
+    }
+
+    private async Task LoadRatingsAsync(CancellationToken token)
+    {
+        await RunAsync(t => Api.GetRatingsAsync(PlayerId, t), load => ratingsLoad = load, token);
+        if (token.IsCancellationRequested || ratingsLoad?.Value is not { } ratings)
+        {
+            return;
+        }
+
+        ratingList = ProfileSummaries.ByGames(ratings);
+        StateHasChanged();
+
+        await RunAsync(async t =>
+        {
+            DateTimeOffset since = DateTimeOffset.UtcNow.AddDays(-30);
+            Task<IReadOnlyList<RatingJournalEntry>>[] journals = [.. ratings.Select(rating => Api.GetRatingHistoryAsync(PlayerId, rating.Board.TechnicalName, since, null, t))];
+            IReadOnlyList<RatingJournalEntry>[] results = await Task.WhenAll(journals);
+            Dictionary<string, int?> changes = [];
+            for (int i = 0; i < ratings.Count; i++)
+            {
+                changes[ratings[i].Board.TechnicalName] = ProfileSummaries.ChangeOver(results[i]);
+            }
+
+            return (IReadOnlyDictionary<string, int?>)changes;
+        }, load => changesLoad = load, token);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        staticCancellation?.Cancel();
+    }
+}

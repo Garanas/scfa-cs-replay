@@ -1,0 +1,45 @@
+@* Bins by sign: a negative bin (a loss) in viz-2, a positive one (a win) in viz-1, the zero bin in
+   faint ink, with a legend that names the three. A ColumnChart with the colours decided here. *@
+<div>
+    <ColumnChart Items="items" Height="Height" AriaLabel="@AriaLabel" OverflowLabels="true" />
+    <div class="mt-3">
+        <Legend Items="legend" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<HistogramBin> Bins { get; set; }
+
+    [Parameter] public int Height { get; set; } = 160;
+
+    [Parameter] public string NegativeLabel { get; set; } = "Losses";
+
+    [Parameter] public string PositiveLabel { get; set; } = "Wins";
+
+    [Parameter] public string ZeroLabel { get; set; } = "No change";
+
+    /// <summary>False leaves the zero entry out of the legend (a histogram without a zero bin).</summary>
+    [Parameter] public bool ShowZeroInLegend { get; set; } = true;
+
+    [Parameter] public string AriaLabel { get; set; } = "Histogram";
+
+    private IReadOnlyList<ColumnItem> items = [];
+
+    private IReadOnlyList<LegendItem> legend = [];
+
+    protected override void OnParametersSet()
+    {
+        items = Bins.Select(bin => new ColumnItem(
+            bin.Label,
+            bin.Value,
+            bin.TopLabel,
+            bin.Sign < 0 ? ChartColor.Viz2 : bin.Sign > 0 ? ChartColor.Viz1 : ChartColor.Faint,
+            bin.Title)).ToList();
+        legend =
+        [
+            new LegendItem(NegativeLabel, ChartColor.Viz2),
+            new LegendItem(PositiveLabel, ChartColor.Viz1),
+            .. ShowZeroInLegend ? new[] { new LegendItem(ZeroLabel, ChartColor.Faint) } : Array.Empty<LegendItem>(),
+        ];
+    }
+}
