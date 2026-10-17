@@ -12,7 +12,8 @@
     {
         DivisionGroup group = Groups[g];
         double opacity = Groups.Count <= 1 ? 1 : 0.35 + 0.65 * g / (Groups.Count - 1);
-        <div class="min-w-0">
+        @* A group on a row of its own (the sixth division, Grandmaster) must not stretch across it. *@
+        <div class="min-w-0 sm:max-w-[10rem]">
             <div class="flex h-24 items-end gap-1 border-b border-edge sm:h-[150px]">
                 @foreach (SubdivisionCount item in group.Subdivisions)
                 {
@@ -25,7 +26,7 @@
                         {
                             <span class="mb-1 whitespace-nowrap text-xs text-ink-muted">@item.Players.ToString("N0", CultureInfo.InvariantCulture)</span>
                         }
-                        <span class="block min-h-[3px] w-full rounded-t-[4px] @(mine ? "bg-primary" : "bg-viz-1") @(selected ? "outline outline-2 outline-offset-1 outline-ink" : "")"
+                        <span class="block min-h-[3px] w-full max-w-6 rounded-t-[4px] @(mine ? "bg-primary" : "bg-viz-1") @(selected ? "outline outline-2 outline-offset-1 outline-ink" : "")"
                               style="height:@Height(item.Players)%;@(mine ? "" : $"opacity:{opacity.ToString("0.##", CultureInfo.InvariantCulture)}")"></span>
                     </button>
                 }
